@@ -64,7 +64,7 @@ class Admin_Menu {
         // Statystyki
         $total_cars = wp_count_posts('samochod');
         $total_reservations = wp_count_posts('rezerwacja');
-        
+
         $pending_count = 0;
         $approved_count = 0;
         $rejected_count = 0;
@@ -87,7 +87,7 @@ class Admin_Menu {
         ?>
         <div class="wrap">
             <h1>FlexMile Dashboard</h1>
-            
+
             <div class="flexmile-dashboard">
                 <div class="flexmile-stats">
                     <div class="stat-box">
@@ -120,7 +120,7 @@ class Admin_Menu {
                         <h2>🎯 Rozpocznij szybko!</h2>
                         <p>Nie masz jeszcze żadnych danych? Zaimportuj przykładowe dane aby przetestować system:</p>
                         <ul style="margin: 15px 0;">
-                            <li>✅ <strong>30 marek</strong> samochodów (BMW, Audi, Toyota...)</li>
+                            <li>✅ <strong>136 marek</strong> samochodów</li>
                             <li>✅ <strong>10 typów nadwozia</strong> (SUV, Sedan, Kombi...)</li>
                             <li>✅ <strong>7 rodzajów paliwa</strong> (Benzyna, Diesel, Hybryda...)</li>
                             <li>✅ <strong>3 przykładowe samochody</strong> z pełnymi danymi</li>
@@ -261,18 +261,18 @@ class Admin_Menu {
         ?>
         <div class="wrap">
             <h1>Ustawienia API FlexMile</h1>
-            
+
             <div class="flexmile-api-info">
                 <h2>🔌 Konfiguracja CORS</h2>
                 <p>Aby Twoja aplikacja Angular mogła komunikować się z WordPress API, musisz skonfigurować CORS.</p>
-                
+
                 <h3>Dodaj do pliku <code>wp-config.php</code> lub <code>functions.php</code>:</h3>
                 <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;"><code>// Włącz CORS dla headless WordPress
 add_action('init', function() {
     header('Access-Control-Allow-Origin: *'); // Zmień * na domenę Angulara w produkcji
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization');
-    
+
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         exit(0);
     }
