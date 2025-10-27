@@ -1,0 +1,292 @@
+<?php
+namespace FlexMile\PostTypes;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Custom Post Type dla Rezerwacji
+ */
+class Rezerwacje {
+
+    const POST_TYPE = 'rezerwacja';
+
+    public function __construct() {
+        add_action('init', [$this, 'register_post_type']);
+        add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
+        add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
+        add_filter('manage_' . self::POST_TYPE . '_posts_columns', [$this, 'custom_columns']);
+        add_action('manage_' . self::POST_TYPE . '_posts_custom_column', [$this, 'custom_column_content'], 10, 2);
+    }
+
+    /**
+     * Rejestracja CPT Rezerwacja
+     */
+    public function register_post_type() {
+        $labels = [
+            'name' => 'Rezerwacje',
+            'singular_name' => 'Rezerwacja',
+            'menu_name' => 'Rezerwacje',
+            'add_new' => 'Dodaj rezerwację',
+            'add_new_item' => 'Dodaj nową rezerwację',
+            'edit_item' => 'Edytuj rezerwację',
+            'new_item' => 'Nowa rezerwacja',
+            'view_item' => 'Zobacz rezerwację',
+            'search_items' => 'Szukaj rezerwacji',
+            'not_found' => 'Nie znaleziono rezerwacji',
+            'all_items' => 'Wszystkie rezerwacje',
+        ];
+
+        $args = [
+            'labels' => $labels,
+            'public' => false,
+            'show_ui' => true,
+            'show_in_menu' => true,
+            'show_in_rest' => true,
+            'rest_base' => 'rezerwacje',
+            'menu_icon' => 'dashicons-clipboard',
+            'supports' => ['title', 'custom-fields'],
+            'capability_type' => 'post',
+            'capabilities' => [
+                'create_posts' => false, // Rezerwacje tworzy się tylko przez API
+            ],
+            'map_meta_cap' => true,
+        ];
+
+        register_post_type(self::POST_TYPE, $args);
+    }
+
+    /**
+     * Dodaje meta boxy
+     */
+    public function add_meta_boxes() {
+        add_meta_box(
+            'flexmile_rezerwacja_details',
+            'Szczegóły rezerwacji',
+            [$this, 'render_details_meta_box'],
+            self::POST_TYPE,
+            'normal',
+            'high'
+        );
+
+        add_meta_box(
+            'flexmile_rezerwacja_status',
+            'Status rezerwacji',
+            [$this, 'render_status_meta_box'],
+            self::POST_TYPE,
+            'side',
+            'high'
+        );
+
+        add_meta_box(
+            'flexmile_rezerwacja_car',
+            'Zarezerwowany samochód',
+            [$this, 'render_car_meta_box'],
+            self::POST_TYPE,
+            'side',
+            'default'
+        );
+    }
+
+    /**
+     * Renderuje meta box ze szczegółami klienta
+     */
+    public function render_details_meta_box($post) {
+        $imie = get_post_meta($post->ID, '_imie', true);
+        $nazwisko = get_post_meta($post->ID, '_nazwisko', true);
+        $email = get_post_meta($post->ID, '_email', true);
+        $telefon = get_post_meta($post->ID, '_telefon', true);
+        $ilosc_miesiecy = get_post_meta($post->ID, '_ilosc_miesiecy', true);
+        $ilosc_km = get_post_meta($post->ID, '_ilosc_km', true);
+        $cena_calkowita = get_post_meta($post->ID, '_cena_calkowita', true);
+        $wiadomosc = get_post_meta($post->ID, '_wiadomosc', true);
+        ?>
+        <table class="form-table">
+            <tr>
+                <th><strong>Imię:</strong></th>
+                <td><?php echo esc_html($imie); ?></td>
+            </tr>
+            <tr>
+                <th><strong>Nazwisko:</strong></th>
+                <td><?php echo esc_html($nazwisko); ?></td>
+            </tr>
+            <tr>
+                <th><strong>Email:</strong></th>
+                <td><a href="mailto:<?php echo esc_attr($email); ?>"><?php echo esc_html($email); ?></a></td>
+            </tr>
+            <tr>
+                <th><strong>Telefon:</strong></th>
+                <td><a href="tel:<?php echo esc_attr($telefon); ?>"><?php echo esc_html($telefon); ?></a></td>
+            </tr>
+            <tr>
+                <th><strong>Okres wynajmu:</strong></th>
+                <td><?php echo esc_html($ilosc_miesiecy); ?> miesięcy</td>
+            </tr>
+            <tr>
+                <th><strong>Planowany przebieg:</strong></th>
+                <td><?php echo number_format($ilosc_km, 0, ',', ' '); ?> km</td>
+            </tr>
+            <tr>
+                <th><strong>Cena całkowita:</strong></th>
+                <td><strong><?php echo number_format($cena_calkowita, 2, ',', ' '); ?> zł</strong></td>
+            </tr>
+            <?php if ($wiadomosc): ?>
+            <tr>
+                <th><strong>Wiadomość:</strong></th>
+                <td><?php echo nl2br(esc_html($wiadomosc)); ?></td>
+            </tr>
+            <?php endif; ?>
+        </table>
+        <?php
+    }
+
+    /**
+     * Renderuje meta box ze statusem
+     */
+    public function render_status_meta_box($post) {
+        wp_nonce_field('flexmile_rezerwacja_status', 'flexmile_rezerwacja_status_nonce');
+        
+        $status = get_post_meta($post->ID, '_status_rezerwacji', true);
+        if (empty($status)) {
+            $status = 'pending';
+        }
+        ?>
+        <p>
+            <label for="status_rezerwacji"><strong>Status:</strong></label><br>
+            <select id="status_rezerwacji" name="status_rezerwacji" class="widefat">
+                <option value="pending" <?php selected($status, 'pending'); ?>>⏳ Oczekująca</option>
+                <option value="approved" <?php selected($status, 'approved'); ?>>✅ Zatwierdzona</option>
+                <option value="rejected" <?php selected($status, 'rejected'); ?>>❌ Odrzucona</option>
+                <option value="completed" <?php selected($status, 'completed'); ?>>🎉 Zrealizowana</option>
+            </select>
+        </p>
+        <p class="description">Po zatwierdzeniu rezerwacji, samochód zostanie automatycznie oznaczony jako zarezerwowany.</p>
+        <?php
+    }
+
+    /**
+     * Renderuje meta box z informacją o samochodzie
+     */
+    public function render_car_meta_box($post) {
+        $samochod_id = get_post_meta($post->ID, '_samochod_id', true);
+        
+        if ($samochod_id) {
+            $samochod = get_post($samochod_id);
+            if ($samochod) {
+                $thumbnail = get_the_post_thumbnail($samochod_id, 'thumbnail');
+                echo '<p><a href="' . get_edit_post_link($samochod_id) . '">';
+                if ($thumbnail) {
+                    echo $thumbnail . '<br>';
+                }
+                echo '<strong>' . esc_html($samochod->post_title) . '</strong></a></p>';
+                
+                $marka = wp_get_post_terms($samochod_id, 'marka_samochodu');
+                if (!empty($marka)) {
+                    echo '<p>Marka: ' . esc_html($marka[0]->name) . '</p>';
+                }
+            }
+        } else {
+            echo '<p>Brak przypisanego samochodu</p>';
+        }
+    }
+
+    /**
+     * Zapisuje meta dane
+     */
+    public function save_meta($post_id, $post) {
+        // Sprawdzenie nonce
+        if (!isset($_POST['flexmile_rezerwacja_status_nonce']) || 
+            !wp_verify_nonce($_POST['flexmile_rezerwacja_status_nonce'], 'flexmile_rezerwacja_status')) {
+            return;
+        }
+
+        // Autosave
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+
+        // Uprawnienia
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+
+        // Zapisz status
+        if (isset($_POST['status_rezerwacji'])) {
+            $old_status = get_post_meta($post_id, '_status_rezerwacji', true);
+            $new_status = sanitize_text_field($_POST['status_rezerwacji']);
+            
+            update_post_meta($post_id, '_status_rezerwacji', $new_status);
+
+            // Jeśli status zmienił się na "approved", zaznacz samochód jako zarezerwowany
+            if ($new_status === 'approved' && $old_status !== 'approved') {
+                $samochod_id = get_post_meta($post_id, '_samochod_id', true);
+                if ($samochod_id) {
+                    update_post_meta($samochod_id, '_rezerwacja_aktywna', '1');
+                }
+            }
+
+            // Jeśli status zmienił się z "approved" na inny, odznacz samochód
+            if ($old_status === 'approved' && $new_status !== 'approved') {
+                $samochod_id = get_post_meta($post_id, '_samochod_id', true);
+                if ($samochod_id) {
+                    update_post_meta($samochod_id, '_rezerwacja_aktywna', '0');
+                }
+            }
+        }
+    }
+
+    /**
+     * Dodaje własne kolumny w liście rezerwacji
+     */
+    public function custom_columns($columns) {
+        $new_columns = [];
+        $new_columns['cb'] = $columns['cb'];
+        $new_columns['title'] = 'Klient';
+        $new_columns['samochod'] = 'Samochód';
+        $new_columns['status'] = 'Status';
+        $new_columns['okres'] = 'Okres';
+        $new_columns['cena'] = 'Cena';
+        $new_columns['date'] = 'Data';
+        
+        return $new_columns;
+    }
+
+    /**
+     * Wypełnia zawartość własnych kolumn
+     */
+    public function custom_column_content($column, $post_id) {
+        switch ($column) {
+            case 'samochod':
+                $samochod_id = get_post_meta($post_id, '_samochod_id', true);
+                if ($samochod_id) {
+                    $samochod = get_post($samochod_id);
+                    if ($samochod) {
+                        echo '<a href="' . get_edit_post_link($samochod_id) . '">' . esc_html($samochod->post_title) . '</a>';
+                    }
+                }
+                break;
+
+            case 'status':
+                $status = get_post_meta($post_id, '_status_rezerwacji', true);
+                $labels = [
+                    'pending' => '<span style="color: orange;">⏳ Oczekująca</span>',
+                    'approved' => '<span style="color: green;">✅ Zatwierdzona</span>',
+                    'rejected' => '<span style="color: red;">❌ Odrzucona</span>',
+                    'completed' => '<span style="color: blue;">🎉 Zrealizowana</span>',
+                ];
+                echo $labels[$status] ?? $labels['pending'];
+                break;
+
+            case 'okres':
+                $ilosc_miesiecy = get_post_meta($post_id, '_ilosc_miesiecy', true);
+                echo esc_html($ilosc_miesiecy) . ' mies.';
+                break;
+
+            case 'cena':
+                $cena = get_post_meta($post_id, '_cena_calkowita', true);
+                echo '<strong>' . number_format($cena, 2, ',', ' ') . ' zł</strong>';
+                break;
+        }
+    }
+}

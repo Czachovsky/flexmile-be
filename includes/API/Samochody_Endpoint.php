@@ -1,0 +1,326 @@
+<?php
+namespace FlexMile\API;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * REST API Endpoint dla Samochodów
+ */
+class Samochody_Endpoint {
+
+    const NAMESPACE = 'flexmile/v1';
+    const BASE = 'samochody';
+
+    public function __construct() {
+        add_action('rest_api_init', [$this, 'register_routes']);
+    }
+
+    /**
+     * Rejestruje endpointy API
+     */
+    public function register_routes() {
+        // Lista samochodów z filtrowaniem
+        register_rest_route(self::NAMESPACE, '/' . self::BASE, [
+            'methods' => 'GET',
+            'callback' => [$this, 'get_samochody'],
+            'permission_callback' => '__return_true',
+            'args' => $this->get_collection_params(),
+        ]);
+
+        // Pojedynczy samochód
+        register_rest_route(self::NAMESPACE, '/' . self::BASE . '/(?P<id>\d+)', [
+            'methods' => 'GET',
+            'callback' => [$this, 'get_samochod'],
+            'permission_callback' => '__return_true',
+        ]);
+    }
+
+    /**
+     * Pobiera listę samochodów z filtrowaniem
+     */
+    public function get_samochody($request) {
+        $params = $request->get_params();
+
+        // Parametry query
+        $args = [
+            'post_type' => 'samochod',
+            'post_status' => 'publish',
+            'posts_per_page' => isset($params['per_page']) ? intval($params['per_page']) : 10,
+            'paged' => isset($params['page']) ? intval($params['page']) : 1,
+            'orderby' => isset($params['orderby']) ? sanitize_text_field($params['orderby']) : 'date',
+            'order' => isset($params['order']) ? sanitize_text_field($params['order']) : 'DESC',
+            'meta_query' => [],
+            'tax_query' => [],
+        ];
+
+        // Ukryj zarezerwowane samochody (opcjonalnie)
+        if (!isset($params['show_reserved']) || $params['show_reserved'] !== 'true') {
+            $args['meta_query'][] = [
+                'relation' => 'OR',
+                [
+                    'key' => '_rezerwacja_aktywna',
+                    'compare' => 'NOT EXISTS',
+                ],
+                [
+                    'key' => '_rezerwacja_aktywna',
+                    'value' => '1',
+                    'compare' => '!=',
+                ],
+            ];
+        }
+
+        // Filtr po marce
+        if (!empty($params['marka'])) {
+            $args['tax_query'][] = [
+                'taxonomy' => 'marka_samochodu',
+                'field' => 'slug',
+                'terms' => sanitize_text_field($params['marka']),
+            ];
+        }
+
+        // Filtr po typie nadwozia
+        if (!empty($params['typ_nadwozia'])) {
+            $args['tax_query'][] = [
+                'taxonomy' => 'typ_nadwozia',
+                'field' => 'slug',
+                'terms' => sanitize_text_field($params['typ_nadwozia']),
+            ];
+        }
+
+        // Filtr po rodzaju paliwa
+        if (!empty($params['paliwo'])) {
+            $args['tax_query'][] = [
+                'taxonomy' => 'rodzaj_paliwa',
+                'field' => 'slug',
+                'terms' => sanitize_text_field($params['paliwo']),
+            ];
+        }
+
+        // Filtr po rocznikach (od-do)
+        if (!empty($params['rocznik_od']) || !empty($params['rocznik_do'])) {
+            $rocznik_query = ['key' => '_rocznik', 'type' => 'NUMERIC'];
+            
+            if (!empty($params['rocznik_od'])) {
+                $rocznik_query['value'] = intval($params['rocznik_od']);
+                $rocznik_query['compare'] = '>=';
+            }
+            
+            if (!empty($params['rocznik_do'])) {
+                if (!empty($params['rocznik_od'])) {
+                    $rocznik_query['value'] = [intval($params['rocznik_od']), intval($params['rocznik_do'])];
+                    $rocznik_query['compare'] = 'BETWEEN';
+                } else {
+                    $rocznik_query['value'] = intval($params['rocznik_do']);
+                    $rocznik_query['compare'] = '<=';
+                }
+            }
+            
+            $args['meta_query'][] = $rocznik_query;
+        }
+
+        // Filtr po przebiegu (maksymalny)
+        if (!empty($params['przebieg_max'])) {
+            $args['meta_query'][] = [
+                'key' => '_przebieg',
+                'value' => intval($params['przebieg_max']),
+                'type' => 'NUMERIC',
+                'compare' => '<=',
+            ];
+        }
+
+        // Filtr po cenie (od-do)
+        if (!empty($params['cena_od']) || !empty($params['cena_do'])) {
+            $cena_query = ['key' => '_cena_bazowa', 'type' => 'NUMERIC'];
+            
+            if (!empty($params['cena_od']) && !empty($params['cena_do'])) {
+                $cena_query['value'] = [floatval($params['cena_od']), floatval($params['cena_do'])];
+                $cena_query['compare'] = 'BETWEEN';
+            } elseif (!empty($params['cena_od'])) {
+                $cena_query['value'] = floatval($params['cena_od']);
+                $cena_query['compare'] = '>=';
+            } else {
+                $cena_query['value'] = floatval($params['cena_do']);
+                $cena_query['compare'] = '<=';
+            }
+            
+            $args['meta_query'][] = $cena_query;
+        }
+
+        // Wykonaj query
+        $query = new \WP_Query($args);
+
+        // Przygotuj odpowiedź
+        $samochody = [];
+        foreach ($query->posts as $post) {
+            $samochody[] = $this->prepare_samochod_data($post);
+        }
+
+        // Nagłówki dla infinite scroll
+        $response = new \WP_REST_Response($samochody);
+        $response->header('X-WP-Total', $query->found_posts);
+        $response->header('X-WP-TotalPages', $query->max_num_pages);
+
+        return $response;
+    }
+
+    /**
+     * Pobiera pojedynczy samochód
+     */
+    public function get_samochod($request) {
+        $id = (int) $request['id'];
+        $post = get_post($id);
+
+        if (!$post || $post->post_type !== 'samochod') {
+            return new \WP_Error('not_found', 'Samochód nie został znaleziony', ['status' => 404]);
+        }
+
+        return $this->prepare_samochod_data($post);
+    }
+
+    /**
+     * Przygotowuje dane samochodu do API
+     */
+    private function prepare_samochod_data($post) {
+        // Podstawowe dane
+        $data = [
+            'id' => $post->ID,
+            'nazwa' => $post->post_title,
+            'opis' => $post->post_content,
+            'slug' => $post->post_name,
+        ];
+
+        // Zdjęcia
+        $data['obrazek_glowny'] = get_the_post_thumbnail_url($post->ID, 'large');
+        $data['miniaturka'] = get_the_post_thumbnail_url($post->ID, 'thumbnail');
+        
+        // Galeria (jeśli jest)
+        $gallery_ids = get_post_meta($post->ID, '_galeria', true);
+        $data['galeria'] = [];
+        if ($gallery_ids) {
+            foreach (explode(',', $gallery_ids) as $img_id) {
+                $data['galeria'][] = [
+                    'url' => wp_get_attachment_url($img_id),
+                    'thumbnail' => wp_get_attachment_image_url($img_id, 'thumbnail'),
+                ];
+            }
+        }
+
+        // Parametry techniczne
+        $data['parametry'] = [
+            'rocznik' => (int) get_post_meta($post->ID, '_rocznik', true),
+            'przebieg' => (int) get_post_meta($post->ID, '_przebieg', true),
+            'moc' => (int) get_post_meta($post->ID, '_moc', true),
+            'pojemnosc' => (int) get_post_meta($post->ID, '_pojemnosc', true),
+            'skrzynia' => get_post_meta($post->ID, '_skrzynia', true),
+            'kolor' => get_post_meta($post->ID, '_kolor', true),
+            'liczba_miejsc' => (int) get_post_meta($post->ID, '_liczba_miejsc', true),
+            'numer_vin' => get_post_meta($post->ID, '_numer_vin', true),
+        ];
+
+        // Taksonomie
+        $marka = wp_get_post_terms($post->ID, 'marka_samochodu');
+        $data['marka'] = !empty($marka) ? [
+            'id' => $marka[0]->term_id,
+            'nazwa' => $marka[0]->name,
+            'slug' => $marka[0]->slug,
+        ] : null;
+
+        $typ_nadwozia = wp_get_post_terms($post->ID, 'typ_nadwozia');
+        $data['typ_nadwozia'] = !empty($typ_nadwozia) ? [
+            'id' => $typ_nadwozia[0]->term_id,
+            'nazwa' => $typ_nadwozia[0]->name,
+            'slug' => $typ_nadwozia[0]->slug,
+        ] : null;
+
+        $paliwo = wp_get_post_terms($post->ID, 'rodzaj_paliwa');
+        $data['paliwo'] = !empty($paliwo) ? [
+            'id' => $paliwo[0]->term_id,
+            'nazwa' => $paliwo[0]->name,
+            'slug' => $paliwo[0]->slug,
+        ] : null;
+
+        // Ceny
+        $data['ceny'] = [
+            'cena_bazowa' => (float) get_post_meta($post->ID, '_cena_bazowa', true),
+            'cena_za_km' => (float) get_post_meta($post->ID, '_cena_za_km', true),
+        ];
+
+        // Status rezerwacji
+        $data['dostepny'] = get_post_meta($post->ID, '_rezerwacja_aktywna', true) !== '1';
+
+        return $data;
+    }
+
+    /**
+     * Parametry dla kolekcji
+     */
+    private function get_collection_params() {
+        return [
+            'page' => [
+                'description' => 'Numer strony (dla infinite scroll)',
+                'type' => 'integer',
+                'default' => 1,
+                'minimum' => 1,
+            ],
+            'per_page' => [
+                'description' => 'Liczba wyników na stronę',
+                'type' => 'integer',
+                'default' => 10,
+                'minimum' => 1,
+                'maximum' => 100,
+            ],
+            'orderby' => [
+                'description' => 'Sortowanie',
+                'type' => 'string',
+                'default' => 'date',
+                'enum' => ['date', 'title', 'meta_value_num'],
+            ],
+            'order' => [
+                'description' => 'Kierunek sortowania',
+                'type' => 'string',
+                'default' => 'DESC',
+                'enum' => ['ASC', 'DESC'],
+            ],
+            'marka' => [
+                'description' => 'Filtr po marce (slug)',
+                'type' => 'string',
+            ],
+            'typ_nadwozia' => [
+                'description' => 'Filtr po typie nadwozia (slug)',
+                'type' => 'string',
+            ],
+            'paliwo' => [
+                'description' => 'Filtr po rodzaju paliwa (slug)',
+                'type' => 'string',
+            ],
+            'rocznik_od' => [
+                'description' => 'Rocznik od',
+                'type' => 'integer',
+            ],
+            'rocznik_do' => [
+                'description' => 'Rocznik do',
+                'type' => 'integer',
+            ],
+            'przebieg_max' => [
+                'description' => 'Maksymalny przebieg',
+                'type' => 'integer',
+            ],
+            'cena_od' => [
+                'description' => 'Cena od',
+                'type' => 'number',
+            ],
+            'cena_do' => [
+                'description' => 'Cena do',
+                'type' => 'number',
+            ],
+            'show_reserved' => [
+                'description' => 'Pokaż zarezerwowane samochody',
+                'type' => 'string',
+                'enum' => ['true', 'false'],
+                'default' => 'false',
+            ],
+        ];
+    }
+}
