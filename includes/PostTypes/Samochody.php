@@ -105,6 +105,8 @@ class Samochody {
 
         if (('post.php' === $hook || 'post-new.php' === $hook) && self::POST_TYPE === $post_type) {
             wp_enqueue_media();
+
+            // Galeria
             wp_enqueue_script(
                 'flexmile-gallery',
                 plugins_url('../../assets/admin-gallery.js', __FILE__),
@@ -112,6 +114,25 @@ class Samochody {
                 '1.0',
                 true
             );
+
+            // Niestandardowe style
+            wp_enqueue_style(
+                'flexmile-admin-styles',
+                plugins_url('../../assets/admin-styles.css', __FILE__),
+                [],
+                '1.0'
+            );
+
+            // jQuery UI Tabs (wbudowane w WordPress)
+            wp_enqueue_script('jquery-ui-tabs');
+            wp_enqueue_style('wp-jquery-ui-dialog');
+
+            // Niestandardowy JS dla zakładek
+            wp_add_inline_script('jquery-ui-tabs', '
+                jQuery(document).ready(function($) {
+                    $(".flexmile-tabs").tabs();
+                });
+            ');
         }
     }
 
@@ -208,46 +229,6 @@ class Samochody {
             </p>
         </div>
 
-        <style>
-            .flexmile-gallery-images {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 10px;
-                margin-bottom: 15px;
-                min-height: 50px;
-            }
-            .gallery-item {
-                position: relative;
-                border: 2px solid #ddd;
-                border-radius: 4px;
-                padding: 5px;
-                background: #f9f9f9;
-                cursor: move;
-            }
-            .gallery-item img {
-                width: 100%;
-                height: auto;
-                display: block;
-            }
-            .gallery-item .remove-gallery-image {
-                position: absolute;
-                top: 5px;
-                right: 5px;
-                background: #dc3232;
-                color: white;
-                border: none;
-                border-radius: 50%;
-                width: 24px;
-                height: 24px;
-                cursor: pointer;
-                font-size: 18px;
-                line-height: 1;
-            }
-            .gallery-item .remove-gallery-image:hover {
-                background: #a00;
-            }
-        </style>
-
         <script>
         jQuery(document).ready(function($) {
             var frame;
@@ -321,77 +302,181 @@ class Samochody {
         $silnik = get_post_meta($post->ID, '_silnik', true);
         $numer_vin = get_post_meta($post->ID, '_numer_vin', true);
         ?>
-        <table class="form-table">
-            <tr>
-                <th><label for="rocznik">Rocznik</label></th>
-                <td><input type="number" id="rocznik" name="rocznik" value="<?php echo esc_attr($rocznik); ?>" class="regular-text" min="1900" max="<?php echo date('Y') + 1; ?>"></td>
-            </tr>
-            <tr>
-                <th><label for="przebieg">Przebieg (km)</label></th>
-                <td><input type="number" id="przebieg" name="przebieg" value="<?php echo esc_attr($przebieg); ?>" class="regular-text" min="0" step="1000"></td>
-            </tr>
-            <tr>
-                <th><label for="silnik">Silnik</label></th>
-                <td>
-                    <input type="text" id="silnik" name="silnik" value="<?php echo esc_attr($silnik); ?>" class="regular-text" placeholder="np. 2.0 TDI, 1.5 TSI">
-                    <p class="description">Nazwa/model silnika (np. 2.0 TDI, 3.0d, 1.8 Hybrid)</p>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="moc">Moc (KM)</label></th>
-                <td><input type="number" id="moc" name="moc" value="<?php echo esc_attr($moc); ?>" class="regular-text" min="0"></td>
-            </tr>
-            <tr>
-                <th><label for="pojemnosc">Pojemność (cm³)</label></th>
-                <td><input type="number" id="pojemnosc" name="pojemnosc" value="<?php echo esc_attr($pojemnosc); ?>" class="regular-text" min="0"></td>
-            </tr>
-            <tr>
-                <th><label for="skrzynia">Skrzynia biegów</label></th>
-                <td>
-                    <select id="skrzynia" name="skrzynia">
-                        <option value="">-- Wybierz --</option>
-                        <option value="manual" <?php selected($skrzynia, 'manual'); ?>>Manualna</option>
-                        <option value="automatic" <?php selected($skrzynia, 'automatic'); ?>>Automatyczna</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="naped">Napęd</label></th>
-                <td>
-                    <select id="naped" name="naped">
-                        <option value="">-- Wybierz --</option>
-                        <option value="FWD" <?php selected($naped, 'FWD'); ?>>FWD (przedni)</option>
-                        <option value="RWD" <?php selected($naped, 'RWD'); ?>>RWD (tylny)</option>
-                        <option value="AWD" <?php selected($naped, 'AWD'); ?>>AWD (4x4)</option>
-                        <option value="4WD" <?php selected($naped, '4WD'); ?>>4WD (4x4 dołączany)</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="kolor">Kolor</label></th>
-                <td><input type="text" id="kolor" name="kolor" value="<?php echo esc_attr($kolor); ?>" class="regular-text"></td>
-            </tr>
-            <tr>
-                <th><label for="liczba_miejsc">Liczba miejsc</label></th>
-                <td><input type="number" id="liczba_miejsc" name="liczba_miejsc" value="<?php echo esc_attr($liczba_miejsc); ?>" class="regular-text" min="1" max="9"></td>
-            </tr>
-            <tr>
-                <th><label for="liczba_drzwi">Liczba drzwi</label></th>
-                <td>
-                    <select id="liczba_drzwi" name="liczba_drzwi">
-                        <option value="">-- Wybierz --</option>
-                        <option value="2" <?php selected($liczba_drzwi, '2'); ?>>2-drzwiowy</option>
-                        <option value="3" <?php selected($liczba_drzwi, '3'); ?>>3-drzwiowy</option>
-                        <option value="4" <?php selected($liczba_drzwi, '4'); ?>>4-drzwiowy</option>
-                        <option value="5" <?php selected($liczba_drzwi, '5'); ?>>5-drzwiowy</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="numer_vin">Numer VIN</label></th>
-                <td><input type="text" id="numer_vin" name="numer_vin" value="<?php echo esc_attr($numer_vin); ?>" class="regular-text"></td>
-            </tr>
-        </table>
+        <div class="flexmile-tabs">
+            <ul class="flexmile-tab-nav">
+                <li><a href="#tab-podstawowe">📋 Podstawowe</a></li>
+                <li><a href="#tab-silnik">🔧 Silnik i napęd</a></li>
+                <li><a href="#tab-wyglad">🎨 Wygląd i wnętrze</a></li>
+            </ul>
+
+            <!-- Zakładka: Podstawowe -->
+            <div id="tab-podstawowe" class="flexmile-tab-content">
+                <div class="flexmile-form-grid">
+                    <div class="flexmile-field">
+                        <label for="rocznik">
+                            <span class="flexmile-label-icon">📅</span>
+                            <strong>Rocznik</strong>
+                        </label>
+                        <input type="number"
+                               id="rocznik"
+                               name="rocznik"
+                               value="<?php echo esc_attr($rocznik); ?>"
+                               class="flexmile-input"
+                               min="1900"
+                               max="<?php echo date('Y') + 1; ?>"
+                               placeholder="np. 2022">
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="przebieg">
+                            <span class="flexmile-label-icon">🛣️</span>
+                            <strong>Przebieg (km)</strong>
+                        </label>
+                        <input type="number"
+                               id="przebieg"
+                               name="przebieg"
+                               value="<?php echo esc_attr($przebieg); ?>"
+                               class="flexmile-input"
+                               min="0"
+                               step="1000"
+                               placeholder="np. 45000">
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="liczba_miejsc">
+                            <span class="flexmile-label-icon">👥</span>
+                            <strong>Liczba miejsc</strong>
+                        </label>
+                        <select id="liczba_miejsc" name="liczba_miejsc" class="flexmile-input">
+                            <option value="">-- Wybierz --</option>
+                            <?php for($i = 2; $i <= 9; $i++): ?>
+                                <option value="<?php echo $i; ?>" <?php selected($liczba_miejsc, $i); ?>>
+                                    <?php echo $i; ?> miejsc
+                                </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="liczba_drzwi">
+                            <span class="flexmile-label-icon">🚪</span>
+                            <strong>Liczba drzwi</strong>
+                        </label>
+                        <select id="liczba_drzwi" name="liczba_drzwi" class="flexmile-input">
+                            <option value="">-- Wybierz --</option>
+                            <option value="2" <?php selected($liczba_drzwi, '2'); ?>>2/3 drzwi</option>
+                            <option value="4" <?php selected($liczba_drzwi, '4'); ?>>4/5 drzwi</option>
+                        </select>
+                    </div>
+
+                    <div class="flexmile-field flexmile-field-full">
+                        <label for="numer_vin">
+                            <span class="flexmile-label-icon">🔢</span>
+                            <strong>Numer VIN</strong>
+                        </label>
+                        <input type="text"
+                               id="numer_vin"
+                               name="numer_vin"
+                               value="<?php echo esc_attr($numer_vin); ?>"
+                               class="flexmile-input"
+                               maxlength="17"
+                               placeholder="np. WBAKR810501A23456">
+                        <p class="description">17-znakowy numer identyfikacyjny pojazdu</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zakładka: Silnik i napęd -->
+            <div id="tab-silnik" class="flexmile-tab-content">
+                <div class="flexmile-form-grid">
+                    <div class="flexmile-field flexmile-field-full">
+                        <label for="silnik">
+                            <span class="flexmile-label-icon">⚙️</span>
+                            <strong>Oznaczenie silnika</strong>
+                        </label>
+                        <input type="text"
+                               id="silnik"
+                               name="silnik"
+                               value="<?php echo esc_attr($silnik); ?>"
+                               class="flexmile-input"
+                               placeholder="np. 2.0 TDI, 1.5 TSI, 3.0d xDrive">
+                        <p class="description">Pełna nazwa/model silnika</p>
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="moc">
+                            <span class="flexmile-label-icon">💪</span>
+                            <strong>Moc (KM)</strong>
+                        </label>
+                        <input type="number"
+                               id="moc"
+                               name="moc"
+                               value="<?php echo esc_attr($moc); ?>"
+                               class="flexmile-input"
+                               min="0"
+                               placeholder="np. 150">
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="pojemnosc">
+                            <span class="flexmile-label-icon">🔋</span>
+                            <strong>Pojemność (cm³)</strong>
+                        </label>
+                        <input type="number"
+                               id="pojemnosc"
+                               name="pojemnosc"
+                               value="<?php echo esc_attr($pojemnosc); ?>"
+                               class="flexmile-input"
+                               min="0"
+                               placeholder="np. 1984">
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="skrzynia">
+                            <span class="flexmile-label-icon">⚡</span>
+                            <strong>Skrzynia biegów</strong>
+                        </label>
+                        <select id="skrzynia" name="skrzynia" class="flexmile-input">
+                            <option value="">-- Wybierz --</option>
+                            <option value="manual" <?php selected($skrzynia, 'manual'); ?>>Manualna</option>
+                            <option value="automatic" <?php selected($skrzynia, 'automatic'); ?>>Automatyczna</option>
+                        </select>
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="naped">
+                            <span class="flexmile-label-icon">🔄</span>
+                            <strong>Napęd</strong>
+                        </label>
+                        <select id="naped" name="naped" class="flexmile-input">
+                            <option value="">-- Wybierz --</option>
+                            <option value="FWD" <?php selected($naped, 'FWD'); ?>>FWD (przedni)</option>
+                            <option value="RWD" <?php selected($naped, 'RWD'); ?>>RWD (tylny)</option>
+                            <option value="AWD" <?php selected($naped, 'AWD'); ?>>AWD (4x4)</option>
+                            <option value="4WD" <?php selected($naped, '4WD'); ?>>4WD (4x4 dołączany)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zakładka: Wygląd -->
+            <div id="tab-wyglad" class="flexmile-tab-content">
+                <div class="flexmile-form-grid">
+                    <div class="flexmile-field flexmile-field-full">
+                        <label for="kolor">
+                            <span class="flexmile-label-icon">🎨</span>
+                            <strong>Kolor lakieru</strong>
+                        </label>
+                        <input type="text"
+                               id="kolor"
+                               name="kolor"
+                               value="<?php echo esc_attr($kolor); ?>"
+                               class="flexmile-input"
+                               placeholder="np. Czarny metalik, Srebrny perła">
+                    </div>
+                </div>
+            </div>
+        </div>
         <?php
     }
 
@@ -511,11 +596,21 @@ class Samochody {
         $wlasne = get_post_meta($post->ID, '_wyposazenie_standardowe_wlasne', true);
 
         $options = $this->get_wyposazenie_standardowe_options();
+
+        $category_icons = [
+            'Bezpieczeństwo' => '🛡️',
+            'Komfort' => '✨',
+            'Multimedia' => '📱',
+            'Oświetlenie' => '💡'
+        ];
         ?>
         <div class="flexmile-wyposazenie">
             <?php foreach ($options as $kategoria => $items): ?>
                 <div class="wyposazenie-kategoria">
-                    <h4><?php echo esc_html($kategoria); ?></h4>
+                    <h4>
+                        <?php echo isset($category_icons[$kategoria]) ? $category_icons[$kategoria] . ' ' : ''; ?>
+                        <?php echo esc_html($kategoria); ?>
+                    </h4>
                     <div class="wyposazenie-items">
                         <?php foreach ($items as $key => $label): ?>
                             <label class="wyposazenie-item">
@@ -530,46 +625,14 @@ class Samochody {
                 </div>
             <?php endforeach; ?>
 
-            <div class="wyposazenie-wlasne" style="margin-top: 20px;">
-                <h4>Dodatkowe pozycje (własne)</h4>
+            <div class="wyposazenie-wlasne">
+                <h4>➕ Dodatkowe pozycje (własne)</h4>
                 <textarea name="wyposazenie_standardowe_wlasne"
                           rows="3"
-                          class="widefat"
-                          placeholder="Wpisz dodatkowe wyposażenie, oddzielone przecinkami"><?php echo esc_textarea($wlasne); ?></textarea>
-                <p class="description">Każda pozycja w nowej linii lub oddzielona przecinkiem</p>
+                          placeholder="Np: Czujniki deszczu, Automatyczne światła, Asystent martwego pola&#10;(każda pozycja w nowej linii lub oddzielona przecinkiem)"><?php echo esc_textarea($wlasne); ?></textarea>
+                <p class="description">💡 Wpisz dodatkowe wyposażenie - każda pozycja w nowej linii lub oddzielona przecinkiem</p>
             </div>
         </div>
-
-        <style>
-            .wyposazenie-kategoria {
-                margin-bottom: 20px;
-                padding: 15px;
-                background: #f9f9f9;
-                border-radius: 4px;
-            }
-            .wyposazenie-kategoria h4 {
-                margin: 0 0 10px 0;
-                color: #2271b1;
-            }
-            .wyposazenie-items {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 8px;
-            }
-            .wyposazenie-item {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                cursor: pointer;
-                padding: 4px;
-            }
-            .wyposazenie-item:hover {
-                background: #e8e8e8;
-            }
-            .wyposazenie-item input[type="checkbox"] {
-                margin: 0;
-            }
-        </style>
         <?php
     }
 
@@ -582,11 +645,23 @@ class Samochody {
         $wlasne = get_post_meta($post->ID, '_wyposazenie_dodatkowe_wlasne', true);
 
         $options = $this->get_wyposazenie_dodatkowe_options();
+
+        $category_icons = [
+            'Premium' => '⭐',
+            'Technologia' => '🔧',
+            'Audio' => '🔊',
+            'Wygląd' => '🎨',
+            'Inne' => '📦',
+            'Off-road' => '🏔️'
+        ];
         ?>
         <div class="flexmile-wyposazenie">
             <?php foreach ($options as $kategoria => $items): ?>
                 <div class="wyposazenie-kategoria">
-                    <h4><?php echo esc_html($kategoria); ?></h4>
+                    <h4>
+                        <?php echo isset($category_icons[$kategoria]) ? $category_icons[$kategoria] . ' ' : ''; ?>
+                        <?php echo esc_html($kategoria); ?>
+                    </h4>
                     <div class="wyposazenie-items">
                         <?php foreach ($items as $key => $label): ?>
                             <label class="wyposazenie-item">
@@ -601,13 +676,12 @@ class Samochody {
                 </div>
             <?php endforeach; ?>
 
-            <div class="wyposazenie-wlasne" style="margin-top: 20px;">
-                <h4>Dodatkowe pozycje (własne)</h4>
+            <div class="wyposazenie-wlasne">
+                <h4>➕ Dodatkowe pozycje (własne)</h4>
                 <textarea name="wyposazenie_dodatkowe_wlasne"
                           rows="3"
-                          class="widefat"
-                          placeholder="Wpisz dodatkowe wyposażenie, oddzielone przecinkami"><?php echo esc_textarea($wlasne); ?></textarea>
-                <p class="description">Każda pozycja w nowej linii lub oddzielona przecinkiem</p>
+                          placeholder="Np: Przyciemniane szyby, Nakładki progowe, Pokrowce premium&#10;(każda pozycja w nowej linii lub oddzielona przecinkiem)"><?php echo esc_textarea($wlasne); ?></textarea>
+                <p class="description">💡 Wpisz dodatkowe wyposażenie - każda pozycja w nowej linii lub oddzielona przecinkiem</p>
             </div>
         </div>
         <?php
@@ -621,22 +695,56 @@ class Samochody {
         $cena_za_km = get_post_meta($post->ID, '_cena_za_km', true);
         $rezerwacja_aktywna = get_post_meta($post->ID, '_rezerwacja_aktywna', true);
         ?>
-        <p>
-            <label for="cena_bazowa"><strong>Cena bazowa / miesiąc</strong></label><br>
-            <input type="number" id="cena_bazowa" name="cena_bazowa" value="<?php echo esc_attr($cena_bazowa); ?>" class="widefat" step="0.01" min="0"> zł
-        </p>
-        <p>
-            <label for="cena_za_km"><strong>Dopłata za km (powyżej limitu)</strong></label><br>
-            <input type="number" id="cena_za_km" name="cena_za_km" value="<?php echo esc_attr($cena_za_km); ?>" class="widefat" step="0.01" min="0"> zł
-        </p>
-        <hr>
-        <p>
-            <label>
-                <input type="checkbox" name="rezerwacja_aktywna" value="1" <?php checked($rezerwacja_aktywna, '1'); ?>>
-                <strong>Samochód zarezerwowany</strong>
-            </label>
-        </p>
-        <p class="description">Zaznacz, jeśli samochód jest aktualnie zarezerwowany i nie powinien być wyświetlany w ofercie.</p>
+        <div style="padding: 5px;">
+            <p>
+                <label for="cena_bazowa">
+                    <span style="font-size: 16px;">💰</span>
+                    <strong>Cena bazowa / miesiąc</strong>
+                </label><br>
+                <input type="number"
+                       id="cena_bazowa"
+                       name="cena_bazowa"
+                       value="<?php echo esc_attr($cena_bazowa); ?>"
+                       class="widefat"
+                       style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; margin-top: 5px;"
+                       step="0.01"
+                       min="0"
+                       placeholder="np. 1500.00"> <span style="color: #64748b;">zł</span>
+            </p>
+
+            <p>
+                <label for="cena_za_km">
+                    <span style="font-size: 16px;">🛣️</span>
+                    <strong>Dopłata za km</strong>
+                </label><br>
+                <input type="number"
+                       id="cena_za_km"
+                       name="cena_za_km"
+                       value="<?php echo esc_attr($cena_za_km); ?>"
+                       class="widefat"
+                       style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; margin-top: 5px;"
+                       step="0.01"
+                       min="0"
+                       placeholder="np. 0.50"> <span style="color: #64748b;">zł</span>
+                <p class="description" style="margin-top: 5px;">Powyżej limitu 1000 km/miesiąc</p>
+            </p>
+
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+            <p style="background: #fef3c7; padding: 12px; border-radius: 6px; border-left: 4px solid #f59e0b;">
+                <label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
+                    <input type="checkbox"
+                           name="rezerwacja_aktywna"
+                           value="1"
+                           <?php checked($rezerwacja_aktywna, '1'); ?>
+                           style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
+                    <span><strong>🔒 Samochód zarezerwowany</strong></span>
+                </label>
+            </p>
+            <p class="description" style="margin-top: 8px;">
+                Zaznacz jeśli samochód jest aktualnie zarezerwowany i nie powinien być wyświetlany w ofercie.
+            </p>
+        </div>
         <?php
     }
 
@@ -650,49 +758,72 @@ class Samochody {
         $najczesciej = get_post_meta($post->ID, '_najczesciej_wybierany', true);
         $wyrozniany = get_post_meta($post->ID, '_wyrozniany', true);
         ?>
-        <div style="margin-bottom: 15px;">
-            <p style="margin-bottom: 10px;"><strong>Statusy samochodu:</strong></p>
+        <div style="padding: 5px;">
+            <div style="margin-bottom: 20px;">
+                <p style="margin-bottom: 12px; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+                    🏷️ Statusy samochodu
+                </p>
 
-            <p style="margin: 8px 0;">
-                <label>
-                    <input type="checkbox" name="nowy_samochod" value="1" <?php checked($nowy, '1'); ?>>
-                    🆕 Nowy samochód
-                </label>
-            </p>
+                <p style="margin: 0 0 10px 0;">
+                    <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
+                           onmouseover="this.style.background='#f8fafc'"
+                           onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="nowy_samochod" value="1" <?php checked($nowy, '1'); ?>
+                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #10b981;">
+                        <span style="font-size: 14px;">🆕 Nowy samochód</span>
+                    </label>
+                </p>
 
-            <p style="margin: 8px 0;">
-                <label>
-                    <input type="checkbox" name="dostepny_od_reki" value="1" <?php checked($od_reki, '1'); ?>>
-                    ⚡ Dostępny od ręki
-                </label>
-            </p>
+                <p style="margin: 0 0 10px 0;">
+                    <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
+                           onmouseover="this.style.background='#f8fafc'"
+                           onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="dostepny_od_reki" value="1" <?php checked($od_reki, '1'); ?>
+                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #10b981;">
+                        <span style="font-size: 14px;">⚡ Dostępny od ręki</span>
+                    </label>
+                </p>
 
-            <p style="margin: 8px 0;">
-                <label>
-                    <input type="checkbox" name="dostepny_wkrotce" value="1" <?php checked($wkrotce, '1'); ?>>
-                    ⏳ Dostępny wkrótce
-                </label>
-            </p>
+                <p style="margin: 0 0 10px 0;">
+                    <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
+                           onmouseover="this.style.background='#f8fafc'"
+                           onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="dostepny_wkrotce" value="1" <?php checked($wkrotce, '1'); ?>
+                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
+                        <span style="font-size: 14px;">⏳ Dostępny wkrótce</span>
+                    </label>
+                </p>
 
-            <p style="margin: 8px 0;">
-                <label>
-                    <input type="checkbox" name="najczesciej_wybierany" value="1" <?php checked($najczesciej, '1'); ?>>
-                    ⭐ Najczęściej wybierany
-                </label>
-            </p>
-        </div>
+                <p style="margin: 0;">
+                    <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
+                           onmouseover="this.style.background='#f8fafc'"
+                           onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" name="najczesciej_wybierany" value="1" <?php checked($najczesciej, '1'); ?>
+                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
+                        <span style="font-size: 14px;">⭐ Najczęściej wybierany</span>
+                    </label>
+                </p>
+            </div>
 
-        <hr>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
 
-        <div style="margin-top: 15px;">
-            <p style="margin-bottom: 10px;"><strong>Wyróżnienie:</strong></p>
-            <p style="margin: 8px 0;">
-                <label>
-                    <input type="checkbox" name="wyrozniany" value="1" <?php checked($wyrozniany, '1'); ?>>
-                    ⭐ Wyróżniony samochód
-                </label>
-            </p>
-            <p class="description">Wyróżnione samochody są wyświetlane na górze listy i w specjalnej sekcji.</p>
+            <div>
+                <p style="margin-bottom: 12px; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+                    ⭐ Wyróżnienie
+                </p>
+
+                <p style="margin: 0;">
+                    <label style="display: flex; align-items: center; padding: 12px; border-radius: 8px; cursor: pointer; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
+                        <input type="checkbox" name="wyrozniany" value="1" <?php checked($wyrozniany, '1'); ?>
+                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
+                        <span style="font-size: 14px; font-weight: 600; color: #92400e;">🌟 Wyróżniony samochód</span>
+                    </label>
+                </p>
+
+                <p class="description" style="margin-top: 10px; font-size: 12px; color: #64748b;">
+                    💡 Wyróżnione samochody są wyświetlane na górze listy i w specjalnej sekcji.
+                </p>
+            </div>
         </div>
         <?php
     }
