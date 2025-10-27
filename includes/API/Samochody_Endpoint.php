@@ -181,10 +181,10 @@ class Samochody_Endpoint {
         // Wykonaj query
         $query = new \WP_Query($args);
 
-        // Przygotuj odpowiedź
+        // Przygotuj odpowiedź - dla listy używamy LIGHTWEIGHT wersji (szybsze ładowanie)
         $samochody = [];
         foreach ($query->posts as $post) {
-            $samochody[] = $this->prepare_samochod_data($post);
+            $samochody[] = $this->prepare_samochod_data_minimal($post);
         }
 
         // Przygotuj pełny response z meta danymi
@@ -208,7 +208,7 @@ class Samochody_Endpoint {
     }
 
     /**
-     * Pobiera TYLKO zarezerwowane samochody
+     * Pobiera TYLKO zarezerwowane samochody (też lightweight)
      */
     public function get_zarezerwowane($request) {
         $params = $request->get_params();
@@ -231,9 +231,10 @@ class Samochody_Endpoint {
 
         $query = new \WP_Query($args);
 
+        // Również lightweight dla listy zarezerwowanych
         $samochody = [];
         foreach ($query->posts as $post) {
-            $samochody[] = $this->prepare_samochod_data($post);
+            $samochody[] = $this->prepare_samochod_data_minimal($post);
         }
 
         $response_data = [
@@ -254,7 +255,7 @@ class Samochody_Endpoint {
     }
 
     /**
-     * Pobiera pojedynczy samochód
+     * Pobiera pojedynczy samochód (PEŁNE DANE)
      */
     public function get_samochod($request) {
         $id = (int) $request['id'];
@@ -264,11 +265,87 @@ class Samochody_Endpoint {
             return new \WP_Error('not_found', 'Samochód nie został znaleziony', ['status' => 404]);
         }
 
+        // Pojedynczy samochód zwraca PEŁNE DANE
         return $this->prepare_samochod_data($post);
     }
 
     /**
-     * Przygotowuje dane samochodu do API
+     * NOWA METODA: Przygotowuje MINIMALNE dane samochodu dla listy (lightweight)
+     *
+     * Zawiera tylko:
+     * - id, nazwa, slug
+     * - grafika (thumbnail + main)
+     * - podstawowe parametry (silnik, paliwo, skrzynia, KM, marka)
+     * - ceny
+     * - atrybuty/flagi
+     * - status dostępności
+     */
+    private function prepare_samochod_data_minimal($post) {
+        $data = [
+            'id' => $post->ID,
+            'nazwa' => $post->post_title,
+            'slug' => $post->post_name,
+        ];
+
+        // Zdjęcia - tylko główne (nie cała galeria!)
+        $data['grafika'] = [
+            'thumbnail' => get_the_post_thumbnail_url($post->ID, 'thumbnail'),
+            'medium' => get_the_post_thumbnail_url($post->ID, 'medium'),
+            'large' => get_the_post_thumbnail_url($post->ID, 'large'),
+        ];
+
+        // Podstawowe parametry techniczne
+        $data['silnik'] = get_post_meta($post->ID, '_silnik', true) ?: 'Brak danych';
+        $data['moc'] = (int) get_post_meta($post->ID, '_moc', true);
+        $data['skrzynia'] = get_post_meta($post->ID, '_skrzynia', true);
+        $data['rocznik'] = (int) get_post_meta($post->ID, '_rocznik', true);
+        $data['przebieg'] = (int) get_post_meta($post->ID, '_przebieg', true);
+
+        // Marka (uproszczona)
+        $marka = wp_get_post_terms($post->ID, 'marka_samochodu');
+        $data['marka'] = !empty($marka) ? [
+            'id' => $marka[0]->term_id,
+            'nazwa' => $marka[0]->name,
+            'slug' => $marka[0]->slug,
+        ] : null;
+
+        // Typ nadwozia (uproszczony)
+        $typ_nadwozia = wp_get_post_terms($post->ID, 'typ_nadwozia');
+        $data['typ_nadwozia'] = !empty($typ_nadwozia) ? [
+            'nazwa' => $typ_nadwozia[0]->name,
+            'slug' => $typ_nadwozia[0]->slug,
+        ] : null;
+
+        // Rodzaj paliwa (uproszczony)
+        $paliwo = wp_get_post_terms($post->ID, 'rodzaj_paliwa');
+        $data['paliwo'] = !empty($paliwo) ? [
+            'nazwa' => $paliwo[0]->name,
+            'slug' => $paliwo[0]->slug,
+        ] : null;
+
+        // Ceny
+        $data['ceny'] = [
+            'cena_bazowa' => (float) get_post_meta($post->ID, '_cena_bazowa', true),
+            'cena_za_km' => (float) get_post_meta($post->ID, '_cena_za_km', true),
+        ];
+
+        // ATRYBUTY/FLAGI - To jest to, czego chciałeś!
+        $data['atrybuty'] = [
+            'nowy' => get_post_meta($post->ID, '_nowy_samochod', true) === '1',
+            'od_reki' => get_post_meta($post->ID, '_dostepny_od_reki', true) === '1',
+            'wkrotce' => get_post_meta($post->ID, '_dostepny_wkrotce', true) === '1',
+            'popularne' => get_post_meta($post->ID, '_najczesciej_wybierany', true) === '1',
+            'wyrozniany' => get_post_meta($post->ID, '_wyrozniany', true) === '1',
+        ];
+
+        // Status dostępności
+        $data['dostepny'] = get_post_meta($post->ID, '_rezerwacja_aktywna', true) !== '1';
+
+        return $data;
+    }
+
+    /**
+     * Przygotowuje PEŁNE dane samochodu (dla pojedynczego widoku)
      */
     private function prepare_samochod_data($post) {
         // Podstawowe dane
@@ -283,7 +360,7 @@ class Samochody_Endpoint {
         $data['obrazek_glowny'] = get_the_post_thumbnail_url($post->ID, 'large');
         $data['miniaturka'] = get_the_post_thumbnail_url($post->ID, 'thumbnail');
 
-        // Galeria
+        // Galeria (PEŁNA)
         $gallery_ids = get_post_meta($post->ID, '_galeria', true);
         $data['galeria'] = [];
         if ($gallery_ids) {
@@ -300,7 +377,7 @@ class Samochody_Endpoint {
             }
         }
 
-        // Parametry techniczne
+        // Parametry techniczne (WSZYSTKIE)
         $data['parametry'] = [
             'rocznik' => (int) get_post_meta($post->ID, '_rocznik', true),
             'przebieg' => (int) get_post_meta($post->ID, '_przebieg', true),
@@ -315,7 +392,7 @@ class Samochody_Endpoint {
             'numer_vin' => get_post_meta($post->ID, '_numer_vin', true),
         ];
 
-        // Taksonomie
+        // Taksonomie (PEŁNE)
         $marka = wp_get_post_terms($post->ID, 'marka_samochodu');
         $data['marka'] = !empty($marka) ? [
             'id' => $marka[0]->term_id,
@@ -343,13 +420,22 @@ class Samochody_Endpoint {
             'cena_za_km' => (float) get_post_meta($post->ID, '_cena_za_km', true),
         ];
 
-        // Wyposażenie standardowe - parsuj z textarea (każda linia to element)
+        // Wyposażenie standardowe (PEŁNE)
         $wyposazenie_std_raw = get_post_meta($post->ID, '_wyposazenie_standardowe', true);
         $data['wyposazenie_standardowe'] = $this->parse_textarea_to_array($wyposazenie_std_raw);
 
-        // Wyposażenie dodatkowe - parsuj z textarea (każda linia to element)
+        // Wyposażenie dodatkowe (PEŁNE)
         $wyposazenie_dod_raw = get_post_meta($post->ID, '_wyposazenie_dodatkowe', true);
         $data['wyposazenie_dodatkowe'] = $this->parse_textarea_to_array($wyposazenie_dod_raw);
+
+        // ATRYBUTY/FLAGI
+        $data['atrybuty'] = [
+            'nowy' => get_post_meta($post->ID, '_nowy_samochod', true) === '1',
+            'od_reki' => get_post_meta($post->ID, '_dostepny_od_reki', true) === '1',
+            'wkrotce' => get_post_meta($post->ID, '_dostepny_wkrotce', true) === '1',
+            'popularne' => get_post_meta($post->ID, '_najczesciej_wybierany', true) === '1',
+            'wyrozniany' => get_post_meta($post->ID, '_wyrozniany', true) === '1',
+        ];
 
         // Status rezerwacji
         $data['dostepny'] = get_post_meta($post->ID, '_rezerwacja_aktywna', true) !== '1';
