@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Custom Post Type dla Samochodów
+ * Z zaawansowanym systemem macierzy cen
  */
 class Samochody {
 
@@ -18,6 +19,9 @@ class Samochody {
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+
+        // AJAX dla generowania macierzy cen
+        add_action('wp_ajax_flexmile_generate_price_matrix', [$this, 'ajax_generate_price_matrix']);
     }
 
     /**
@@ -178,7 +182,7 @@ class Samochody {
 
         add_meta_box(
             'flexmile_samochod_pricing',
-            'Kalkulator ceny wynajmu',
+            '💰 Konfiguracja cen',
             [$this, 'render_pricing_meta_box'],
             self::POST_TYPE,
             'side',
@@ -527,49 +531,80 @@ class Samochody {
     }
 
     /**
-     * Renderuje meta box z kalkulatorem cen
+     * Renderuje meta box z konfiguracją cen (NOWY SYSTEM)
      */
     public function render_pricing_meta_box($post) {
-        $cena_bazowa = get_post_meta($post->ID, '_cena_bazowa', true);
-        $cena_za_km = get_post_meta($post->ID, '_cena_za_km', true);
         $rezerwacja_aktywna = get_post_meta($post->ID, '_rezerwacja_aktywna', true);
+
+        // Pobierz konfigurację cen
+        $config = get_post_meta($post->ID, '_ceny_konfiguracja', true);
+
+        // Domyślna konfiguracja
+        if (empty($config)) {
+            $config = [
+                'okresy' => [12, 24, 36, 48],
+                'limity_km' => [10000, 15000, 20000],
+                'ceny' => []
+            ];
+        }
+
+        $cena_najnizsza = get_post_meta($post->ID, '_cena_najnizsza', true);
         ?>
         <div style="padding: 5px;">
-            <p>
-                <label for="cena_bazowa">
-                    <span style="font-size: 16px;">💰</span>
-                    <strong>Cena bazowa / miesiąc</strong>
-                </label><br>
-                <input type="number"
-                       id="cena_bazowa"
-                       name="cena_bazowa"
-                       value="<?php echo esc_attr($cena_bazowa); ?>"
-                       class="widefat"
-                       style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; margin-top: 5px;"
-                       step="0.01"
-                       min="0"
-                       placeholder="np. 1500.00"> <span style="color: #64748b;">zł</span>
-            </p>
+            <!-- Najniższa cena (auto-wyliczana) -->
+            <?php if ($cena_najnizsza): ?>
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; color: white;">
+                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">💰 NAJNIŻSZA CENA</div>
+                <div style="font-size: 28px; font-weight: bold;"><?php echo number_format($cena_najnizsza, 2, ',', ' '); ?> zł/mies.</div>
+                <div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Cena widoczna na liście</div>
+            </div>
+            <?php endif; ?>
 
-            <p>
-                <label for="cena_za_km">
-                    <span style="font-size: 16px;">🛣️</span>
-                    <strong>Dopłata za km</strong>
-                </label><br>
-                <input type="number"
-                       id="cena_za_km"
-                       name="cena_za_km"
-                       value="<?php echo esc_attr($cena_za_km); ?>"
+            <!-- Konfiguracja okresów -->
+            <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
+                    📅 Dostępne okresy wynajmu (miesiące)
+                </label>
+                <input type="text"
+                       id="flexmile_okresy"
+                       name="ceny_okresy"
+                       value="<?php echo esc_attr(implode(',', $config['okresy'])); ?>"
                        class="widefat"
-                       style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; margin-top: 5px;"
-                       step="0.01"
-                       min="0"
-                       placeholder="np. 0.50"> <span style="color: #64748b;">zł</span>
-                <p class="description" style="margin-top: 5px;">Powyżej limitu 1000 km/miesiąc</p>
-            </p>
+                       style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;"
+                       placeholder="np. 12,24,36,48">
+                <p class="description" style="margin-top: 5px;">Oddziel przecinkami, np: 12,24,36,48</p>
+            </div>
+
+            <!-- Konfiguracja limitów km -->
+            <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
+                    🛣️ Roczne limity kilometrów
+                </label>
+                <input type="text"
+                       id="flexmile_limity"
+                       name="ceny_limity_km"
+                       value="<?php echo esc_attr(implode(',', $config['limity_km'])); ?>"
+                       class="widefat"
+                       style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;"
+                       placeholder="np. 10000,15000,20000">
+                <p class="description" style="margin-top: 5px;">Oddziel przecinkami, np: 10000,15000,20000</p>
+            </div>
+
+            <button type="button"
+                    id="flexmile_generate_price_matrix"
+                    class="button button-secondary"
+                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 600; cursor: pointer;">
+                🔄 Wygeneruj tabelę cen
+            </button>
+
+            <!-- Macierz cen -->
+            <div id="flexmile_price_matrix" style="margin-top: 15px;">
+                <?php $this->render_price_matrix($config); ?>
+            </div>
 
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
 
+            <!-- Status rezerwacji -->
             <p style="background: #fef3c7; padding: 12px; border-radius: 6px; border-left: 4px solid #f59e0b;">
                 <label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
                     <input type="checkbox"
@@ -581,10 +616,156 @@ class Samochody {
                 </label>
             </p>
             <p class="description" style="margin-top: 8px;">
-                Zaznacz jeśli samochód jest aktualnie zarezerwowany i nie powinien być wyświetlany w ofercie.
+                Zaznacz jeśli samochód jest aktualnie zarezerwowany.
             </p>
         </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            // Generuj macierz po kliknięciu
+            $('#flexmile_generate_price_matrix').on('click', function() {
+                var button = $(this);
+                var okresy = $('#flexmile_okresy').val();
+                var limity = $('#flexmile_limity').val();
+
+                if (!okresy || !limity) {
+                    alert('Uzupełnij okresy i limity kilometrów!');
+                    return;
+                }
+
+                button.prop('disabled', true).text('⏳ Generowanie...');
+
+                // AJAX do wygenerowania tabeli
+                $.post(ajaxurl, {
+                    action: 'flexmile_generate_price_matrix',
+                    post_id: <?php echo $post->ID; ?>,
+                    okresy: okresy,
+                    limity: limity,
+                    nonce: '<?php echo wp_create_nonce('flexmile_price_matrix'); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        $('#flexmile_price_matrix').html(response.data.html);
+                    } else {
+                        alert('Błąd: ' + response.data.message);
+                    }
+                }).always(function() {
+                    button.prop('disabled', false).html('🔄 Wygeneruj tabelę cen');
+                });
+            });
+        });
+        </script>
         <?php
+    }
+
+    /**
+     * Renderuje macierz cen (tabelę)
+     */
+    private function render_price_matrix($config) {
+        if (empty($config['okresy']) || empty($config['limity_km'])) {
+            echo '<p style="text-align: center; color: #64748b; padding: 20px;">Uzupełnij okresy i limity, a następnie kliknij "Wygeneruj tabelę cen"</p>';
+            return;
+        }
+
+        ?>
+        <div style="overflow-x: auto;">
+            <table class="widefat" style="border-collapse: collapse; width: 100%; background: white;">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <th style="padding: 12px; text-align: left; color: white; font-weight: 600; border: 1px solid rgba(255,255,255,0.2);">
+                            Okres / Limit km
+                        </th>
+                        <?php foreach ($config['limity_km'] as $limit): ?>
+                        <th style="padding: 12px; text-align: center; color: white; font-weight: 600; border: 1px solid rgba(255,255,255,0.2);">
+                            <?php echo number_format($limit, 0, '', ' '); ?> km/rok
+                        </th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $min_price = PHP_FLOAT_MAX;
+                    $min_key = '';
+
+                    foreach ($config['okresy'] as $okres):
+                    ?>
+                    <tr>
+                        <td style="padding: 12px; font-weight: 600; background: #f8fafc; border: 1px solid #e2e8f0;">
+                            <?php echo $okres; ?> miesięcy
+                        </td>
+                        <?php foreach ($config['limity_km'] as $limit):
+                            $key = $okres . '_' . $limit;
+                            $cena = isset($config['ceny'][$key]) ? $config['ceny'][$key] : '';
+
+                            // Znajdź najniższą cenę
+                            if (!empty($cena) && $cena < $min_price) {
+                                $min_price = $cena;
+                                $min_key = $key;
+                            }
+                        ?>
+                        <td style="padding: 8px; border: 1px solid #e2e8f0; <?php echo ($key === $min_key && !empty($cena)) ? 'background: #d1fae5;' : ''; ?>">
+                            <input type="number"
+                                   name="ceny_matrix[<?php echo esc_attr($key); ?>]"
+                                   value="<?php echo esc_attr($cena); ?>"
+                                   step="0.01"
+                                   min="0"
+                                   placeholder="0.00"
+                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: right; <?php echo ($key === $min_key && !empty($cena)) ? 'border-color: #10b981; font-weight: 600;' : ''; ?>">
+                        </td>
+                        <?php endforeach; ?>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <?php if ($min_price < PHP_FLOAT_MAX): ?>
+            <p style="margin-top: 10px; padding: 10px; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 4px; font-size: 13px;">
+                💚 <strong>Najniższa cena:</strong> <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
+                (podświetlona na zielono)
+            </p>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    /**
+     * AJAX: Generuje macierz cen
+     */
+    public function ajax_generate_price_matrix() {
+        check_ajax_referer('flexmile_price_matrix', 'nonce');
+
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(['message' => 'Brak uprawnień']);
+        }
+
+        $post_id = intval($_POST['post_id']);
+        $okresy_str = sanitize_text_field($_POST['okresy']);
+        $limity_str = sanitize_text_field($_POST['limity']);
+
+        // Parse okresy i limity
+        $okresy = array_map('intval', array_filter(explode(',', $okresy_str)));
+        $limity_km = array_map('intval', array_filter(explode(',', $limity_str)));
+
+        if (empty($okresy) || empty($limity_km)) {
+            wp_send_json_error(['message' => 'Nieprawidłowe dane']);
+        }
+
+        // Pobierz istniejącą konfigurację (żeby zachować ceny)
+        $old_config = get_post_meta($post_id, '_ceny_konfiguracja', true);
+        $old_ceny = is_array($old_config) && isset($old_config['ceny']) ? $old_config['ceny'] : [];
+
+        // Nowa konfiguracja
+        $config = [
+            'okresy' => $okresy,
+            'limity_km' => $limity_km,
+            'ceny' => $old_ceny // Zachowaj stare ceny
+        ];
+
+        // Renderuj tabelę
+        ob_start();
+        $this->render_price_matrix($config);
+        $html = ob_get_clean();
+
+        wp_send_json_success(['html' => $html]);
     }
 
     /**
@@ -668,7 +849,7 @@ class Samochody {
     }
 
     /**
-     * Zapisuje meta dane
+     * Zapisuje meta dane (ZAKTUALIZOWANE - nowy system cen)
      */
     public function save_meta($post_id, $post) {
         // Sprawdzenie nonce
@@ -705,8 +886,6 @@ class Samochody {
             '_liczba_miejsc' => 'intval',
             '_liczba_drzwi' => 'sanitize_text_field',
             '_numer_vin' => 'sanitize_text_field',
-            '_cena_bazowa' => 'floatval',
-            '_cena_za_km' => 'floatval',
         ];
 
         foreach ($fields as $field => $sanitize) {
@@ -714,6 +893,36 @@ class Samochody {
             if (isset($_POST[$key])) {
                 update_post_meta($post_id, $field, $sanitize($_POST[$key]));
             }
+        }
+
+        // === NOWY SYSTEM CEN ===
+        if (isset($_POST['ceny_okresy']) && isset($_POST['ceny_limity_km'])) {
+            // Parse okresów i limitów
+            $okresy = array_map('intval', array_filter(explode(',', $_POST['ceny_okresy'])));
+            $limity_km = array_map('intval', array_filter(explode(',', $_POST['ceny_limity_km'])));
+
+            // Parse macierzy cen
+            $ceny = [];
+            if (isset($_POST['ceny_matrix']) && is_array($_POST['ceny_matrix'])) {
+                foreach ($_POST['ceny_matrix'] as $key => $value) {
+                    if (!empty($value)) {
+                        $ceny[sanitize_text_field($key)] = floatval($value);
+                    }
+                }
+            }
+
+            // Zapisz konfigurację
+            $config = [
+                'okresy' => $okresy,
+                'limity_km' => $limity_km,
+                'ceny' => $ceny
+            ];
+
+            update_post_meta($post_id, '_ceny_konfiguracja', $config);
+
+            // Wylicz i zapisz najniższą cenę (cache)
+            $min_price = !empty($ceny) ? min($ceny) : 0;
+            update_post_meta($post_id, '_cena_najnizsza', $min_price);
         }
 
         // Checkbox rezerwacji
@@ -734,12 +943,12 @@ class Samochody {
             update_post_meta($post_id, $meta_key, $value);
         }
 
-        // Wyposażenie standardowe - zapisz jako textarea (każda linia to element)
+        // Wyposażenie standardowe
         if (isset($_POST['wyposazenie_standardowe'])) {
             update_post_meta($post_id, '_wyposazenie_standardowe', sanitize_textarea_field($_POST['wyposazenie_standardowe']));
         }
 
-        // Wyposażenie dodatkowe - zapisz jako textarea (każda linia to element)
+        // Wyposażenie dodatkowe
         if (isset($_POST['wyposazenie_dodatkowe'])) {
             update_post_meta($post_id, '_wyposazenie_dodatkowe', sanitize_textarea_field($_POST['wyposazenie_dodatkowe']));
         }

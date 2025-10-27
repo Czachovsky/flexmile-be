@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Custom Post Type dla Rezerwacji
+ * Zaktualizowane o nowy system cen
  */
 class Rezerwacje {
 
@@ -90,7 +91,7 @@ class Rezerwacje {
     }
 
     /**
-     * Renderuje meta box ze szczegółami klienta
+     * Renderuje meta box ze szczegółami klienta (ZAKTUALIZOWANE)
      */
     public function render_details_meta_box($post) {
         $imie = get_post_meta($post->ID, '_imie', true);
@@ -98,7 +99,8 @@ class Rezerwacje {
         $email = get_post_meta($post->ID, '_email', true);
         $telefon = get_post_meta($post->ID, '_telefon', true);
         $ilosc_miesiecy = get_post_meta($post->ID, '_ilosc_miesiecy', true);
-        $ilosc_km = get_post_meta($post->ID, '_ilosc_km', true);
+        $limit_km_rocznie = get_post_meta($post->ID, '_limit_km_rocznie', true);
+        $cena_miesieczna = get_post_meta($post->ID, '_cena_miesieczna', true);
         $cena_calkowita = get_post_meta($post->ID, '_cena_calkowita', true);
         $wiadomosc = get_post_meta($post->ID, '_wiadomosc', true);
         ?>
@@ -119,17 +121,26 @@ class Rezerwacje {
                 <th><strong>Telefon:</strong></th>
                 <td><a href="tel:<?php echo esc_attr($telefon); ?>"><?php echo esc_html($telefon); ?></a></td>
             </tr>
+            <tr style="background: #f0f9ff; border-top: 2px solid #0369a1; border-bottom: 2px solid #0369a1;">
+                <th colspan="2" style="padding: 12px; text-align: center; font-size: 16px; color: #0369a1;">
+                    💰 WYBRANA KONFIGURACJA
+                </th>
+            </tr>
             <tr>
                 <th><strong>Okres wynajmu:</strong></th>
                 <td><?php echo esc_html($ilosc_miesiecy); ?> miesięcy</td>
             </tr>
             <tr>
-                <th><strong>Planowany przebieg:</strong></th>
-                <td><?php echo number_format($ilosc_km, 0, ',', ' '); ?> km</td>
+                <th><strong>Roczny limit km:</strong></th>
+                <td><?php echo number_format($limit_km_rocznie, 0, ',', ' '); ?> km</td>
             </tr>
             <tr>
+                <th><strong>Cena miesięczna:</strong></th>
+                <td><strong style="color: #10b981; font-size: 15px;"><?php echo number_format($cena_miesieczna, 2, ',', ' '); ?> zł/mies.</strong></td>
+            </tr>
+            <tr style="background: #d1fae5;">
                 <th><strong>Cena całkowita:</strong></th>
-                <td><strong><?php echo number_format($cena_calkowita, 2, ',', ' '); ?> zł</strong></td>
+                <td><strong style="color: #059669; font-size: 18px;"><?php echo number_format($cena_calkowita, 2, ',', ' '); ?> zł</strong></td>
             </tr>
             <?php if ($wiadomosc): ?>
             <tr>
@@ -146,7 +157,7 @@ class Rezerwacje {
      */
     public function render_status_meta_box($post) {
         wp_nonce_field('flexmile_rezerwacja_status', 'flexmile_rezerwacja_status_nonce');
-        
+
         $status = get_post_meta($post->ID, '_status_rezerwacji', true);
         if (empty($status)) {
             $status = 'pending';
@@ -170,7 +181,7 @@ class Rezerwacje {
      */
     public function render_car_meta_box($post) {
         $samochod_id = get_post_meta($post->ID, '_samochod_id', true);
-        
+
         if ($samochod_id) {
             $samochod = get_post($samochod_id);
             if ($samochod) {
@@ -180,7 +191,7 @@ class Rezerwacje {
                     echo $thumbnail . '<br>';
                 }
                 echo '<strong>' . esc_html($samochod->post_title) . '</strong></a></p>';
-                
+
                 $marka = wp_get_post_terms($samochod_id, 'marka_samochodu');
                 if (!empty($marka)) {
                     echo '<p>Marka: ' . esc_html($marka[0]->name) . '</p>';
@@ -196,7 +207,7 @@ class Rezerwacje {
      */
     public function save_meta($post_id, $post) {
         // Sprawdzenie nonce
-        if (!isset($_POST['flexmile_rezerwacja_status_nonce']) || 
+        if (!isset($_POST['flexmile_rezerwacja_status_nonce']) ||
             !wp_verify_nonce($_POST['flexmile_rezerwacja_status_nonce'], 'flexmile_rezerwacja_status')) {
             return;
         }
@@ -215,7 +226,7 @@ class Rezerwacje {
         if (isset($_POST['status_rezerwacji'])) {
             $old_status = get_post_meta($post_id, '_status_rezerwacji', true);
             $new_status = sanitize_text_field($_POST['status_rezerwacji']);
-            
+
             update_post_meta($post_id, '_status_rezerwacji', $new_status);
 
             // Jeśli status zmienił się na "approved", zaznacz samochód jako zarezerwowany
@@ -237,7 +248,7 @@ class Rezerwacje {
     }
 
     /**
-     * Dodaje własne kolumny w liście rezerwacji
+     * Dodaje własne kolumny w liście rezerwacji (ZAKTUALIZOWANE)
      */
     public function custom_columns($columns) {
         $new_columns = [];
@@ -245,15 +256,15 @@ class Rezerwacje {
         $new_columns['title'] = 'Klient';
         $new_columns['samochod'] = 'Samochód';
         $new_columns['status'] = 'Status';
-        $new_columns['okres'] = 'Okres';
+        $new_columns['konfiguracja'] = 'Konfiguracja';
         $new_columns['cena'] = 'Cena';
         $new_columns['date'] = 'Data';
-        
+
         return $new_columns;
     }
 
     /**
-     * Wypełnia zawartość własnych kolumn
+     * Wypełnia zawartość własnych kolumn (ZAKTUALIZOWANE)
      */
     public function custom_column_content($column, $post_id) {
         switch ($column) {
@@ -278,9 +289,10 @@ class Rezerwacje {
                 echo $labels[$status] ?? $labels['pending'];
                 break;
 
-            case 'okres':
+            case 'konfiguracja':
                 $ilosc_miesiecy = get_post_meta($post_id, '_ilosc_miesiecy', true);
-                echo esc_html($ilosc_miesiecy) . ' mies.';
+                $limit_km = get_post_meta($post_id, '_limit_km_rocznie', true);
+                echo '<strong>' . esc_html($ilosc_miesiecy) . ' mies.</strong> / ' . number_format($limit_km, 0, '', ' ') . ' km/rok';
                 break;
 
             case 'cena':

@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * REST API Endpoint dla Samochodów
+ * Z obsługą macierzy cen
  */
 class Samochody_Endpoint {
 
@@ -160,9 +161,9 @@ class Samochody_Endpoint {
             ];
         }
 
-        // Filtr po cenie (od-do)
+        // Filtr po cenie (od-do) - używamy najniższej ceny
         if (!empty($params['cena_od']) || !empty($params['cena_do'])) {
-            $cena_query = ['key' => '_cena_bazowa', 'type' => 'NUMERIC'];
+            $cena_query = ['key' => '_cena_najnizsza', 'type' => 'NUMERIC'];
 
             if (!empty($params['cena_od']) && !empty($params['cena_do'])) {
                 $cena_query['value'] = [floatval($params['cena_od']), floatval($params['cena_do'])];
@@ -276,7 +277,7 @@ class Samochody_Endpoint {
      * - id, nazwa, slug
      * - grafika (thumbnail + main)
      * - podstawowe parametry (silnik, paliwo, skrzynia, KM, marka)
-     * - ceny
+     * - cena_od (najniższa cena)
      * - atrybuty/flagi
      * - status dostępności
      */
@@ -323,13 +324,12 @@ class Samochody_Endpoint {
             'slug' => $paliwo[0]->slug,
         ] : null;
 
-        // Ceny
-        $data['ceny'] = [
-            'cena_bazowa' => (float) get_post_meta($post->ID, '_cena_bazowa', true),
-            'cena_za_km' => (float) get_post_meta($post->ID, '_cena_za_km', true),
-        ];
+        // === NOWA STRUKTURA CEN ===
+        // Na liście pokazuj tylko NAJNIŻSZĄ CENĘ
+        $cena_najnizsza = (float) get_post_meta($post->ID, '_cena_najnizsza', true);
+        $data['cena_od'] = $cena_najnizsza; // Najniższa cena do wyświetlenia
 
-        // ATRYBUTY/FLAGI - To jest to, czego chciałeś!
+        // ATRYBUTY/FLAGI
         $data['atrybuty'] = [
             'nowy' => get_post_meta($post->ID, '_nowy_samochod', true) === '1',
             'od_reki' => get_post_meta($post->ID, '_dostepny_od_reki', true) === '1',
@@ -414,11 +414,25 @@ class Samochody_Endpoint {
             'slug' => $paliwo[0]->slug,
         ] : null;
 
-        // Ceny
-        $data['ceny'] = [
-            'cena_bazowa' => (float) get_post_meta($post->ID, '_cena_bazowa', true),
-            'cena_za_km' => (float) get_post_meta($post->ID, '_cena_za_km', true),
-        ];
+        // === PEŁNA KONFIGURACJA CEN ===
+        $config = get_post_meta($post->ID, '_ceny_konfiguracja', true);
+
+        if (!empty($config)) {
+            $data['cennik'] = [
+                'okresy_miesiace' => $config['okresy'],
+                'limity_km_rocznie' => $config['limity_km'],
+                'tabela_cen' => $config['ceny'], // Obiekt: { "12_10000": 1500.00, "24_10000": 1400.00, ... }
+                'cena_najnizsza' => (float) get_post_meta($post->ID, '_cena_najnizsza', true),
+            ];
+        } else {
+            // Fallback jeśli nie ma konfiguracji
+            $data['cennik'] = [
+                'okresy_miesiace' => [],
+                'limity_km_rocznie' => [],
+                'tabela_cen' => [],
+                'cena_najnizsza' => 0,
+            ];
+        }
 
         // Wyposażenie standardowe (PEŁNE)
         $wyposazenie_std_raw = get_post_meta($post->ID, '_wyposazenie_standardowe', true);
@@ -519,11 +533,11 @@ class Samochody_Endpoint {
                 'type' => 'integer',
             ],
             'cena_od' => [
-                'description' => 'Cena od',
+                'description' => 'Cena od (najniższa)',
                 'type' => 'number',
             ],
             'cena_do' => [
-                'description' => 'Cena do',
+                'description' => 'Cena do (najniższa)',
                 'type' => 'number',
             ],
             'show_reserved' => [
