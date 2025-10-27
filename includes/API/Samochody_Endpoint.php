@@ -343,23 +343,13 @@ class Samochody_Endpoint {
             'cena_za_km' => (float) get_post_meta($post->ID, '_cena_za_km', true),
         ];
 
-        // Wyposażenie standardowe
-        $wyposazenie_std = get_post_meta($post->ID, '_wyposazenie_standardowe', true);
-        $wyposazenie_std_wlasne = get_post_meta($post->ID, '_wyposazenie_standardowe_wlasne', true);
+        // Wyposażenie standardowe - parsuj z textarea (każda linia to element)
+        $wyposazenie_std_raw = get_post_meta($post->ID, '_wyposazenie_standardowe', true);
+        $data['wyposazenie_standardowe'] = $this->parse_textarea_to_array($wyposazenie_std_raw);
 
-        $data['wyposazenie_standardowe'] = [
-            'predefiniowane' => is_array($wyposazenie_std) ? $wyposazenie_std : [],
-            'wlasne' => $this->parse_custom_equipment($wyposazenie_std_wlasne),
-        ];
-
-        // Wyposażenie dodatkowe
-        $wyposazenie_dod = get_post_meta($post->ID, '_wyposazenie_dodatkowe', true);
-        $wyposazenie_dod_wlasne = get_post_meta($post->ID, '_wyposazenie_dodatkowe_wlasne', true);
-
-        $data['wyposazenie_dodatkowe'] = [
-            'predefiniowane' => is_array($wyposazenie_dod) ? $wyposazenie_dod : [],
-            'wlasne' => $this->parse_custom_equipment($wyposazenie_dod_wlasne),
-        ];
+        // Wyposażenie dodatkowe - parsuj z textarea (każda linia to element)
+        $wyposazenie_dod_raw = get_post_meta($post->ID, '_wyposazenie_dodatkowe', true);
+        $data['wyposazenie_dodatkowe'] = $this->parse_textarea_to_array($wyposazenie_dod_raw);
 
         // Status rezerwacji
         $data['dostepny'] = get_post_meta($post->ID, '_rezerwacja_aktywna', true) !== '1';
@@ -368,19 +358,24 @@ class Samochody_Endpoint {
     }
 
     /**
-     * Parsuje własne wyposażenie z textarea
+     * Parsuje textarea na tablicę (każda nowa linia to element)
      */
-    private function parse_custom_equipment($text) {
+    private function parse_textarea_to_array($text) {
         if (empty($text)) {
             return [];
         }
 
-        // Rozdziel po przecinkach lub nowych liniach
-        $items = preg_split('/[,\n]+/', $text);
-        $items = array_map('trim', $items);
-        $items = array_filter($items); // Usuń puste
+        // Rozdziel po nowych liniach
+        $lines = preg_split('/\r\n|\r|\n/', $text);
 
-        return array_values($items);
+        // Trim każdej linii i usuń puste
+        $lines = array_map('trim', $lines);
+        $lines = array_filter($lines, function($line) {
+            return !empty($line);
+        });
+
+        // Zwróć jako indeksowaną tablicę
+        return array_values($lines);
     }
 
     /**

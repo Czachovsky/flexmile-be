@@ -481,156 +481,23 @@ class Samochody {
     }
 
     /**
-     * Ładuje konfigurację z pliku JSON
-     */
-    private function load_config() {
-        $config_file = FLEXMILE_PLUGIN_DIR . 'config.json';
-
-        if (!file_exists($config_file)) {
-            return null;
-        }
-
-        $json = file_get_contents($config_file);
-        $config = json_decode($json, true);
-
-        return $config;
-    }
-
-    /**
-     * Lista wyposażenia standardowego
-     */
-    private function get_wyposazenie_standardowe_options() {
-        $config = $this->load_config();
-
-        // Jeśli config istnieje, użyj go
-        if ($config && isset($config['wyposazenie_standardowe'])) {
-            return $config['wyposazenie_standardowe'];
-        }
-
-        // Fallback - hardkodowane wartości
-        return [
-            'Bezpieczeństwo' => [
-                'abs' => 'ABS',
-                'esp' => 'ESP',
-                'asr' => 'ASR/Kontrola trakcji',
-                'poduszki' => 'Poduszki powietrzne',
-                'isofix' => 'ISOFIX',
-                'alarm' => 'Alarm',
-                'immobiliser' => 'Immobiliser',
-            ],
-            'Komfort' => [
-                'klimatyzacja' => 'Klimatyzacja',
-                'klimatyzacja_auto' => 'Klimatyzacja automatyczna',
-                'nawigacja' => 'Nawigacja GPS',
-                'bluetooth' => 'Bluetooth',
-                'tempomat' => 'Tempomat',
-                'el_szyby' => 'Elektryczne szyby',
-                'el_lusterka' => 'Elektryczne lusterka',
-                'podgrzewane_siedzenia' => 'Podgrzewane siedzenia',
-            ],
-            'Multimedia' => [
-                'radio' => 'Radio',
-                'cd' => 'Odtwarzacz CD',
-                'usb' => 'USB/AUX',
-                'glosniki' => 'Zestaw głośników',
-            ],
-            'Oświetlenie' => [
-                'led' => 'Światła LED',
-                'xenon' => 'Xenon',
-                'halogen' => 'Halogen',
-                'swiatla_dzienne' => 'Światła dzienne LED',
-            ],
-        ];
-    }
-
-    /**
-     * Lista wyposażenia dodatkowego
-     */
-    private function get_wyposazenie_dodatkowe_options() {
-        $config = $this->load_config();
-
-        // Jeśli config istnieje, użyj go
-        if ($config && isset($config['wyposazenie_dodatkowe'])) {
-            return $config['wyposazenie_dodatkowe'];
-        }
-
-        // Fallback - hardkodowane wartości
-        return [
-            'Premium' => [
-                'skorzana_tapicerka' => 'Skórzana tapicerka',
-                'dach_panoramiczny' => 'Dach panoramiczny',
-                'zawieszenie_pneumatyczne' => 'Zawieszenie pneumatyczne',
-                'fotele_sportowe' => 'Fotele sportowe',
-                'fotele_wentylowane' => 'Fotele wentylowane',
-                'masaz_foteli' => 'Masaż foteli',
-            ],
-            'Technologia' => [
-                'kamera_360' => 'Kamera 360°',
-                'kamera_cofania' => 'Kamera cofania',
-                'czujniki_parkowania' => 'Czujniki parkowania',
-                'asystent_pasa' => 'Asystent pasa ruchu',
-                'tempomat_adaptacyjny' => 'Tempomat adaptacyjny',
-                'head_up_display' => 'Head-up display',
-                'keyless' => 'Keyless Go',
-            ],
-            'Audio' => [
-                'system_audio_premium' => 'System audio premium',
-                'subwoofer' => 'Subwoofer',
-                'android_auto' => 'Android Auto',
-                'apple_carplay' => 'Apple CarPlay',
-            ],
-            'Inne' => [
-                'felgi_aluminiowe' => 'Felgi aluminiowe',
-                'hak' => 'Hak holowniczy',
-                'relingi' => 'Relingi dachowe',
-            ],
-        ];
-    }
-
-    /**
      * Renderuje meta box z wyposażeniem standardowym
      */
     public function render_wyposazenie_meta_box($post) {
         $wyposazenie = get_post_meta($post->ID, '_wyposazenie_standardowe', true);
-        $wyposazenie = is_array($wyposazenie) ? $wyposazenie : [];
-        $wlasne = get_post_meta($post->ID, '_wyposazenie_standardowe_wlasne', true);
-
-        $options = $this->get_wyposazenie_standardowe_options();
-
-        $category_icons = [
-            'Bezpieczeństwo' => '🛡️',
-            'Komfort' => '✨',
-            'Multimedia' => '📱',
-            'Oświetlenie' => '💡'
-        ];
         ?>
         <div class="flexmile-wyposazenie">
-            <?php foreach ($options as $kategoria => $items): ?>
-                <div class="wyposazenie-kategoria">
-                    <h4>
-                        <?php echo isset($category_icons[$kategoria]) ? $category_icons[$kategoria] . ' ' : ''; ?>
-                        <?php echo esc_html($kategoria); ?>
-                    </h4>
-                    <div class="wyposazenie-items">
-                        <?php foreach ($items as $key => $label): ?>
-                            <label class="wyposazenie-item">
-                                <input type="checkbox"
-                                       name="wyposazenie_standardowe[]"
-                                       value="<?php echo esc_attr($key); ?>"
-                                       <?php checked(in_array($key, $wyposazenie)); ?>>
-                                <span><?php echo esc_html($label); ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
             <div class="wyposazenie-wlasne">
-                <h4>➕ Dodatkowe pozycje (własne)</h4>
-                <textarea name="wyposazenie_standardowe_wlasne"
-                          rows="3"
-                          placeholder="Np: Czujniki deszczu, Automatyczne światła, Asystent martwego pola&#10;(każda pozycja w nowej linii lub oddzielona przecinkiem)"><?php echo esc_textarea($wlasne); ?></textarea>
-                <p class="description">💡 Wpisz dodatkowe wyposażenie - każda pozycja w nowej linii lub oddzielona przecinkiem</p>
+                <p style="margin-bottom: 15px; color: #64748b; font-size: 14px;">
+                    📝 Wpisz wyposażenie standardowe - każda pozycja w nowej linii
+                </p>
+                <textarea name="wyposazenie_standardowe"
+                          rows="10"
+                          style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Courier New', monospace; line-height: 1.6;"
+                          placeholder="ABS&#10;ESP&#10;Klimatyzacja automatyczna&#10;Nawigacja GPS&#10;Bluetooth&#10;Poduszki powietrzne&#10;Elektryczne szyby&#10;Światła LED"><?php echo esc_textarea($wyposazenie); ?></textarea>
+                <p class="description" style="margin-top: 10px;">
+                    💡 Każda nowa linia to jeden element wyposażenia
+                </p>
             </div>
         </div>
         <?php
@@ -641,47 +508,19 @@ class Samochody {
      */
     public function render_wyposazenie_dodatkowe_meta_box($post) {
         $wyposazenie = get_post_meta($post->ID, '_wyposazenie_dodatkowe', true);
-        $wyposazenie = is_array($wyposazenie) ? $wyposazenie : [];
-        $wlasne = get_post_meta($post->ID, '_wyposazenie_dodatkowe_wlasne', true);
-
-        $options = $this->get_wyposazenie_dodatkowe_options();
-
-        $category_icons = [
-            'Premium' => '⭐',
-            'Technologia' => '🔧',
-            'Audio' => '🔊',
-            'Wygląd' => '🎨',
-            'Inne' => '📦',
-            'Off-road' => '🏔️'
-        ];
         ?>
         <div class="flexmile-wyposazenie">
-            <?php foreach ($options as $kategoria => $items): ?>
-                <div class="wyposazenie-kategoria">
-                    <h4>
-                        <?php echo isset($category_icons[$kategoria]) ? $category_icons[$kategoria] . ' ' : ''; ?>
-                        <?php echo esc_html($kategoria); ?>
-                    </h4>
-                    <div class="wyposazenie-items">
-                        <?php foreach ($items as $key => $label): ?>
-                            <label class="wyposazenie-item">
-                                <input type="checkbox"
-                                       name="wyposazenie_dodatkowe[]"
-                                       value="<?php echo esc_attr($key); ?>"
-                                       <?php checked(in_array($key, $wyposazenie)); ?>>
-                                <span><?php echo esc_html($label); ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
             <div class="wyposazenie-wlasne">
-                <h4>➕ Dodatkowe pozycje (własne)</h4>
-                <textarea name="wyposazenie_dodatkowe_wlasne"
-                          rows="3"
-                          placeholder="Np: Przyciemniane szyby, Nakładki progowe, Pokrowce premium&#10;(każda pozycja w nowej linii lub oddzielona przecinkiem)"><?php echo esc_textarea($wlasne); ?></textarea>
-                <p class="description">💡 Wpisz dodatkowe wyposażenie - każda pozycja w nowej linii lub oddzielona przecinkiem</p>
+                <p style="margin-bottom: 15px; color: #64748b; font-size: 14px;">
+                    📝 Wpisz wyposażenie dodatkowe - każda pozycja w nowej linii
+                </p>
+                <textarea name="wyposazenie_dodatkowe"
+                          rows="10"
+                          style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Courier New', monospace; line-height: 1.6;"
+                          placeholder="Skórzana tapicerka&#10;Dach panoramiczny&#10;Kamera 360°&#10;Asystent parkowania&#10;Tempomat adaptacyjny&#10;System audio premium&#10;Felgi aluminiowe 19&#34;&#10;Hak holowniczy"><?php echo esc_textarea($wyposazenie); ?></textarea>
+                <p class="description" style="margin-top: 10px;">
+                    💡 Każda nowa linia to jeden element wyposażenia
+                </p>
             </div>
         </div>
         <?php
@@ -895,26 +734,14 @@ class Samochody {
             update_post_meta($post_id, $meta_key, $value);
         }
 
-        // Wyposażenie standardowe
-        $wyposazenie_std = isset($_POST['wyposazenie_standardowe']) && is_array($_POST['wyposazenie_standardowe'])
-            ? array_map('sanitize_text_field', $_POST['wyposazenie_standardowe'])
-            : [];
-        update_post_meta($post_id, '_wyposazenie_standardowe', $wyposazenie_std);
-
-        // Wyposażenie standardowe - własne
-        if (isset($_POST['wyposazenie_standardowe_wlasne'])) {
-            update_post_meta($post_id, '_wyposazenie_standardowe_wlasne', sanitize_textarea_field($_POST['wyposazenie_standardowe_wlasne']));
+        // Wyposażenie standardowe - zapisz jako textarea (każda linia to element)
+        if (isset($_POST['wyposazenie_standardowe'])) {
+            update_post_meta($post_id, '_wyposazenie_standardowe', sanitize_textarea_field($_POST['wyposazenie_standardowe']));
         }
 
-        // Wyposażenie dodatkowe
-        $wyposazenie_dod = isset($_POST['wyposazenie_dodatkowe']) && is_array($_POST['wyposazenie_dodatkowe'])
-            ? array_map('sanitize_text_field', $_POST['wyposazenie_dodatkowe'])
-            : [];
-        update_post_meta($post_id, '_wyposazenie_dodatkowe', $wyposazenie_dod);
-
-        // Wyposażenie dodatkowe - własne
-        if (isset($_POST['wyposazenie_dodatkowe_wlasne'])) {
-            update_post_meta($post_id, '_wyposazenie_dodatkowe_wlasne', sanitize_textarea_field($_POST['wyposazenie_dodatkowe_wlasne']));
+        // Wyposażenie dodatkowe - zapisz jako textarea (każda linia to element)
+        if (isset($_POST['wyposazenie_dodatkowe'])) {
+            update_post_meta($post_id, '_wyposazenie_dodatkowe', sanitize_textarea_field($_POST['wyposazenie_dodatkowe']));
         }
     }
 }
