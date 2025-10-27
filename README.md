@@ -10,6 +10,7 @@ Wtyczka do headless WordPressa dla systemu komisu samochodowego FlexMile z API d
    - Zablokuje frontend WordPressa (headless mode)
    - Zarejestruje CPT i taksonomie
    - Udostępni REST API endpointy
+4. **NOWOŚĆ!** Przejdź do FlexMile Dashboard i kliknij "Importuj przykładowe dane" aby szybko rozpocząć
 
 ## 📋 Funkcjonalności
 
@@ -30,6 +31,22 @@ Wtyczka do headless WordPressa dla systemu komisu samochodowego FlexMile z API d
 - **REST API** z filtrowaniem i infinite scroll
 - **System maili** (do admina i klienta po rezerwacji)
 - **Dashboard administracyjny** ze statystykami
+- **Import przykładowych danych** - jednym kliknięciem dodajesz 30 marek, 10 typów nadwozia, 7 rodzajów paliwa i 3 przykładowe samochody
+
+## 📦 Import przykładowych danych
+
+Po aktywacji wtyczki w **FlexMile Dashboard** zobaczysz przycisk **"Importuj przykładowe dane"**.
+
+Jeden klik doda:
+- ✅ **30 marek** samochodów (BMW, Audi, Toyota, Mercedes-Benz, Volkswagen...)
+- ✅ **10 typów nadwozia** (SUV, Sedan, Kombi, Hatchback, Coupe...)
+- ✅ **7 rodzajów paliwa** (Benzyna, Diesel, Hybryda, Elektryczny...)
+- ✅ **3 przykładowe samochody** z pełnymi danymi:
+  - BMW X5 3.0d xDrive (2022, SUV, Diesel)
+  - Toyota Corolla 1.8 Hybrid (2023, Sedan, Hybryda)
+  - Volkswagen Golf 1.5 TSI (2021, Hatchback, Benzyna)
+
+Import nie nadpisuje istniejących danych - możesz go uruchomić bezpiecznie w każdej chwili!
 
 ## 🔌 REST API Endpoints
 
@@ -71,7 +88,7 @@ GET /wp-json/flexmile/v1/samochody?marka=bmw&rocznik_od=2020&page=1&per_page=10
       "przebieg": 50000,
       "moc": 286,
       "pojemnosc": 2993,
-      "skrzynia": "automatyczna",
+      "skrzynia": "automatic",
       "kolor": "czarny",
       "liczba_miejsc": 5,
       "numer_vin": "..."
@@ -233,5 +250,5 @@ MIT License - użyj jak chcesz!
 ---
 
 **Autor:** FlexMile Team  
-**Wersja:** 1.0.0  
+**Wersja:** 1.1.0  
 **Wymaga:** WordPress 5.8+, PHP 7.4+

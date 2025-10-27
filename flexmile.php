@@ -3,7 +3,7 @@
  * Plugin Name: FlexMile - Komis Samochodowy
  * Plugin URI: https://flexmile.pl
  * Description: System zarządzania komisem samochodowym online z API dla headless WordPress
- * Version: 1.0.0
+ * Version: 1.2.0
  * Author: FlexMile Team
  * Text Domain: flexmile
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Definicje stałych
-define('FLEXMILE_VERSION', '1.0.0');
+define('FLEXMILE_VERSION', '1.2.0');
 define('FLEXMILE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('FLEXMILE_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -77,6 +77,7 @@ class FlexMile_Plugin {
         
         // Admin
         new FlexMile\Admin\Admin_Menu();
+        new FlexMile\Admin\Sample_Data_Importer();
     }
 
     public function load_textdomain() {

@@ -71,6 +71,48 @@ class Samochody_Endpoint {
             ];
         }
 
+        // Sortowanie - wyróżnione na górze
+        if (isset($params['sort_featured']) && $params['sort_featured'] === 'true') {
+            $args['meta_key'] = '_wyrozniany';
+            $args['orderby'] = ['meta_value' => 'DESC', 'date' => 'DESC'];
+        }
+
+        // Filtr po fladze "wyróżniony"
+        if (isset($params['wyrozniany']) && $params['wyrozniany'] === 'true') {
+            $args['meta_query'][] = [
+                'key' => '_wyrozniany',
+                'value' => '1',
+                'compare' => '=',
+            ];
+        }
+
+        // Filtr po fladze "nowy samochód"
+        if (isset($params['nowy']) && $params['nowy'] === 'true') {
+            $args['meta_query'][] = [
+                'key' => '_nowy_samochod',
+                'value' => '1',
+                'compare' => '=',
+            ];
+        }
+
+        // Filtr po fladze "dostępny od ręki"
+        if (isset($params['od_reki']) && $params['od_reki'] === 'true') {
+            $args['meta_query'][] = [
+                'key' => '_dostepny_od_reki',
+                'value' => '1',
+                'compare' => '=',
+            ];
+        }
+
+        // Filtr po fladze "najczęściej wybierany"
+        if (isset($params['popularne']) && $params['popularne'] === 'true') {
+            $args['meta_query'][] = [
+                'key' => '_najczesciej_wybierany',
+                'value' => '1',
+                'compare' => '=',
+            ];
+        }
+
         // Filtr po marce
         if (!empty($params['marka'])) {
             $args['tax_query'][] = [
@@ -101,12 +143,12 @@ class Samochody_Endpoint {
         // Filtr po rocznikach (od-do)
         if (!empty($params['rocznik_od']) || !empty($params['rocznik_do'])) {
             $rocznik_query = ['key' => '_rocznik', 'type' => 'NUMERIC'];
-            
+
             if (!empty($params['rocznik_od'])) {
                 $rocznik_query['value'] = intval($params['rocznik_od']);
                 $rocznik_query['compare'] = '>=';
             }
-            
+
             if (!empty($params['rocznik_do'])) {
                 if (!empty($params['rocznik_od'])) {
                     $rocznik_query['value'] = [intval($params['rocznik_od']), intval($params['rocznik_do'])];
@@ -116,7 +158,7 @@ class Samochody_Endpoint {
                     $rocznik_query['compare'] = '<=';
                 }
             }
-            
+
             $args['meta_query'][] = $rocznik_query;
         }
 
@@ -133,7 +175,7 @@ class Samochody_Endpoint {
         // Filtr po cenie (od-do)
         if (!empty($params['cena_od']) || !empty($params['cena_do'])) {
             $cena_query = ['key' => '_cena_bazowa', 'type' => 'NUMERIC'];
-            
+
             if (!empty($params['cena_od']) && !empty($params['cena_do'])) {
                 $cena_query['value'] = [floatval($params['cena_od']), floatval($params['cena_do'])];
                 $cena_query['compare'] = 'BETWEEN';
@@ -144,7 +186,7 @@ class Samochody_Endpoint {
                 $cena_query['value'] = floatval($params['cena_do']);
                 $cena_query['compare'] = '<=';
             }
-            
+
             $args['meta_query'][] = $cena_query;
         }
 
@@ -186,69 +228,33 @@ class Samochody_Endpoint {
         // Podstawowe dane
         $data = [
             'id' => $post->ID,
-            'nazwa' => $post->post_title,
-            'opis' => $post->post_content,
+            'name' => $post->post_title,
             'slug' => $post->post_name,
         ];
 
-        // Zdjęcia
-        $data['obrazek_glowny'] = get_the_post_thumbnail_url($post->ID, 'large');
-        $data['miniaturka'] = get_the_post_thumbnail_url($post->ID, 'thumbnail');
-        
-        // Galeria (jeśli jest)
-        $gallery_ids = get_post_meta($post->ID, '_galeria', true);
-        $data['galeria'] = [];
-        if ($gallery_ids) {
-            foreach (explode(',', $gallery_ids) as $img_id) {
-                $data['galeria'][] = [
-                    'url' => wp_get_attachment_url($img_id),
-                    'thumbnail' => wp_get_attachment_image_url($img_id, 'thumbnail'),
-                ];
-            }
-        }
+        // Zdjęcie
+        $data['photo'] = get_the_post_thumbnail_url($post->ID, 'large') ?: null;
 
-        // Parametry techniczne
-        $data['parametry'] = [
-            'rocznik' => (int) get_post_meta($post->ID, '_rocznik', true),
-            'przebieg' => (int) get_post_meta($post->ID, '_przebieg', true),
-            'moc' => (int) get_post_meta($post->ID, '_moc', true),
-            'pojemnosc' => (int) get_post_meta($post->ID, '_pojemnosc', true),
-            'skrzynia' => get_post_meta($post->ID, '_skrzynia', true),
-            'kolor' => get_post_meta($post->ID, '_kolor', true),
-            'liczba_miejsc' => (int) get_post_meta($post->ID, '_liczba_miejsc', true),
-            'numer_vin' => get_post_meta($post->ID, '_numer_vin', true),
-        ];
-
-        // Taksonomie
-        $marka = wp_get_post_terms($post->ID, 'marka_samochodu');
-        $data['marka'] = !empty($marka) ? [
-            'id' => $marka[0]->term_id,
-            'nazwa' => $marka[0]->name,
-            'slug' => $marka[0]->slug,
-        ] : null;
-
-        $typ_nadwozia = wp_get_post_terms($post->ID, 'typ_nadwozia');
-        $data['typ_nadwozia'] = !empty($typ_nadwozia) ? [
-            'id' => $typ_nadwozia[0]->term_id,
-            'nazwa' => $typ_nadwozia[0]->name,
-            'slug' => $typ_nadwozia[0]->slug,
-        ] : null;
-
+        // Typ paliwa
         $paliwo = wp_get_post_terms($post->ID, 'rodzaj_paliwa');
-        $data['paliwo'] = !empty($paliwo) ? [
-            'id' => $paliwo[0]->term_id,
-            'nazwa' => $paliwo[0]->name,
-            'slug' => $paliwo[0]->slug,
-        ] : null;
+        $data['fuel'] = !empty($paliwo) ? $paliwo[0]->name : '';
 
-        // Ceny
-        $data['ceny'] = [
-            'cena_bazowa' => (float) get_post_meta($post->ID, '_cena_bazowa', true),
-            'cena_za_km' => (float) get_post_meta($post->ID, '_cena_za_km', true),
+        // Skrzynia biegów
+        $data['transmission'] = get_post_meta($post->ID, '_skrzynia', true) ?: '';
+
+        // Konie mechaniczne
+        $data['power'] = (int) get_post_meta($post->ID, '_moc', true);
+
+        // Atrybuty (flagi statusu)
+        $data['attributes'] = [
+            'new' => get_post_meta($post->ID, '_nowy_samochod', true) === '1',
+            'available' => get_post_meta($post->ID, '_dostepny_od_reki', true) === '1',
+            'soon' => get_post_meta($post->ID, '_dostepny_wkrotce', true) === '1',
+            'hot' => get_post_meta($post->ID, '_najczesciej_wybierany', true) === '1',
         ];
 
-        // Status rezerwacji
-        $data['dostepny'] = get_post_meta($post->ID, '_rezerwacja_aktywna', true) !== '1';
+        // Wyróżnienie
+        $data['featured'] = get_post_meta($post->ID, '_wyrozniany', true) === '1';
 
         return $data;
     }
@@ -320,6 +326,32 @@ class Samochody_Endpoint {
                 'type' => 'string',
                 'enum' => ['true', 'false'],
                 'default' => 'false',
+            ],
+            'sort_featured' => [
+                'description' => 'Sortuj wyróżnione na górze',
+                'type' => 'string',
+                'enum' => ['true', 'false'],
+                'default' => 'false',
+            ],
+            'wyrozniany' => [
+                'description' => 'Tylko wyróżnione samochody',
+                'type' => 'string',
+                'enum' => ['true', 'false'],
+            ],
+            'nowy' => [
+                'description' => 'Tylko nowe samochody',
+                'type' => 'string',
+                'enum' => ['true', 'false'],
+            ],
+            'od_reki' => [
+                'description' => 'Tylko dostępne od ręki',
+                'type' => 'string',
+                'enum' => ['true', 'false'],
+            ],
+            'popularne' => [
+                'description' => 'Tylko najczęściej wybierane',
+                'type' => 'string',
+                'enum' => ['true', 'false'],
             ],
         ];
     }

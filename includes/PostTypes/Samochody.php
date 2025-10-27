@@ -117,6 +117,15 @@ class Samochody {
             'side',
             'default'
         );
+
+        add_meta_box(
+            'flexmile_samochod_flags',
+            'Statusy i wyróżnienie',
+            [$this, 'render_flags_meta_box'],
+            self::POST_TYPE,
+            'side',
+            'default'
+        );
     }
 
     /**
@@ -156,8 +165,8 @@ class Samochody {
                 <td>
                     <select id="skrzynia" name="skrzynia">
                         <option value="">-- Wybierz --</option>
-                        <option value="manualna" <?php selected($skrzynia, 'manualna'); ?>>Manualna</option>
-                        <option value="automatyczna" <?php selected($skrzynia, 'automatyczna'); ?>>Automatyczna</option>
+                        <option value="manual" <?php selected($skrzynia, 'manual'); ?>>Manualna</option>
+                        <option value="automatic" <?php selected($skrzynia, 'automatic'); ?>>Automatyczna</option>
                     </select>
                 </td>
             </tr>
@@ -205,11 +214,68 @@ class Samochody {
     }
 
     /**
+     * Renderuje meta box z flagami statusu i wyróżnienia
+     */
+    public function render_flags_meta_box($post) {
+        $nowy = get_post_meta($post->ID, '_nowy_samochod', true);
+        $od_reki = get_post_meta($post->ID, '_dostepny_od_reki', true);
+        $wkrotce = get_post_meta($post->ID, '_dostepny_wkrotce', true);
+        $najczesciej = get_post_meta($post->ID, '_najczesciej_wybierany', true);
+        $wyrozniany = get_post_meta($post->ID, '_wyrozniany', true);
+        ?>
+        <div style="margin-bottom: 15px;">
+            <p style="margin-bottom: 10px;"><strong>Statusy samochodu:</strong></p>
+
+            <p style="margin: 8px 0;">
+                <label>
+                    <input type="checkbox" name="nowy_samochod" value="1" <?php checked($nowy, '1'); ?>>
+                    🆕 Nowy samochód
+                </label>
+            </p>
+
+            <p style="margin: 8px 0;">
+                <label>
+                    <input type="checkbox" name="dostepny_od_reki" value="1" <?php checked($od_reki, '1'); ?>>
+                    ⚡ Dostępny od ręki
+                </label>
+            </p>
+
+            <p style="margin: 8px 0;">
+                <label>
+                    <input type="checkbox" name="dostepny_wkrotce" value="1" <?php checked($wkrotce, '1'); ?>>
+                    ⏳ Dostępny wkrótce
+                </label>
+            </p>
+
+            <p style="margin: 8px 0;">
+                <label>
+                    <input type="checkbox" name="najczesciej_wybierany" value="1" <?php checked($najczesciej, '1'); ?>>
+                    ⭐ Najczęściej wybierany
+                </label>
+            </p>
+        </div>
+
+        <hr>
+
+        <div style="margin-top: 15px;">
+            <p style="margin-bottom: 10px;"><strong>Wyróżnienie:</strong></p>
+            <p style="margin: 8px 0;">
+                <label>
+                    <input type="checkbox" name="wyrozniany" value="1" <?php checked($wyrozniany, '1'); ?>>
+                    ⭐ Wyróżniony samochód
+                </label>
+            </p>
+            <p class="description">Wyróżnione samochody są wyświetlane na górze listy i w specjalnej sekcji.</p>
+        </div>
+        <?php
+    }
+
+    /**
      * Zapisuje meta dane
      */
     public function save_meta($post_id, $post) {
         // Sprawdzenie nonce
-        if (!isset($_POST['flexmile_samochod_nonce']) || 
+        if (!isset($_POST['flexmile_samochod_nonce']) ||
             !wp_verify_nonce($_POST['flexmile_samochod_nonce'], 'flexmile_samochod_meta')) {
             return;
         }
@@ -248,5 +314,19 @@ class Samochody {
         // Checkbox rezerwacji
         $rezerwacja = isset($_POST['rezerwacja_aktywna']) ? '1' : '0';
         update_post_meta($post_id, '_rezerwacja_aktywna', $rezerwacja);
+
+        // Flagi statusu
+        $flags = [
+            '_nowy_samochod' => 'nowy_samochod',
+            '_dostepny_od_reki' => 'dostepny_od_reki',
+            '_dostepny_wkrotce' => 'dostepny_wkrotce',
+            '_najczesciej_wybierany' => 'najczesciej_wybierany',
+            '_wyrozniany' => 'wyrozniany',
+        ];
+
+        foreach ($flags as $meta_key => $post_key) {
+            $value = isset($_POST[$post_key]) ? '1' : '0';
+            update_post_meta($post_id, $meta_key, $value);
+        }
     }
 }

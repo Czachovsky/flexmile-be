@@ -52,6 +52,15 @@ class Admin_Menu {
      * Renderuje dashboard
      */
     public function render_dashboard() {
+        // Komunikat sukcesu po imporcie
+        if (isset($_GET['import']) && $_GET['import'] === 'success') {
+            ?>
+            <div class="notice notice-success is-dismissible">
+                <p><strong>✅ Sukces!</strong> <?php echo esc_html(urldecode($_GET['message'])); ?></p>
+            </div>
+            <?php
+        }
+
         // Statystyki
         $total_cars = wp_count_posts('samochod');
         $total_reservations = wp_count_posts('rezerwacja');
@@ -71,6 +80,9 @@ class Admin_Menu {
             if ($status === 'approved') $approved_count++;
             if ($status === 'rejected') $rejected_count++;
         }
+
+        // Sprawdź czy są już przykładowe dane
+        $has_sample_data = \FlexMile\Admin\Sample_Data_Importer::has_sample_data();
 
         ?>
         <div class="wrap">
@@ -103,6 +115,30 @@ class Admin_Menu {
                 </div>
 
                 <div class="flexmile-info">
+                    <?php if (!$has_sample_data): ?>
+                    <div class="flexmile-import-box">
+                        <h2>🎯 Rozpocznij szybko!</h2>
+                        <p>Nie masz jeszcze żadnych danych? Zaimportuj przykładowe dane aby przetestować system:</p>
+                        <ul style="margin: 15px 0;">
+                            <li>✅ <strong>30 marek</strong> samochodów (BMW, Audi, Toyota...)</li>
+                            <li>✅ <strong>10 typów nadwozia</strong> (SUV, Sedan, Kombi...)</li>
+                            <li>✅ <strong>7 rodzajów paliwa</strong> (Benzyna, Diesel, Hybryda...)</li>
+                            <li>✅ <strong>3 przykładowe samochody</strong> z pełnymi danymi</li>
+                        </ul>
+                        <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" style="margin-top: 20px;">
+                            <input type="hidden" name="action" value="flexmile_import_sample_data">
+                            <?php wp_nonce_field('flexmile_import_sample_data', 'flexmile_nonce'); ?>
+                            <button type="submit" class="button button-primary button-hero" style="background: #00a32a; border-color: #00a32a;">
+                                📦 Importuj przykładowe dane
+                            </button>
+                        </form>
+                        <p style="color: #666; font-size: 12px; margin-top: 10px;">
+                            ℹ️ Import nie nadpisze istniejących danych. Możesz go uruchomić bezpiecznie.
+                        </p>
+                    </div>
+                    <hr style="margin: 30px 0;">
+                    <?php endif; ?>
+
                     <h2>🎯 Szybki start</h2>
                     <ul>
                         <li><a href="<?php echo admin_url('post-new.php?post_type=samochod'); ?>">➕ Dodaj nowy samochód</a></li>
@@ -175,6 +211,32 @@ class Admin_Menu {
             .flexmile-info ul li {
                 padding: 8px 0;
                 border-bottom: 1px solid #f0f0f0;
+            }
+            .flexmile-import-box {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 25px;
+                border-radius: 12px;
+                color: white;
+                margin-bottom: 20px;
+            }
+            .flexmile-import-box h2 {
+                color: white;
+                margin-top: 0;
+            }
+            .flexmile-import-box p {
+                color: rgba(255,255,255,0.95);
+            }
+            .flexmile-import-box ul {
+                list-style: none;
+                padding: 0;
+            }
+            .flexmile-import-box ul li {
+                padding: 8px 0;
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+                color: white;
+            }
+            .flexmile-import-box ul li:last-child {
+                border-bottom: none;
             }
             .api-endpoints code {
                 background: #f5f5f5;
