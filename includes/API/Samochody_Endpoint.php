@@ -283,15 +283,20 @@ class Samochody_Endpoint {
         $data['obrazek_glowny'] = get_the_post_thumbnail_url($post->ID, 'large');
         $data['miniaturka'] = get_the_post_thumbnail_url($post->ID, 'thumbnail');
 
-        // Galeria (jeśli jest)
+        // Galeria
         $gallery_ids = get_post_meta($post->ID, '_galeria', true);
         $data['galeria'] = [];
         if ($gallery_ids) {
             foreach (explode(',', $gallery_ids) as $img_id) {
-                $data['galeria'][] = [
-                    'url' => wp_get_attachment_url($img_id),
-                    'thumbnail' => wp_get_attachment_image_url($img_id, 'thumbnail'),
-                ];
+                if ($img_id) {
+                    $data['galeria'][] = [
+                        'id' => (int) $img_id,
+                        'url' => wp_get_attachment_url($img_id),
+                        'thumbnail' => wp_get_attachment_image_url($img_id, 'thumbnail'),
+                        'medium' => wp_get_attachment_image_url($img_id, 'medium'),
+                        'large' => wp_get_attachment_image_url($img_id, 'large'),
+                    ];
+                }
             }
         }
 
@@ -299,11 +304,14 @@ class Samochody_Endpoint {
         $data['parametry'] = [
             'rocznik' => (int) get_post_meta($post->ID, '_rocznik', true),
             'przebieg' => (int) get_post_meta($post->ID, '_przebieg', true),
+            'silnik' => get_post_meta($post->ID, '_silnik', true),
             'moc' => (int) get_post_meta($post->ID, '_moc', true),
             'pojemnosc' => (int) get_post_meta($post->ID, '_pojemnosc', true),
             'skrzynia' => get_post_meta($post->ID, '_skrzynia', true),
+            'naped' => get_post_meta($post->ID, '_naped', true),
             'kolor' => get_post_meta($post->ID, '_kolor', true),
             'liczba_miejsc' => (int) get_post_meta($post->ID, '_liczba_miejsc', true),
+            'liczba_drzwi' => (int) get_post_meta($post->ID, '_liczba_drzwi', true),
             'numer_vin' => get_post_meta($post->ID, '_numer_vin', true),
         ];
 
@@ -335,10 +343,44 @@ class Samochody_Endpoint {
             'cena_za_km' => (float) get_post_meta($post->ID, '_cena_za_km', true),
         ];
 
+        // Wyposażenie standardowe
+        $wyposazenie_std = get_post_meta($post->ID, '_wyposazenie_standardowe', true);
+        $wyposazenie_std_wlasne = get_post_meta($post->ID, '_wyposazenie_standardowe_wlasne', true);
+
+        $data['wyposazenie_standardowe'] = [
+            'predefiniowane' => is_array($wyposazenie_std) ? $wyposazenie_std : [],
+            'wlasne' => $this->parse_custom_equipment($wyposazenie_std_wlasne),
+        ];
+
+        // Wyposażenie dodatkowe
+        $wyposazenie_dod = get_post_meta($post->ID, '_wyposazenie_dodatkowe', true);
+        $wyposazenie_dod_wlasne = get_post_meta($post->ID, '_wyposazenie_dodatkowe_wlasne', true);
+
+        $data['wyposazenie_dodatkowe'] = [
+            'predefiniowane' => is_array($wyposazenie_dod) ? $wyposazenie_dod : [],
+            'wlasne' => $this->parse_custom_equipment($wyposazenie_dod_wlasne),
+        ];
+
         // Status rezerwacji
         $data['dostepny'] = get_post_meta($post->ID, '_rezerwacja_aktywna', true) !== '1';
 
         return $data;
+    }
+
+    /**
+     * Parsuje własne wyposażenie z textarea
+     */
+    private function parse_custom_equipment($text) {
+        if (empty($text)) {
+            return [];
+        }
+
+        // Rozdziel po przecinkach lub nowych liniach
+        $items = preg_split('/[,\n]+/', $text);
+        $items = array_map('trim', $items);
+        $items = array_filter($items); // Usuń puste
+
+        return array_values($items);
     }
 
     /**
