@@ -1,0 +1,135 @@
+{
+  "marki": [
+    "Audi",
+    "BMW",
+    "Mercedes-Benz",
+    "Volkswagen",
+    "Toyota",
+    "Honda",
+    "Ford",
+    "Opel",
+    "Peugeot",
+    "Renault",
+    "Skoda",
+    "Seat",
+    "Fiat",
+    "Alfa Romeo",
+    "Volvo",
+    "Mazda",
+    "Nissan",
+    "Hyundai",
+    "Kia",
+    "Lexus",
+    "Porsche",
+    "Tesla",
+    "Land Rover",
+    "Jaguar",
+    "Mini",
+    "Chevrolet",
+    "Subaru",
+    "Mitsubishi",
+    "Suzuki",
+    "Dacia"
+  ],
+  "wyposazenie_standardowe": {
+    "Bezpieczeństwo": {
+      "abs": "ABS",
+      "esp": "ESP",
+      "asr": "ASR/Kontrola trakcji",
+      "poduszki": "Poduszki powietrzne",
+      "isofix": "ISOFIX",
+      "alarm": "Alarm",
+      "immobiliser": "Immobiliser",
+      "asystent_hamowania": "Asystent hamowania"
+    },
+    "Komfort": {
+      "klimatyzacja": "Klimatyzacja",
+      "klimatyzacja_auto": "Klimatyzacja automatyczna",
+      "nawigacja": "Nawigacja GPS",
+      "bluetooth": "Bluetooth",
+      "tempomat": "Tempomat",
+      "el_szyby": "Elektryczne szyby",
+      "el_lusterka": "Elektryczne lusterka",
+      "podgrzewane_siedzenia": "Podgrzewane siedzenia",
+      "kierownica_wielofunkcyjna": "Kierownica wielofunkcyjna"
+    },
+    "Multimedia": {
+      "radio": "Radio",
+      "cd": "Odtwarzacz CD",
+      "usb": "USB/AUX",
+      "glosniki": "Zestaw głośników",
+      "ekran_dotykowy": "Ekran dotykowy",
+      "bluetooth_audio": "Bluetooth audio"
+    },
+    "Oświetlenie": {
+      "led": "Światła LED",
+      "xenon": "Xenon",
+      "halogen": "Halogen",
+      "swiatla_dzienne": "Światła dzienne LED",
+      "reflektory_przeciwmgielne": "Reflektory przeciwmgielne"
+    }
+  },
+  "wyposazenie_dodatkowe": {
+    "Premium": {
+      "skorzana_tapicerka": "Skórzana tapicerka",
+      "dach_panoramiczny": "Dach panoramiczny",
+      "zawieszenie_pneumatyczne": "Zawieszenie pneumatyczne",
+      "fotele_sportowe": "Fotele sportowe",
+      "fotele_wentylowane": "Fotele wentylowane",
+      "masaz_foteli": "Masaż foteli",
+      "fotele_podgrzewane_tyl": "Podgrzewane siedzenia tylne",
+      "fotele_elektryczne": "Fotele elektryczne z pamięcią"
+    },
+    "Technologia": {
+      "kamera_360": "Kamera 360°",
+      "kamera_cofania": "Kamera cofania",
+      "czujniki_parkowania": "Czujniki parkowania",
+      "czujniki_parkowania_przod_tyl": "Czujniki parkowania przód i tył",
+      "asystent_pasa": "Asystent pasa ruchu",
+      "tempomat_adaptacyjny": "Tempomat adaptacyjny",
+      "head_up_display": "Head-up display",
+      "keyless": "Keyless Go",
+      "start_stop": "System Start/Stop",
+      "night_vision": "Night Vision"
+    },
+    "Audio": {
+      "system_audio_premium": "System audio premium",
+      "subwoofer": "Subwoofer",
+      "android_auto": "Android Auto",
+      "apple_carplay": "Apple CarPlay",
+      "glosniki_premium": "Głośniki premium (Bose/Harman Kardon)",
+      "radio_dab": "Radio DAB+"
+    },
+    "Wygląd": {
+      "felgi_aluminiowe": "Felgi aluminiowe",
+      "felgi_18": "Felgi 18\"",
+      "felgi_19": "Felgi 19\"",
+      "felgi_20": "Felgi 20\"",
+      "relingi": "Relingi dachowe",
+      "hak": "Hak holowniczy",
+      "spojler": "Spojler",
+      "przyciemniane_szyby": "Przyciemniane szyby"
+    }
+  },
+  "typy_nadwozia": [
+    "Sedan",
+    "Kombi",
+    "SUV",
+    "Hatchback",
+    "Coupe",
+    "Cabrio",
+    "Minivan",
+    "Pickup",
+    "Kompakt",
+    "Sportowy"
+  ],
+  "rodzaje_paliwa": [
+    "Benzyna",
+    "Diesel",
+    "Hybryda",
+    "Elektryczny",
+    "Benzyna + LPG",
+    "Benzyna + CNG",
+    "Plug-in Hybrid"
+  ]
+}

@@ -396,9 +396,33 @@ class Samochody {
     }
 
     /**
+     * Ładuje konfigurację z pliku JSON
+     */
+    private function load_config() {
+        $config_file = FLEXMILE_PLUGIN_DIR . 'config.json';
+
+        if (!file_exists($config_file)) {
+            return null;
+        }
+
+        $json = file_get_contents($config_file);
+        $config = json_decode($json, true);
+
+        return $config;
+    }
+
+    /**
      * Lista wyposażenia standardowego
      */
     private function get_wyposazenie_standardowe_options() {
+        $config = $this->load_config();
+
+        // Jeśli config istnieje, użyj go
+        if ($config && isset($config['wyposazenie_standardowe'])) {
+            return $config['wyposazenie_standardowe'];
+        }
+
+        // Fallback - hardkodowane wartości
         return [
             'Bezpieczeństwo' => [
                 'abs' => 'ABS',
@@ -438,6 +462,14 @@ class Samochody {
      * Lista wyposażenia dodatkowego
      */
     private function get_wyposazenie_dodatkowe_options() {
+        $config = $this->load_config();
+
+        // Jeśli config istnieje, użyj go
+        if ($config && isset($config['wyposazenie_dodatkowe'])) {
+            return $config['wyposazenie_dodatkowe'];
+        }
+
+        // Fallback - hardkodowane wartości
         return [
             'Premium' => [
                 'skorzana_tapicerka' => 'Skórzana tapicerka',

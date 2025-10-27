@@ -15,6 +15,22 @@ class Sample_Data_Importer {
     }
 
     /**
+     * Ładuje konfigurację z pliku JSON
+     */
+    private function load_config() {
+        $config_file = FLEXMILE_PLUGIN_DIR . 'config.json';
+
+        if (!file_exists($config_file)) {
+            return null;
+        }
+
+        $json = file_get_contents($config_file);
+        $config = json_decode($json, true);
+
+        return $config;
+    }
+
+    /**
      * Importuje przykładowe dane
      */
     public function import_sample_data() {
@@ -66,14 +82,22 @@ class Sample_Data_Importer {
      * Importuje marki samochodów
      */
     private function import_marki() {
-        $marki = [
-            'Audi', 'BMW', 'Mercedes-Benz', 'Volkswagen', 'Toyota',
-            'Honda', 'Ford', 'Opel', 'Peugeot', 'Renault',
-            'Skoda', 'Seat', 'Fiat', 'Alfa Romeo', 'Volvo',
-            'Mazda', 'Nissan', 'Hyundai', 'Kia', 'Lexus',
-            'Porsche', 'Tesla', 'Land Rover', 'Jaguar', 'Mini',
-            'Chevrolet', 'Subaru', 'Mitsubishi', 'Suzuki', 'Dacia'
-        ];
+        $config = $this->load_config();
+
+        // Użyj marek z config.json jeśli dostępne
+        if ($config && isset($config['marki'])) {
+            $marki = $config['marki'];
+        } else {
+            // Fallback - hardkodowane marki
+            $marki = [
+                'Audi', 'BMW', 'Mercedes-Benz', 'Volkswagen', 'Toyota',
+                'Honda', 'Ford', 'Opel', 'Peugeot', 'Renault',
+                'Skoda', 'Seat', 'Fiat', 'Alfa Romeo', 'Volvo',
+                'Mazda', 'Nissan', 'Hyundai', 'Kia', 'Lexus',
+                'Porsche', 'Tesla', 'Land Rover', 'Jaguar', 'Mini',
+                'Chevrolet', 'Subaru', 'Mitsubishi', 'Suzuki', 'Dacia'
+            ];
+        }
 
         $count = 0;
         foreach ($marki as $marka) {
@@ -93,18 +117,26 @@ class Sample_Data_Importer {
      * Importuje typy nadwozia
      */
     private function import_typy_nadwozia() {
-        $typy = [
-            'Sedan',
-            'Kombi',
-            'SUV',
-            'Hatchback',
-            'Coupe',
-            'Cabrio',
-            'Minivan',
-            'Pickup',
-            'Kompakt',
-            'Sportowy'
-        ];
+        $config = $this->load_config();
+
+        // Użyj typów z config.json jeśli dostępne
+        if ($config && isset($config['typy_nadwozia'])) {
+            $typy = $config['typy_nadwozia'];
+        } else {
+            // Fallback - hardkodowane typy
+            $typy = [
+                'Sedan',
+                'Kombi',
+                'SUV',
+                'Hatchback',
+                'Coupe',
+                'Cabrio',
+                'Minivan',
+                'Pickup',
+                'Kompakt',
+                'Sportowy'
+            ];
+        }
 
         $count = 0;
         foreach ($typy as $typ) {
@@ -124,15 +156,23 @@ class Sample_Data_Importer {
      * Importuje rodzaje paliwa
      */
     private function import_paliwa() {
-        $paliwa = [
-            'Benzyna',
-            'Diesel',
-            'Hybryda',
-            'Elektryczny',
-            'Benzyna + LPG',
-            'Benzyna + CNG',
-            'Plug-in Hybrid'
-        ];
+        $config = $this->load_config();
+
+        // Użyj paliw z config.json jeśli dostępne
+        if ($config && isset($config['rodzaje_paliwa'])) {
+            $paliwa = $config['rodzaje_paliwa'];
+        } else {
+            // Fallback - hardkodowane paliwa
+            $paliwa = [
+                'Benzyna',
+                'Diesel',
+                'Hybryda',
+                'Elektryczny',
+                'Benzyna + LPG',
+                'Benzyna + CNG',
+                'Plug-in Hybrid'
+            ];
+        }
 
         $count = 0;
         foreach ($paliwa as $paliwo) {
@@ -209,7 +249,7 @@ class Sample_Data_Importer {
                 'przebieg' => 62000,
                 'moc' => 150,
                 'pojemnosc' => 1498,
-                'skrzynia' => 'manualna',
+                'skrzynia' => 'manual',
                 'kolor' => 'Biały',
                 'miejsca' => 5,
                 'vin' => 'WVWZZZ1KZMW012345',
