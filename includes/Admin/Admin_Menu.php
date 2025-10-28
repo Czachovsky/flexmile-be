@@ -86,81 +86,81 @@ class Admin_Menu {
 
         ?>
         <div class="wrap">
-            <h1>FlexMile Dashboard</h1>
+<h1>FlexMile Dashboard</h1>
 
             <div class="flexmile-dashboard">
                 <div class="flexmile-stats">
                     <div class="stat-box">
-                        <h3>🚗 Offers</h3>
+                        <h3>🚗 Oferty</h3>
                         <p class="stat-number"><?php echo $total_offers->publish; ?></p>
-                        <a href="<?php echo admin_url('edit.php?post_type=offer'); ?>">View all</a>
+                        <a href="<?php echo admin_url('edit.php?post_type=offer'); ?>">Zobacz wszystkie</a>
                     </div>
 
                     <div class="stat-box">
-                        <h3>⏳ Pending Reservations</h3>
+                        <h3>⏳ Oczekujące rezerwacje</h3>
                         <p class="stat-number"><?php echo $pending_count; ?></p>
-                        <a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">Manage</a>
+                        <a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">Zarządzaj</a>
                     </div>
 
                     <div class="stat-box">
-                        <h3>✅ Approved</h3>
+                        <h3>✅ Zatwierdzone</h3>
                         <p class="stat-number"><?php echo $approved_count; ?></p>
                     </div>
 
                     <div class="stat-box">
-                        <h3>📋 All Reservations</h3>
+                        <h3>📋 Wszystkie rezerwacje</h3>
                         <p class="stat-number"><?php echo $total_reservations->publish; ?></p>
-                        <a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">View all</a>
+                        <a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">Zobacz wszystkie</a>
                     </div>
                 </div>
 
                 <div class="flexmile-info">
                     <?php if (!$has_sample_data): ?>
                     <div class="flexmile-import-box">
-                        <h2>🎯 Quick Start!</h2>
-                        <p>No data yet? Import sample data to test the system:</p>
+                        <h2>🎯 Rozpocznij szybko!</h2>
+                        <p>Nie masz jeszcze żadnych danych? Zaimportuj przykładowe dane aby przetestować system:</p>
                         <ul style="margin: 15px 0;">
-                            <li>✅ <strong>136 car brands</strong></li>
-                            <li>✅ <strong>10 body types</strong> (SUV, Sedan, Wagon...)</li>
-                            <li>✅ <strong>7 fuel types</strong> (Petrol, Diesel, Hybrid...)</li>
-                            <li>✅ <strong>3 sample cars</strong> with full data</li>
+                            <li>✅ <strong>136 marek</strong> samochodów</li>
+                            <li>✅ <strong>10 typów nadwozia</strong> (SUV, Sedan, Kombi...)</li>
+                            <li>✅ <strong>7 rodzajów paliwa</strong> (Benzyna, Diesel, Hybryda...)</li>
+                            <li>✅ <strong>3 przykładowe samochody</strong> z pełnymi danymi</li>
                         </ul>
                         <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" style="margin-top: 20px;">
                             <input type="hidden" name="action" value="flexmile_import_sample_data">
                             <?php wp_nonce_field('flexmile_import_sample_data', 'flexmile_nonce'); ?>
                             <button type="submit" class="button button-primary button-hero" style="background: #00a32a; border-color: #00a32a;">
-                                📦 Import Sample Data
+                                📦 Importuj przykładowe dane
                             </button>
                         </form>
                         <p style="color: #666; font-size: 12px; margin-top: 10px;">
-                            ℹ️ Import won't overwrite existing data. You can run it safely.
+                            ℹ️ Import nie nadpisze istniejących danych. Możesz go uruchomić bezpiecznie.
                         </p>
                     </div>
                     <hr style="margin: 30px 0;">
                     <?php endif; ?>
 
-                    <h2>🎯 Quick Start</h2>
+                    <h2>🎯 Szybki start</h2>
                     <ul>
-                        <li><a href="<?php echo admin_url('post-new.php?post_type=offer'); ?>">➕ Add New Offer</a></li>
-                        <li><a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">📋 Manage Reservations</a></li>
-                        <li><a href="<?php echo admin_url('edit-tags.php?taxonomy=car_brand&post_type=offer'); ?>">🏷️ Manage Brands</a></li>
-                        <li><a href="<?php echo admin_url('admin.php?page=flexmile-api'); ?>">⚙️ API Settings</a></li>
+                        <li><a href="<?php echo admin_url('post-new.php?post_type=offer'); ?>">➕ Dodaj nową ofertę</a></li>
+                        <li><a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">📋 Zarządzaj rezerwacjami</a></li>
+                        <li><a href="<?php echo admin_url('edit-tags.php?taxonomy=car_brand&post_type=offer'); ?>">🏷️ Zarządzaj markami</a></li>
+                        <li><a href="<?php echo admin_url('admin.php?page=flexmile-api'); ?>">⚙️ Ustawienia API</a></li>
                     </ul>
 
                     <h3>📡 REST API Endpoints</h3>
-                    <p>Your Angular app should use these endpoints:</p>
+                    <p>Twoja aplikacja Angular powinna używać następujących endpointów:</p>
                     <ul class="api-endpoints">
                         <li>
                             <code>GET <?php echo rest_url('flexmile/v1/offers'); ?></code>
-                            <span>List of offers with filtering</span>
+                            <span>Lista ofert z filtrowaniem</span>
                         </li>
                         <li>
                             <code>GET <?php echo rest_url('flexmile/v1/offers/{id}'); ?></code>
-                            <span>Single offer</span>
+                            <span>Pojedyncza oferta</span>
                         </li>
                         <li>
                             <code>POST <?php echo rest_url('flexmile/v1/reservations'); ?></code>
-                            <span>New reservation</span>
+                            <span>Nowa rezerwacja</span>
                         </li>
                     </ul>
                 </div>
@@ -260,13 +260,13 @@ class Admin_Menu {
     public function render_api_settings() {
         ?>
         <div class="wrap">
-            <h1>FlexMile API Settings</h1>
+            <h1>Ustawienia FlexMile API</h1>
 
             <div class="flexmile-api-info">
-                <h2>🔌 CORS Configuration</h2>
-                <p>For your Angular app to communicate with WordPress API, you need to configure CORS.</p>
+             <h2>🔌 Konfiguracja CORS</h2>
+             <p>Aby Twoja aplikacja Angular mogła komunikować się z WordPress API, musisz skonfigurować CORS.</p>
 
-                <h3>Add to <code>wp-config.php</code> or <code>functions.php</code>:</h3>
+             <h3>Dodaj do pliku <code>wp-config.php</code> lub <code>functions.php</code>:</h3>
                 <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;"><code>// Enable CORS for headless WordPress
 add_action('init', function() {
     header('Access-Control-Allow-Origin: *'); // Change * to Angular domain in production
@@ -278,76 +278,76 @@ add_action('init', function() {
     }
 });</code></pre>
 
-                <h3>📋 Available API Filters:</h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th>Parameter</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>car_brand</code></td>
-                            <td>string</td>
-                            <td>Filter by brand (slug)</td>
-                        </tr>
-                        <tr>
-                            <td><code>year_from</code></td>
-                            <td>integer</td>
-                            <td>Year from</td>
-                        </tr>
-                        <tr>
-                            <td><code>year_to</code></td>
-                            <td>integer</td>
-                            <td>Year to</td>
-                        </tr>
-                        <tr>
-                            <td><code>max_mileage</code></td>
-                            <td>integer</td>
-                            <td>Maximum mileage</td>
-                        </tr>
-                        <tr>
-                            <td><code>price_from</code></td>
-                            <td>float</td>
-                            <td>Minimum price</td>
-                        </tr>
-                        <tr>
-                            <td><code>price_to</code></td>
-                            <td>float</td>
-                            <td>Maximum price</td>
-                        </tr>
-                        <tr>
-                            <td><code>page</code></td>
-                            <td>integer</td>
-                            <td>Page number (infinite scroll)</td>
-                        </tr>
-                        <tr>
-                            <td><code>per_page</code></td>
-                            <td>integer</td>
-                            <td>Results per page (max 100)</td>
-                        </tr>
-                    </tbody>
-                </table>
+ <h3>📋 Dostępne filtry API:</h3>
+         <table class="wp-list-table widefat fixed striped">
+             <thead>
+                 <tr>
+                     <th>Parametr</th>
+                     <th>Typ</th>
+                     <th>Opis</th>
+                 </tr>
+             </thead>
+             <tbody>
+                 <tr>
+                     <td><code>car_brand</code></td>
+                     <td>string</td>
+                     <td>Filtrowanie po marce (slug)</td>
+                 </tr>
+                 <tr>
+                     <td><code>year_from</code></td>
+                     <td>integer</td>
+                     <td>Rocznik od</td>
+                 </tr>
+                 <tr>
+                     <td><code>year_to</code></td>
+                     <td>integer</td>
+                     <td>Rocznik do</td>
+                 </tr>
+                 <tr>
+                     <td><code>max_mileage</code></td>
+                     <td>integer</td>
+                     <td>Maksymalny przebieg</td>
+                 </tr>
+                 <tr>
+                     <td><code>price_from</code></td>
+                     <td>float</td>
+                     <td>Cena minimalna</td>
+                 </tr>
+                 <tr>
+                     <td><code>price_to</code></td>
+                     <td>float</td>
+                     <td>Cena maksymalna</td>
+                 </tr>
+                 <tr>
+                     <td><code>page</code></td>
+                     <td>integer</td>
+                     <td>Numer strony (infinite scroll)</td>
+                 </tr>
+                 <tr>
+                     <td><code>per_page</code></td>
+                     <td>integer</td>
+                     <td>Liczba wyników na stronę (max 100)</td>
+                 </tr>
+             </tbody>
+         </table>
 
-                <h3>💡 Example Requests:</h3>
-                <ul class="api-examples">
-                    <li>
-                        <strong>All offers:</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers'); ?></code>
-                    </li>
-                    <li>
-                        <strong>BMW from 2020-2023:</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers?car_brand=bmw&year_from=2020&year_to=2023'); ?></code>
-                    </li>
-                    <li>
-                        <strong>Infinite scroll (page 2):</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers?page=2&per_page=10'); ?></code>
-                    </li>
-                </ul>
-            </div>
-        </div>
+         <h3>💡 Przykładowe zapytania:</h3>
+         <ul class="api-examples">
+             <li>
+                 <strong>Wszystkie oferty:</strong><br>
+                 <code><?php echo rest_url('flexmile/v1/offers'); ?></code>
+             </li>
+             <li>
+                 <strong>BMW z lat 2020-2023:</strong><br>
+                 <code><?php echo rest_url('flexmile/v1/offers?car_brand=bmw&year_from=2020&year_to=2023'); ?></code>
+             </li>
+             <li>
+                 <strong>Infinite scroll (strona 2):</strong><br>
+                 <code><?php echo rest_url('flexmile/v1/offers?page=2&per_page=10'); ?></code>
+             </li>
+         </ul>
+     </div>
+ </div>
 
         <style>
             .flexmile-api-info {
