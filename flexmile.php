@@ -42,7 +42,7 @@ spl_autoload_register(function ($class) {
  * Główna klasa wtyczki
  */
 class FlexMile_Plugin {
-    
+
     private static $instance = null;
 
     public static function get_instance() {
@@ -66,15 +66,15 @@ class FlexMile_Plugin {
     private function load_components() {
         // Blokada frontendu (headless mode)
         new FlexMile\Core\Frontend_Blocker();
-        
+
         // Custom Post Types
-        new FlexMile\PostTypes\Samochody();
-        new FlexMile\PostTypes\Rezerwacje();
-        
+        new FlexMile\PostTypes\Offers();
+        new FlexMile\PostTypes\Reservations();
+
         // REST API
-        new FlexMile\API\Samochody_Endpoint();
-        new FlexMile\API\Rezerwacje_Endpoint();
-        
+        new FlexMile\API\Offers_Endpoint();
+        new FlexMile\API\Reservations_Endpoint();
+
         // Admin
         new FlexMile\Admin\Admin_Menu();
         new FlexMile\Admin\Sample_Data_Importer();
@@ -86,9 +86,9 @@ class FlexMile_Plugin {
 
     public function activate() {
         // Rejestracja CPT przed flush
-        new FlexMile\PostTypes\Samochody();
-        new FlexMile\PostTypes\Rezerwacje();
-        
+        new FlexMile\PostTypes\Offers();
+        new FlexMile\PostTypes\Reservations();
+
         flush_rewrite_rules();
     }
 

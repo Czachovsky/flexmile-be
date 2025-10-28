@@ -9,10 +9,10 @@ if (!defined('ABSPATH')) {
  * REST API Endpoint dla Rezerwacji
  * Z nowym systemem wyboru konfiguracji cen
  */
-class Rezerwacje_Endpoint {
+class Reservations_Endpoint {
 
     const NAMESPACE = 'flexmile/v1';
-    const BASE = 'rezerwacje';
+    const BASE = 'reservations';
 
     public function __construct() {
         add_action('rest_api_init', [$this, 'register_routes']);

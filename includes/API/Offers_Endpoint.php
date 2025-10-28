@@ -6,13 +6,13 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * REST API Endpoint dla Samochodów
+ * REST API Endpoint dla Ofert
  * Z obsługą macierzy cen
  */
-class Samochody_Endpoint {
+class Offers_Endpoint {
 
     const NAMESPACE = 'flexmile/v1';
-    const BASE = 'samochody';
+    const BASE = 'offers';
 
     public function __construct() {
         add_action('rest_api_init', [$this, 'register_routes']);

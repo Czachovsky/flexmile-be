@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
  * Custom Post Type dla Rezerwacji
  * Zaktualizowane o nowy system cen
  */
-class Rezerwacje {
+class Reservations {
 
     const POST_TYPE = 'rezerwacja';
 

@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
  * Custom Post Type dla Samochodów
  * Z zaawansowanym systemem macierzy cen
  */
-class Samochody {
+class Offers {
 
     const POST_TYPE = 'samochod';
 
