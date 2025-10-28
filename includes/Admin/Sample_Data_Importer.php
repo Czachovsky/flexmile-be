@@ -43,31 +43,31 @@ class Sample_Data_Importer {
         check_admin_referer('flexmile_import_sample_data', 'flexmile_nonce');
 
         $results = [
-            'marki' => 0,
-            'typy_nadwozia' => 0,
-            'paliwa' => 0,
-            'samochody' => 0,
+            'brands' => 0,
+            'body_types' => 0,
+            'fuel_types' => 0,
+            'offers' => 0,
         ];
 
         // Import marek
-        $results['marki'] = $this->import_marki();
+        $results['brands'] = $this->import_brands();
 
         // Import typów nadwozia
-        $results['typy_nadwozia'] = $this->import_typy_nadwozia();
+        $results['body_types'] = $this->import_body_types();
 
         // Import rodzajów paliwa
-        $results['paliwa'] = $this->import_paliwa();
+        $results['fuel_types'] = $this->import_fuel_types();
 
         // Import przykładowych samochodów
-        $results['samochody'] = $this->import_samochody();
+        $results['offers'] = $this->import_offers();
 
         // Przekieruj z komunikatem
         $message = sprintf(
-            'Zaimportowano: %d marek, %d typów nadwozia, %d rodzajów paliwa, %d samochodów',
-            $results['marki'],
-            $results['typy_nadwozia'],
-            $results['paliwa'],
-            $results['samochody']
+            'Imported: %d brands, %d body types, %d fuel types, %d offers',
+            $results['brands'],
+            $results['body_types'],
+            $results['fuel_types'],
+            $results['offers']
         );
 
         wp_redirect(add_query_arg([
@@ -81,12 +81,12 @@ class Sample_Data_Importer {
     /**
      * Importuje marki samochodów
      */
-    private function import_marki() {
+    private function import_brands() {
         $config = $this->load_config();
 
         // Użyj marek z config.json jeśli dostępne
-        if ($config && isset($config['marki'])) {
-            $marki = $config['marki'];
+        if ($config && isset($config['brands'])) {
+            $marki = $config['brands'];
         } else {
             // Fallback - hardkodowane marki
             $marki = [
@@ -101,9 +101,9 @@ class Sample_Data_Importer {
 
         $count = 0;
         foreach ($marki as $marka) {
-            $existing = term_exists($marka, 'marka_samochodu');
+            $existing = term_exists($marka, 'car_brand');
             if (!$existing) {
-                $result = wp_insert_term($marka, 'marka_samochodu');
+                $result = wp_insert_term($marka, 'car_brand');
                 if (!is_wp_error($result)) {
                     $count++;
                 }
@@ -116,12 +116,12 @@ class Sample_Data_Importer {
     /**
      * Importuje typy nadwozia
      */
-    private function import_typy_nadwozia() {
+    private function import_body_types() {
         $config = $this->load_config();
 
         // Użyj typów z config.json jeśli dostępne
-        if ($config && isset($config['typy_nadwozia'])) {
-            $typy = $config['typy_nadwozia'];
+        if ($config && isset($config['body_types'])) {
+            $typy = $config['body_types'];
         } else {
             // Fallback - hardkodowane typy
             $typy = [
@@ -140,9 +140,9 @@ class Sample_Data_Importer {
 
         $count = 0;
         foreach ($typy as $typ) {
-            $existing = term_exists($typ, 'typ_nadwozia');
+            $existing = term_exists($typ, 'body_type');
             if (!$existing) {
-                $result = wp_insert_term($typ, 'typ_nadwozia');
+                $result = wp_insert_term($typ, 'body_type');
                 if (!is_wp_error($result)) {
                     $count++;
                 }
@@ -155,12 +155,12 @@ class Sample_Data_Importer {
     /**
      * Importuje rodzaje paliwa
      */
-    private function import_paliwa() {
+    private function import_fuel_types() {
         $config = $this->load_config();
 
         // Użyj paliw z config.json jeśli dostępne
-        if ($config && isset($config['rodzaje_paliwa'])) {
-            $paliwa = $config['rodzaje_paliwa'];
+        if ($config && isset($config['fuel_types'])) {
+            $paliwa = $config['fuel_types'];
         } else {
             // Fallback - hardkodowane paliwa
             $paliwa = [
@@ -176,9 +176,9 @@ class Sample_Data_Importer {
 
         $count = 0;
         foreach ($paliwa as $paliwo) {
-            $existing = term_exists($paliwo, 'rodzaj_paliwa');
+            $existing = term_exists($paliwo, 'fuel_type');
             if (!$existing) {
-                $result = wp_insert_term($paliwo, 'rodzaj_paliwa');
+                $result = wp_insert_term($paliwo, 'fuel_type');
                 if (!is_wp_error($result)) {
                     $count++;
                 }
@@ -191,134 +191,185 @@ class Sample_Data_Importer {
     /**
      * Importuje przykładowe samochody
      */
-    private function import_samochody() {
-        $samochody = [
+    private function import_offers() {
+        $offers = [
             [
-                'nazwa' => 'BMW X5 3.0d xDrive',
-                'opis' => 'Luksusowy SUV premium z napędem na cztery koła. Doskonały stan techniczny, bogate wyposażenie. Idealny do długich tras i rodzinnych wyjazdów. Samochód serwisowany w ASO, kompletna historia przeglądów.',
-                'marka' => 'BMW',
-                'typ' => 'SUV',
-                'paliwo' => 'Diesel',
-                'rocznik' => 2022,
-                'przebieg' => 45000,
-                'moc' => 286,
-                'pojemnosc' => 2993,
-                'skrzynia' => 'automatic',
-                'kolor' => 'Czarny metalik',
-                'miejsca' => 5,
+                'title' => 'BMW X5 3.0d xDrive',
+                'description' => 'Luksusowy SUV premium z napędem na cztery koła. Doskonały stan techniczny, bogate wyposażenie. Idealny do długich tras i rodzinnych wyjazdów. Samochód serwisowany w ASO, kompletna historia przeglądów.',
+                'brand' => 'BMW',
+                'body_type' => 'SUV',
+                'fuel_type' => 'Diesel',
+                'year' => 2022,
+                'mileage' => 45000,
+                'horsepower' => 286,
+                'engine_capacity' => 2993,
+                'transmission' => 'automatic',
+                'color' => 'Czarny metalik',
+                'seats' => 5,
                 'vin' => 'WBAKR810501A23456',
-                'cena_bazowa' => 2800.00,
-                'cena_za_km' => 0.60,
-                'flagi' => [
-                    'nowy' => true,
-                    'od_reki' => true,
-                    'popularne' => true,
-                    'wyrozniany' => true,
+                'lowest_price' => 2800.00,
+                'pricing_config' => [
+                    'rental_periods' => [12, 24, 36, 48],
+                    'mileage_limits' => [10000, 15000, 20000],
+                    'prices' => [
+                        '12_10000' => 2800.00,
+                        '12_15000' => 2900.00,
+                        '12_20000' => 3000.00,
+                        '24_10000' => 2600.00,
+                        '24_15000' => 2700.00,
+                        '24_20000' => 2800.00,
+                        '36_10000' => 2400.00,
+                        '36_15000' => 2500.00,
+                        '36_20000' => 2600.00,
+                        '48_10000' => 2200.00,
+                        '48_15000' => 2300.00,
+                        '48_20000' => 2400.00,
+                    ]
+                ],
+                'attributes' => [
+                    'new' => true,
+                    'available_immediately' => true,
+                    'popular' => true,
+                    'featured' => true,
                 ],
             ],
             [
-                'nazwa' => 'Toyota Corolla 1.8 Hybrid',
-                'opis' => 'Ekonomiczny sedan hybrydowy o niskim spalaniu (4.5l/100km). Idealne auto do miasta i trasy. Bezawaryjny napęd hybrydowy, cicha kabina, niskie koszty eksploatacji. Jeden właściciel, ASO.',
-                'marka' => 'Toyota',
-                'typ' => 'Sedan',
-                'paliwo' => 'Hybryda',
-                'rocznik' => 2023,
-                'przebieg' => 28000,
-                'moc' => 122,
-                'pojemnosc' => 1798,
-                'skrzynia' => 'automatic',
-                'kolor' => 'Srebrny',
-                'miejsca' => 5,
+                'title' => 'Toyota Corolla 1.8 Hybrid',
+                'description' => 'Ekonomiczny sedan hybrydowy o niskim spalaniu (4.5l/100km). Idealne auto do miasta i trasy. Bezawaryjny napęd hybrydowy, cicha kabina, niskie koszty eksploatacji. Jeden właściciel, ASO.',
+                'brand' => 'Toyota',
+                'body_type' => 'Sedan',
+                'fuel_type' => 'Hybryda',
+                'year' => 2023,
+                'mileage' => 28000,
+                'horsepower' => 122,
+                'engine_capacity' => 1798,
+                'transmission' => 'automatic',
+                'color' => 'Srebrny',
+                'seats' => 5,
                 'vin' => 'NMTBB6EE3NR023789',
-                'cena_bazowa' => 1900.00,
-                'cena_za_km' => 0.40,
-                'flagi' => [
-                    'nowy' => true,
-                    'od_reki' => true,
-                    'popularne' => false,
-                    'wyrozniany' => false,
+                'lowest_price' => 1900.00,
+                'pricing_config' => [
+                    'rental_periods' => [12, 24, 36, 48],
+                    'mileage_limits' => [10000, 15000, 20000],
+                    'prices' => [
+                        '12_10000' => 1900.00,
+                        '12_15000' => 2000.00,
+                        '12_20000' => 2100.00,
+                        '24_10000' => 1800.00,
+                        '24_15000' => 1900.00,
+                        '24_20000' => 2000.00,
+                        '36_10000' => 1700.00,
+                        '36_15000' => 1800.00,
+                        '36_20000' => 1900.00,
+                        '48_10000' => 1600.00,
+                        '48_15000' => 1700.00,
+                        '48_20000' => 1800.00,
+                    ]
+                ],
+                'attributes' => [
+                    'new' => true,
+                    'available_immediately' => true,
+                    'popular' => false,
+                    'featured' => false,
                 ],
             ],
             [
-                'nazwa' => 'Volkswagen Golf 1.5 TSI',
-                'opis' => 'Klasyczny hatchback z segmentu C. Sprawdzony silnik benzynowy 1.5 TSI o mocy 150 KM. Oszczędny, dynamiczny i praktyczny. Wyposażenie: klimatyzacja, nawigacja, czujniki parkowania, kamera cofania.',
-                'marka' => 'Volkswagen',
-                'typ' => 'Hatchback',
-                'paliwo' => 'Benzyna',
-                'rocznik' => 2021,
-                'przebieg' => 62000,
-                'moc' => 150,
-                'pojemnosc' => 1498,
-                'skrzynia' => 'manual',
-                'kolor' => 'Biały',
-                'miejsca' => 5,
+                'title' => 'Volkswagen Golf 1.5 TSI',
+                'description' => 'Klasyczny hatchback z segmentu C. Sprawdzony silnik benzynowy 1.5 TSI o mocy 150 KM. Oszczędny, dynamiczny i praktyczny. Wyposażenie: klimatyzacja, nawigacja, czujniki parkowania, kamera cofania.',
+                'brand' => 'Volkswagen',
+                'body_type' => 'Hatchback',
+                'fuel_type' => 'Benzyna',
+                'year' => 2021,
+                'mileage' => 62000,
+                'horsepower' => 150,
+                'engine_capacity' => 1498,
+                'transmission' => 'manual',
+                'color' => 'Biały',
+                'seats' => 5,
                 'vin' => 'WVWZZZ1KZMW012345',
-                'cena_bazowa' => 1600.00,
-                'cena_za_km' => 0.35,
-                'flagi' => [
-                    'nowy' => false,
-                    'od_reki' => false,
-                    'popularne' => true,
-                    'wyrozniany' => false,
+                'lowest_price' => 1600.00,
+                'pricing_config' => [
+                    'rental_periods' => [12, 24, 36, 48],
+                    'mileage_limits' => [10000, 15000, 20000],
+                    'prices' => [
+                        '12_10000' => 1600.00,
+                        '12_15000' => 1700.00,
+                        '12_20000' => 1800.00,
+                        '24_10000' => 1500.00,
+                        '24_15000' => 1600.00,
+                        '24_20000' => 1700.00,
+                        '36_10000' => 1400.00,
+                        '36_15000' => 1500.00,
+                        '36_20000' => 1600.00,
+                        '48_10000' => 1300.00,
+                        '48_15000' => 1400.00,
+                        '48_20000' => 1500.00,
+                    ]
+                ],
+                'attributes' => [
+                    'new' => false,
+                    'available_immediately' => false,
+                    'popular' => true,
+                    'featured' => false,
                 ],
             ],
         ];
 
         $count = 0;
-        foreach ($samochody as $auto) {
+        foreach ($offers as $offer) {
             // Sprawdź czy nie istnieje
             $existing = get_posts([
-                'post_type' => 'samochod',
-                'title' => $auto['nazwa'],
+                'post_type' => 'offer',
+                'title' => $offer['title'],
                 'posts_per_page' => 1,
             ]);
 
             if (empty($existing)) {
                 // Utwórz post
                 $post_id = wp_insert_post([
-                    'post_type' => 'samochod',
-                    'post_title' => $auto['nazwa'],
-                    'post_content' => $auto['opis'],
+                    'post_type' => 'offer',
+                    'post_title' => $offer['title'],
+                    'post_content' => $offer['description'],
                     'post_status' => 'publish',
                 ]);
 
                 if ($post_id && !is_wp_error($post_id)) {
                     // Dodaj taksonomie
-                    $marka_term = term_exists($auto['marka'], 'marka_samochodu');
-                    if ($marka_term) {
-                        wp_set_object_terms($post_id, (int)$marka_term['term_id'], 'marka_samochodu');
+                    $brand_term = term_exists($offer['brand'], 'car_brand');
+                    if ($brand_term) {
+                        wp_set_object_terms($post_id, (int)$brand_term['term_id'], 'car_brand');
                     }
 
-                    $typ_term = term_exists($auto['typ'], 'typ_nadwozia');
-                    if ($typ_term) {
-                        wp_set_object_terms($post_id, (int)$typ_term['term_id'], 'typ_nadwozia');
+                    $body_type_term = term_exists($offer['body_type'], 'body_type');
+                    if ($body_type_term) {
+                        wp_set_object_terms($post_id, (int)$body_type_term['term_id'], 'body_type');
                     }
 
-                    $paliwo_term = term_exists($auto['paliwo'], 'rodzaj_paliwa');
-                    if ($paliwo_term) {
-                        wp_set_object_terms($post_id, (int)$paliwo_term['term_id'], 'rodzaj_paliwa');
+                    $fuel_term = term_exists($offer['fuel_type'], 'fuel_type');
+                    if ($fuel_term) {
+                        wp_set_object_terms($post_id, (int)$fuel_term['term_id'], 'fuel_type');
                     }
 
                     // Dodaj meta pola
-                    update_post_meta($post_id, '_rocznik', $auto['rocznik']);
-                    update_post_meta($post_id, '_przebieg', $auto['przebieg']);
-                    update_post_meta($post_id, '_moc', $auto['moc']);
-                    update_post_meta($post_id, '_pojemnosc', $auto['pojemnosc']);
-                    update_post_meta($post_id, '_skrzynia', $auto['skrzynia']);
-                    update_post_meta($post_id, '_kolor', $auto['kolor']);
-                    update_post_meta($post_id, '_liczba_miejsc', $auto['miejsca']);
-                    update_post_meta($post_id, '_numer_vin', $auto['vin']);
-                    update_post_meta($post_id, '_cena_bazowa', $auto['cena_bazowa']);
-                    update_post_meta($post_id, '_cena_za_km', $auto['cena_za_km']);
-                    update_post_meta($post_id, '_rezerwacja_aktywna', '0');
+                    update_post_meta($post_id, '_year', $offer['year']);
+                    update_post_meta($post_id, '_mileage', $offer['mileage']);
+                    update_post_meta($post_id, '_horsepower', $offer['horsepower']);
+                    update_post_meta($post_id, '_engine_capacity', $offer['engine_capacity']);
+                    update_post_meta($post_id, '_transmission', $offer['transmission']);
+                    update_post_meta($post_id, '_color', $offer['color']);
+                    update_post_meta($post_id, '_seats', $offer['seats']);
+                    update_post_meta($post_id, '_vin_number', $offer['vin']);
+                    update_post_meta($post_id, '_lowest_price', $offer['lowest_price']);
+                    update_post_meta($post_id, '_pricing_config', $offer['pricing_config']);
+                    update_post_meta($post_id, '_reservation_active', '0');
 
                     // Dodaj flagi jeśli są
-                    if (isset($auto['flagi'])) {
-                        update_post_meta($post_id, '_nowy_samochod', $auto['flagi']['nowy'] ? '1' : '0');
-                        update_post_meta($post_id, '_dostepny_od_reki', $auto['flagi']['od_reki'] ? '1' : '0');
-                        update_post_meta($post_id, '_najczesciej_wybierany', $auto['flagi']['popularne'] ? '1' : '0');
-                        update_post_meta($post_id, '_wyrozniany', $auto['flagi']['wyrozniany'] ? '1' : '0');
-                        update_post_meta($post_id, '_dostepny_wkrotce', '0');
+                    if (isset($offer['attributes'])) {
+                        update_post_meta($post_id, '_new_car', $offer['attributes']['new'] ? '1' : '0');
+                        update_post_meta($post_id, '_available_immediately', $offer['attributes']['available_immediately'] ? '1' : '0');
+                        update_post_meta($post_id, '_most_popular', $offer['attributes']['popular'] ? '1' : '0');
+                        update_post_meta($post_id, '_featured', $offer['attributes']['featured'] ? '1' : '0');
+                        update_post_meta($post_id, '_coming_soon', '0');
                     }
 
                     $count++;
@@ -333,14 +384,14 @@ class Sample_Data_Importer {
      * Sprawdza czy przykładowe dane już istnieją
      */
     public static function has_sample_data() {
-        $marki = get_terms([
-            'taxonomy' => 'marka_samochodu',
+        $brands = get_terms([
+            'taxonomy' => 'car_brand',
             'hide_empty' => false,
             'count' => true,
         ]);
 
-        $samochody = wp_count_posts('samochod');
+        $offers = wp_count_posts('offer');
 
-        return (!empty($marki) && count($marki) > 5) || ($samochody && $samochody->publish > 0);
+        return (!empty($brands) && count($brands) > 5) || ($offers && $offers->publish > 0);
     }
 }

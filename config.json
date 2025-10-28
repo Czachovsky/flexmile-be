@@ -1,5 +1,5 @@
 {
-  "marki": [
+  "brands": [
     "Abarth",
     "Acura",
     "Aito",
@@ -135,107 +135,107 @@
     "Zefir",
     "Zhidou",
     "Żuk",
-    "Inny"
+    "Other"
   ],
-  "wyposazenie_standardowe": {
-    "Bezpieczeństwo": {
+  "standard_equipment": {
+    "Safety": {
       "abs": "ABS",
       "esp": "ESP",
-      "asr": "ASR/Kontrola trakcji",
-      "poduszki": "Poduszki powietrzne",
+      "asr": "ASR/Traction Control",
+      "airbags": "Airbags",
       "isofix": "ISOFIX",
       "alarm": "Alarm",
       "immobiliser": "Immobiliser",
-      "asystent_hamowania": "Asystent hamowania"
+      "brake_assist": "Brake Assist"
     },
-    "Komfort": {
-      "klimatyzacja": "Klimatyzacja",
-      "klimatyzacja_auto": "Klimatyzacja automatyczna",
-      "nawigacja": "Nawigacja GPS",
+    "Comfort": {
+      "air_conditioning": "Air Conditioning",
+      "climate_control": "Climate Control",
+      "navigation": "GPS Navigation",
       "bluetooth": "Bluetooth",
-      "tempomat": "Tempomat",
-      "el_szyby": "Elektryczne szyby",
-      "el_lusterka": "Elektryczne lusterka",
-      "podgrzewane_siedzenia": "Podgrzewane siedzenia",
-      "kierownica_wielofunkcyjna": "Kierownica wielofunkcyjna"
+      "cruise_control": "Cruise Control",
+      "electric_windows": "Electric Windows",
+      "electric_mirrors": "Electric Mirrors",
+      "heated_seats": "Heated Seats",
+      "multifunction_steering_wheel": "Multifunction Steering Wheel"
     },
     "Multimedia": {
       "radio": "Radio",
-      "cd": "Odtwarzacz CD",
-      "usb": "USB/AUX",
-      "glosniki": "Zestaw głośników",
-      "ekran_dotykowy": "Ekran dotykowy",
-      "bluetooth_audio": "Bluetooth audio"
+      "cd_player": "CD Player",
+      "usb_aux": "USB/AUX",
+      "speakers": "Speaker System",
+      "touchscreen": "Touchscreen",
+      "bluetooth_audio": "Bluetooth Audio"
     },
-    "Oświetlenie": {
-      "led": "Światła LED",
+    "Lighting": {
+      "led": "LED Lights",
       "xenon": "Xenon",
       "halogen": "Halogen",
-      "swiatla_dzienne": "Światła dzienne LED",
-      "reflektory_przeciwmgielne": "Reflektory przeciwmgielne"
+      "daytime_running_lights": "LED Daytime Running Lights",
+      "fog_lights": "Fog Lights"
     }
   },
-  "wyposazenie_dodatkowe": {
+  "additional_equipment": {
     "Premium": {
-      "skorzana_tapicerka": "Skórzana tapicerka",
-      "dach_panoramiczny": "Dach panoramiczny",
-      "zawieszenie_pneumatyczne": "Zawieszenie pneumatyczne",
-      "fotele_sportowe": "Fotele sportowe",
-      "fotele_wentylowane": "Fotele wentylowane",
-      "masaz_foteli": "Masaż foteli",
-      "fotele_podgrzewane_tyl": "Podgrzewane siedzenia tylne",
-      "fotele_elektryczne": "Fotele elektryczne z pamięcią"
+      "leather_seats": "Leather Seats",
+      "panoramic_roof": "Panoramic Roof",
+      "air_suspension": "Air Suspension",
+      "sport_seats": "Sport Seats",
+      "ventilated_seats": "Ventilated Seats",
+      "massage_seats": "Massage Seats",
+      "heated_rear_seats": "Heated Rear Seats",
+      "memory_seats": "Electric Seats with Memory"
     },
-    "Technologia": {
-      "kamera_360": "Kamera 360°",
-      "kamera_cofania": "Kamera cofania",
-      "czujniki_parkowania": "Czujniki parkowania",
-      "czujniki_parkowania_przod_tyl": "Czujniki parkowania przód i tył",
-      "asystent_pasa": "Asystent pasa ruchu",
-      "tempomat_adaptacyjny": "Tempomat adaptacyjny",
-      "head_up_display": "Head-up display",
-      "keyless": "Keyless Go",
-      "start_stop": "System Start/Stop",
+    "Technology": {
+      "camera_360": "360° Camera",
+      "rear_camera": "Rear Camera",
+      "parking_sensors": "Parking Sensors",
+      "front_rear_sensors": "Front & Rear Parking Sensors",
+      "lane_assist": "Lane Assist",
+      "adaptive_cruise": "Adaptive Cruise Control",
+      "head_up_display": "Head-up Display",
+      "keyless_go": "Keyless Go",
+      "start_stop": "Start/Stop System",
       "night_vision": "Night Vision"
     },
     "Audio": {
-      "system_audio_premium": "System audio premium",
+      "premium_audio": "Premium Audio System",
       "subwoofer": "Subwoofer",
       "android_auto": "Android Auto",
       "apple_carplay": "Apple CarPlay",
-      "glosniki_premium": "Głośniki premium (Bose/Harman Kardon)",
-      "radio_dab": "Radio DAB+"
+      "premium_speakers": "Premium Speakers (Bose/Harman Kardon)",
+      "dab_radio": "DAB+ Radio"
     },
-    "Wygląd": {
-      "felgi_aluminiowe": "Felgi aluminiowe",
-      "felgi_18": "Felgi 18\"",
-      "felgi_19": "Felgi 19\"",
-      "felgi_20": "Felgi 20\"",
-      "relingi": "Relingi dachowe",
-      "hak": "Hak holowniczy",
-      "spojler": "Spojler",
-      "przyciemniane_szyby": "Przyciemniane szyby"
+    "Appearance": {
+      "alloy_wheels": "Alloy Wheels",
+      "wheels_18": "18\" Wheels",
+      "wheels_19": "19\" Wheels",
+      "wheels_20": "20\" Wheels",
+      "roof_rails": "Roof Rails",
+      "tow_hitch": "Tow Hitch",
+      "spoiler": "Spoiler",
+      "tinted_windows": "Tinted Windows"
     }
   },
-  "typy_nadwozia": [
+  "body_types": [
     "Sedan",
-    "Kombi",
+    "Wagon",
     "SUV",
     "Hatchback",
     "Coupe",
-    "Cabrio",
+    "Convertible",
     "Minivan",
     "Pickup",
-    "Kompakt",
-    "Sportowy"
+    "Compact",
+    "Sports"
   ],
-  "rodzaje_paliwa": [
-    "Benzyna",
+  "fuel_types": [
+    "Petrol",
     "Diesel",
-    "Hybryda",
-    "Elektryczny",
-    "Benzyna + LPG",
-    "Benzyna + CNG",
+    "Hybrid",
+    "Electric",
+    "Petrol + LPG",
+    "Petrol + CNG",
     "Plug-in Hybrid"
   ]
 }

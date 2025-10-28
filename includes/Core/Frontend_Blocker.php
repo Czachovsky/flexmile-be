@@ -6,32 +6,32 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Blokada dostępu do frontendu WordPressa
- * WordPress działa tylko jako headless CMS z REST API
+ * WordPress Frontend Blocking
+ * WordPress works only as headless CMS with REST API
  */
 class Frontend_Blocker {
 
     public function __construct() {
         add_action('template_redirect', [$this, 'block_frontend'], 1);
         add_action('wp_head', [$this, 'remove_frontend_assets'], 1);
-        
-        // Usuń niepotrzebne generatory i linki
+
+        // Remove unnecessary generators and links
         $this->clean_wp_head();
     }
 
     /**
-     * Blokuje dostęp do wszystkich stron frontendowych
+     * Blocks access to all frontend pages
      */
     public function block_frontend() {
-        // Wyjątki: panel admina, REST API, wp-login, wp-cron
-        if (is_admin() || 
-            $this->is_rest_api_request() || 
+        // Exceptions: admin panel, REST API, wp-login, wp-cron
+        if (is_admin() ||
+            $this->is_rest_api_request() ||
             $this->is_login_page() ||
             (defined('DOING_CRON') && DOING_CRON)) {
             return;
         }
 
-        // Zwróć odpowiedź JSON dla headless
+        // Return JSON response for headless
         wp_send_json([
             'error' => 'Frontend disabled',
             'message' => 'This is a headless WordPress installation. Please use the REST API.',
@@ -42,14 +42,14 @@ class Frontend_Blocker {
     }
 
     /**
-     * Sprawdza czy to zapytanie do REST API
+     * Checks if it's a REST API request
      */
     private function is_rest_api_request() {
         if (defined('REST_REQUEST') && REST_REQUEST) {
             return true;
         }
 
-        // Sprawdź URL
+        // Check URL
         $rest_prefix = rest_get_url_prefix();
         if (strpos($_SERVER['REQUEST_URI'], $rest_prefix) !== false) {
             return true;
@@ -59,39 +59,39 @@ class Frontend_Blocker {
     }
 
     /**
-     * Sprawdza czy to strona logowania
+     * Checks if it's a login page
      */
     private function is_login_page() {
         return in_array($GLOBALS['pagenow'], ['wp-login.php', 'wp-register.php']);
     }
 
     /**
-     * Usuwa zbędne assety z headera
+     * Removes unnecessary assets from header
      */
     public function remove_frontend_assets() {
         if (is_admin()) {
             return;
         }
 
-        // Usuń style i skrypty WP
+        // Remove WP styles and scripts
         wp_dequeue_style('wp-block-library');
         wp_dequeue_style('wp-block-library-theme');
         wp_dequeue_style('global-styles');
     }
 
     /**
-     * Czyści wp_head z niepotrzebnych rzeczy
+     * Cleans wp_head from unnecessary items
      */
     private function clean_wp_head() {
-        // Usuń generatory i meta
+        // Remove generators and meta
         remove_action('wp_head', 'wp_generator');
         remove_action('wp_head', 'wlwmanifest_link');
         remove_action('wp_head', 'rsd_link');
         remove_action('wp_head', 'wp_shortlink_wp_head');
         remove_action('wp_head', 'rest_output_link_wp_head');
         remove_action('wp_head', 'wp_oembed_add_discovery_links');
-        
-        // Usuń feed links jeśli nie są potrzebne
+
+        // Remove feed links if not needed
         remove_action('wp_head', 'feed_links', 2);
         remove_action('wp_head', 'feed_links_extra', 3);
     }

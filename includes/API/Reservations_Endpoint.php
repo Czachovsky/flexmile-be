@@ -22,7 +22,6 @@ class Reservations_Endpoint {
      * Rejestruje endpointy API
      */
     public function register_routes() {
-        // Tworzenie rezerwacji
         register_rest_route(self::NAMESPACE, '/' . self::BASE, [
             'methods' => 'POST',
             'callback' => [$this, 'create_rezerwacja'],
@@ -30,7 +29,6 @@ class Reservations_Endpoint {
             'args' => $this->get_create_params(),
         ]);
 
-        // Lista rezerwacji (tylko dla zalogowanych adminów)
         register_rest_route(self::NAMESPACE, '/' . self::BASE, [
             'methods' => 'GET',
             'callback' => [$this, 'get_rezerwacje'],
@@ -46,34 +44,28 @@ class Reservations_Endpoint {
     public function create_rezerwacja($request) {
         $params = $request->get_params();
 
-        // Walidacja samochodu
-        $samochod_id = intval($params['samochod_id']);
+        $samochod_id = intval($params['offer_id']);
         $samochod = get_post($samochod_id);
 
-        if (!$samochod || $samochod->post_type !== 'samochod') {
+        if (!$samochod || $samochod->post_type !== 'offer') {
             return new \WP_Error('invalid_car', 'Nieprawidłowy ID samochodu', ['status' => 400]);
         }
 
-        // Sprawdź czy samochód nie jest zarezerwowany
-        $rezerwacja_aktywna = get_post_meta($samochod_id, '_rezerwacja_aktywna', true);
+        $rezerwacja_aktywna = get_post_meta($samochod_id, '_reservation_active', true);
         if ($rezerwacja_aktywna === '1') {
             return new \WP_Error('car_reserved', 'Ten samochód jest już zarezerwowany', ['status' => 400]);
         }
 
-        // === NOWY SYSTEM CEN ===
-        // Pobierz konfigurację cen samochodu
-        $config = get_post_meta($samochod_id, '_ceny_konfiguracja', true);
+        $config = get_post_meta($samochod_id, '_pricing_config', true);
 
-        if (empty($config) || empty($config['ceny'])) {
+        if (empty($config) || empty($config['prices'])) {
             return new \WP_Error('no_pricing', 'Samochód nie ma skonfigurowanych cen', ['status' => 400]);
         }
 
-        // Pobierz wybrane parametry (okres i limit km)
-        $ilosc_miesiecy = intval($params['ilosc_miesiecy']);
-        $limit_km_rocznie = intval($params['limit_km_rocznie']);
+        $ilosc_miesiecy = intval($params['rental_months']);
+        $limit_km_rocznie = intval($params['annual_mileage_limit']);
 
-        // Sprawdź czy wybrane parametry są dostępne
-        if (!in_array($ilosc_miesiecy, $config['okresy'])) {
+        if (!in_array($ilosc_miesiecy, $config['rental_periods'])) {
             return new \WP_Error(
                 'invalid_period',
                 'Wybrany okres wynajmu nie jest dostępny dla tego samochodu',
@@ -81,7 +73,7 @@ class Reservations_Endpoint {
             );
         }
 
-        if (!in_array($limit_km_rocznie, $config['limity_km'])) {
+        if (!in_array($limit_km_rocznie, $config['mileage_limits'])) {
             return new \WP_Error(
                 'invalid_km_limit',
                 'Wybrany limit kilometrów nie jest dostępny dla tego samochodu',
@@ -89,10 +81,9 @@ class Reservations_Endpoint {
             );
         }
 
-        // Znajdź cenę dla wybranej konfiguracji
         $cena_key = $ilosc_miesiecy . '_' . $limit_km_rocznie;
 
-        if (!isset($config['ceny'][$cena_key])) {
+        if (!isset($config['prices'][$cena_key])) {
             return new \WP_Error(
                 'price_not_found',
                 'Nie znaleziono ceny dla wybranej konfiguracji',
@@ -100,23 +91,21 @@ class Reservations_Endpoint {
             );
         }
 
-        $cena_miesieczna = (float) $config['ceny'][$cena_key];
+        $cena_miesieczna = (float) $config['prices'][$cena_key];
         $cena_calkowita = $cena_miesieczna * $ilosc_miesiecy;
 
-        // Przygotuj tytuł rezerwacji
         $tytul = sprintf(
             'Rezerwacja: %s - %s %s',
-            sanitize_text_field($params['imie']) . ' ' . sanitize_text_field($params['nazwisko']),
+            sanitize_text_field($params['first_name']) . ' ' . sanitize_text_field($params['last_name']),
             $samochod->post_title,
             date('Y-m-d H:i')
         );
 
-        // Utwórz post rezerwacji
         $post_data = [
-            'post_type' => 'rezerwacja',
+            'post_type' => 'reservation',
             'post_title' => $tytul,
             'post_status' => 'publish',
-            'post_author' => 1, // Admin
+            'post_author' => 1,
         ];
 
         $rezerwacja_id = wp_insert_post($post_data);
@@ -125,36 +114,33 @@ class Reservations_Endpoint {
             return new \WP_Error('create_failed', 'Nie udało się utworzyć rezerwacji', ['status' => 500]);
         }
 
-        // Zapisz meta dane
-        update_post_meta($rezerwacja_id, '_samochod_id', $samochod_id);
-        update_post_meta($rezerwacja_id, '_imie', sanitize_text_field($params['imie']));
-        update_post_meta($rezerwacja_id, '_nazwisko', sanitize_text_field($params['nazwisko']));
+        update_post_meta($rezerwacja_id, '_offer_id', $samochod_id);
+        update_post_meta($rezerwacja_id, '_first_name', sanitize_text_field($params['first_name']));
+        update_post_meta($rezerwacja_id, '_last_name', sanitize_text_field($params['last_name']));
         update_post_meta($rezerwacja_id, '_email', sanitize_email($params['email']));
-        update_post_meta($rezerwacja_id, '_telefon', sanitize_text_field($params['telefon']));
-        update_post_meta($rezerwacja_id, '_ilosc_miesiecy', $ilosc_miesiecy);
-        update_post_meta($rezerwacja_id, '_limit_km_rocznie', $limit_km_rocznie);
-        update_post_meta($rezerwacja_id, '_cena_miesieczna', $cena_miesieczna);
-        update_post_meta($rezerwacja_id, '_cena_calkowita', $cena_calkowita);
-        update_post_meta($rezerwacja_id, '_status_rezerwacji', 'pending');
+        update_post_meta($rezerwacja_id, '_phone', sanitize_text_field($params['phone']));
+        update_post_meta($rezerwacja_id, '_rental_months', $ilosc_miesiecy);
+        update_post_meta($rezerwacja_id, '_annual_mileage_limit', $limit_km_rocznie);
+        update_post_meta($rezerwacja_id, '_monthly_price', $cena_miesieczna);
+        update_post_meta($rezerwacja_id, '_total_price', $cena_calkowita);
+        update_post_meta($rezerwacja_id, '_status', 'pending');
 
-        if (!empty($params['wiadomosc'])) {
-            update_post_meta($rezerwacja_id, '_wiadomosc', sanitize_textarea_field($params['wiadomosc']));
+        if (!empty($params['message'])) {
+            update_post_meta($rezerwacja_id, '_message', sanitize_textarea_field($params['message']));
         }
 
-        // Wyślij maile
         $this->send_admin_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita);
         $this->send_customer_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita);
 
-        // Zwróć odpowiedź
         return new \WP_REST_Response([
             'success' => true,
             'message' => 'Rezerwacja została złożona pomyślnie',
-            'rezerwacja_id' => $rezerwacja_id,
-            'cennik' => [
-                'cena_miesieczna' => $cena_miesieczna,
-                'cena_calkowita' => $cena_calkowita,
-                'ilosc_miesiecy' => $ilosc_miesiecy,
-                'limit_km_rocznie' => $limit_km_rocznie,
+            'reservation_id' => $rezerwacja_id,
+            'pricing' => [
+                'monthly_price' => $cena_miesieczna,
+                'total_price' => $cena_calkowita,
+                'rental_months' => $ilosc_miesiecy,
+                'annual_mileage_limit' => $limit_km_rocznie,
             ],
         ], 201);
     }
@@ -164,7 +150,7 @@ class Reservations_Endpoint {
      */
     public function get_rezerwacje($request) {
         $args = [
-            'post_type' => 'rezerwacja',
+            'post_type' => 'reservation',
             'post_status' => 'publish',
             'posts_per_page' => -1,
             'orderby' => 'date',
@@ -185,30 +171,30 @@ class Reservations_Endpoint {
      * Przygotowuje dane rezerwacji (ZAKTUALIZOWANE)
      */
     private function prepare_rezerwacja_data($post) {
-        $samochod_id = get_post_meta($post->ID, '_samochod_id', true);
+        $samochod_id = get_post_meta($post->ID, '_offer_id', true);
         $samochod = get_post($samochod_id);
 
         return [
             'id' => $post->ID,
-            'data_utworzenia' => $post->post_date,
-            'status' => get_post_meta($post->ID, '_status_rezerwacji', true),
-            'klient' => [
-                'imie' => get_post_meta($post->ID, '_imie', true),
-                'nazwisko' => get_post_meta($post->ID, '_nazwisko', true),
+            'created_at' => $post->post_date,
+            'status' => get_post_meta($post->ID, '_status', true),
+            'customer' => [
+                'first_name' => get_post_meta($post->ID, '_first_name', true),
+                'last_name' => get_post_meta($post->ID, '_last_name', true),
                 'email' => get_post_meta($post->ID, '_email', true),
-                'telefon' => get_post_meta($post->ID, '_telefon', true),
+                'phone' => get_post_meta($post->ID, '_phone', true),
             ],
-            'samochod' => [
+            'offer' => [
                 'id' => $samochod_id,
-                'nazwa' => $samochod ? $samochod->post_title : '',
+                'title' => $samochod ? $samochod->post_title : '',
             ],
-            'szczegoly' => [
-                'ilosc_miesiecy' => (int) get_post_meta($post->ID, '_ilosc_miesiecy', true),
-                'limit_km_rocznie' => (int) get_post_meta($post->ID, '_limit_km_rocznie', true),
-                'cena_miesieczna' => (float) get_post_meta($post->ID, '_cena_miesieczna', true),
-                'cena_calkowita' => (float) get_post_meta($post->ID, '_cena_calkowita', true),
+            'details' => [
+                'rental_months' => (int) get_post_meta($post->ID, '_rental_months', true),
+                'annual_mileage_limit' => (int) get_post_meta($post->ID, '_annual_mileage_limit', true),
+                'monthly_price' => (float) get_post_meta($post->ID, '_monthly_price', true),
+                'total_price' => (float) get_post_meta($post->ID, '_total_price', true),
             ],
-            'wiadomosc' => get_post_meta($post->ID, '_wiadomosc', true),
+            'message' => get_post_meta($post->ID, '_message', true),
         ];
     }
 
@@ -229,19 +215,19 @@ class Reservations_Endpoint {
         $message .= sprintf("Link: %s\n\n", admin_url('post.php?post=' . $samochod->ID . '&action=edit'));
 
         $message .= "=== KLIENT ===\n";
-        $message .= sprintf("Imię i nazwisko: %s %s\n", $params['imie'], $params['nazwisko']);
+        $message .= sprintf("Imię i nazwisko: %s %s\n", $params['first_name'], $params['last_name']);
         $message .= sprintf("Email: %s\n", $params['email']);
-        $message .= sprintf("Telefon: %s\n\n", $params['telefon']);
+        $message .= sprintf("Telefon: %s\n\n", $params['phone']);
 
         $message .= "=== PARAMETRY WYNAJMU ===\n";
-        $message .= sprintf("Okres: %d miesięcy\n", $params['ilosc_miesiecy']);
-        $message .= sprintf("Roczny limit km: %d km\n", $params['limit_km_rocznie']);
+        $message .= sprintf("Okres: %d miesięcy\n", $params['rental_months']);
+        $message .= sprintf("Roczny limit km: %d km\n", $params['annual_mileage_limit']);
         $message .= sprintf("Cena miesięczna: %.2f zł\n", $cena_miesieczna);
         $message .= sprintf("Cena całkowita (za cały okres): %.2f zł\n\n", $cena_calkowita);
 
-        if (!empty($params['wiadomosc'])) {
+        if (!empty($params['message'])) {
             $message .= "=== WIADOMOŚĆ OD KLIENTA ===\n";
-            $message .= $params['wiadomosc'] . "\n\n";
+            $message .= $params['message'] . "\n\n";
         }
 
         $message .= "Aby zarządzać tą rezerwacją, przejdź do:\n";
@@ -257,7 +243,7 @@ class Reservations_Endpoint {
         $to = $params['email'];
         $subject = 'Potwierdzenie rezerwacji - FlexMile';
 
-        $message = sprintf("Witaj %s!\n\n", $params['imie']);
+        $message = sprintf("Witaj %s!\n\n", $params['first_name']);
         $message .= "Dziękujemy za złożenie rezerwacji w FlexMile.\n\n";
 
         $message .= "=== SZCZEGÓŁY TWOJEJ REZERWACJI ===\n";
@@ -265,8 +251,8 @@ class Reservations_Endpoint {
         $message .= sprintf("Samochód: %s\n\n", $samochod->post_title);
 
         $message .= "=== WYBRANA KONFIGURACJA ===\n";
-        $message .= sprintf("Okres wynajmu: %d miesięcy\n", $params['ilosc_miesiecy']);
-        $message .= sprintf("Roczny limit km: %d km\n", $params['limit_km_rocznie']);
+        $message .= sprintf("Okres wynajmu: %d miesięcy\n", $params['rental_months']);
+        $message .= sprintf("Roczny limit km: %d km\n", $params['annual_mileage_limit']);
         $message .= sprintf("Cena miesięczna: %.2f zł\n", $cena_miesieczna);
         $message .= sprintf("Cena całkowita: %.2f zł\n\n", $cena_calkowita);
 
@@ -285,17 +271,17 @@ class Reservations_Endpoint {
      */
     private function get_create_params() {
         return [
-            'samochod_id' => [
+            'offer_id' => [
                 'required' => true,
                 'type' => 'integer',
                 'description' => 'ID samochodu',
             ],
-            'imie' => [
+            'first_name' => [
                 'required' => true,
                 'type' => 'string',
                 'description' => 'Imię klienta',
             ],
-            'nazwisko' => [
+            'last_name' => [
                 'required' => true,
                 'type' => 'string',
                 'description' => 'Nazwisko klienta',
@@ -306,24 +292,24 @@ class Reservations_Endpoint {
                 'format' => 'email',
                 'description' => 'Email klienta',
             ],
-            'telefon' => [
+            'phone' => [
                 'required' => true,
                 'type' => 'string',
                 'description' => 'Numer telefonu',
             ],
-            'ilosc_miesiecy' => [
+            'rental_months' => [
                 'required' => true,
                 'type' => 'integer',
                 'minimum' => 1,
                 'description' => 'Wybrany okres wynajmu w miesiącach (np. 12, 24, 36)',
             ],
-            'limit_km_rocznie' => [
+            'annual_mileage_limit' => [
                 'required' => true,
                 'type' => 'integer',
                 'minimum' => 0,
                 'description' => 'Wybrany roczny limit kilometrów (np. 10000, 15000)',
             ],
-            'wiadomosc' => [
+            'message' => [
                 'required' => false,
                 'type' => 'string',
                 'description' => 'Dodatkowa wiadomość od klienta',

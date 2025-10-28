@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: FlexMile - Komis Samochodowy
+ * Plugin Name: FlexMile - Car Rental Management
  * Plugin URI: https://flexmile.pl
- * Description: System zarządzania komisem samochodowym online z API dla headless WordPress
- * Version: 1.2.0
+ * Description: Online car rental management system with API for headless WordPress
+ * Version: 2.0.0
  * Author: FlexMile Team
  * Text Domain: flexmile
  * Domain Path: /languages
@@ -13,13 +13,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Definicje stałych
-define('FLEXMILE_VERSION', '1.2.0');
+// Define constants
+define('FLEXMILE_VERSION', '2.0.0');
 define('FLEXMILE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('FLEXMILE_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
- * Autoloader dla klas wtyczki
+ * Autoloader for plugin classes
  */
 spl_autoload_register(function ($class) {
     $prefix = 'FlexMile\\';
@@ -39,7 +39,7 @@ spl_autoload_register(function ($class) {
 });
 
 /**
- * Główna klasa wtyczki
+ * Main plugin class
  */
 class FlexMile_Plugin {
 
@@ -64,7 +64,7 @@ class FlexMile_Plugin {
     }
 
     private function load_components() {
-        // Blokada frontendu (headless mode)
+        // Frontend blocker (headless mode)
         new FlexMile\Core\Frontend_Blocker();
 
         // Custom Post Types
@@ -85,7 +85,7 @@ class FlexMile_Plugin {
     }
 
     public function activate() {
-        // Rejestracja CPT przed flush
+        // Register CPT before flush
         new FlexMile\PostTypes\Offers();
         new FlexMile\PostTypes\Reservations();
 
@@ -97,5 +97,5 @@ class FlexMile_Plugin {
     }
 }
 
-// Inicjalizacja wtyczki
+// Initialize plugin
 FlexMile_Plugin::get_instance();

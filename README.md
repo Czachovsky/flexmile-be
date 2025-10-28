@@ -1,157 +1,273 @@
-# FlexMile - Wtyczka WordPress do Zarządzania Komisem Online
+# FlexMile - WordPress Plugin for Online Car Rental Management
 
-Wtyczka do headless WordPressa dla systemu komisu samochodowego FlexMile z API dla aplikacji Angular.
+WordPress headless plugin for FlexMile car rental system with API for Angular applications.
 
-## 🚀 Instalacja
+## 🚀 Installation
 
-1. Wypakuj folder `flexmile` do `/wp-content/plugins/`
-2. Aktywuj wtyczkę w panelu WordPress
-3. Wtyczka automatycznie:
-   - Zablokuje frontend WordPressa (headless mode)
-   - Zarejestruje CPT i taksonomie
-   - Udostępni REST API endpointy
-4. **NOWOŚĆ!** Przejdź do FlexMile Dashboard i kliknij "Importuj przykładowe dane" aby szybko rozpocząć
+1. Extract `flexmile` folder to `/wp-content/plugins/`
+2. Activate the plugin in WordPress admin panel
+3. The plugin will automatically:
+    - Block WordPress frontend (headless mode)
+    - Register CPT and taxonomies
+    - Expose REST API endpoints
+4. **NEW!** Go to FlexMile Dashboard and click "Import Sample Data" to quickly get started
 
-## 📋 Funkcjonalności
+## 📋 Features
 
-### ✅ Już zrobione:
+### ✅ Done:
 
-- **Blokada frontendu** - WordPress działa tylko jako headless CMS
-- **CPT Samochody** z polami:
-  - Rocznik, przebieg, moc, pojemność
-  - Skrzynia biegów, kolor, liczba miejsc, VIN
-  - Kalkulator ceny (cena bazowa + dopłata za km)
-  - Status rezerwacji
-- **CPT Rezerwacje** z:
-  - Danymi klienta
-  - Parametrami wynajmu
-  - Statusami (pending/approved/rejected/completed)
-  - Automatycznym oznaczaniem samochodów jako zarezerwowane
-- **Taksonomie**: Marka, Typ nadwozia, Rodzaj paliwa
-- **REST API** z filtrowaniem i infinite scroll
-- **System maili** (do admina i klienta po rezerwacji)
-- **Dashboard administracyjny** ze statystykami
-- **Import przykładowych danych** - jednym kliknięciem dodajesz 30 marek, 10 typów nadwozia, 7 rodzajów paliwa i 3 przykładowe samochody
+- **Frontend blocking** - WordPress works only as headless CMS
+- **CPT Offers** with fields:
+    - Year, mileage, horsepower, engine capacity
+    - Transmission, color, seats, VIN
+    - Price matrix (monthly price based on rental period and mileage limit)
+    - Reservation status
+- **CPT Reservations** with:
+    - Customer data
+    - Rental parameters (months + annual mileage limit)
+    - Status (pending/approved/rejected/completed)
+    - Automatic car reservation marking
+- **Taxonomies**: Car Brand, Body Type, Fuel Type
+- **REST API** with filtering and infinite scroll
+- **Email system** (to admin and customer after reservation)
+- **Admin dashboard** with statistics
+- **Sample data import** - one click to add 136 brands, 10 body types, 7 fuel types and 3 sample cars
 
-## 📦 Import przykładowych danych
+## 📦 Sample Data Import
 
-Po aktywacji wtyczki w **FlexMile Dashboard** zobaczysz przycisk **"Importuj przykładowe dane"**.
+After activating the plugin, you'll see an **"Import Sample Data"** button in **FlexMile Dashboard**.
 
-Jeden klik doda:
-- ✅ **30 marek** samochodów (BMW, Audi, Toyota, Mercedes-Benz, Volkswagen...)
-- ✅ **10 typów nadwozia** (SUV, Sedan, Kombi, Hatchback, Coupe...)
-- ✅ **7 rodzajów paliwa** (Benzyna, Diesel, Hybryda, Elektryczny...)
-- ✅ **3 przykładowe samochody** z pełnymi danymi:
-  - BMW X5 3.0d xDrive (2022, SUV, Diesel)
-  - Toyota Corolla 1.8 Hybrid (2023, Sedan, Hybryda)
-  - Volkswagen Golf 1.5 TSI (2021, Hatchback, Benzyna)
+One click adds:
+- ✅ **136 car brands** (BMW, Audi, Toyota, Mercedes-Benz, Volkswagen...)
+- ✅ **10 body types** (SUV, Sedan, Wagon, Hatchback, Coupe...)
+- ✅ **7 fuel types** (Petrol, Diesel, Hybrid, Electric...)
+- ✅ **3 sample cars** with full data:
+    - BMW X5 3.0d xDrive (2022, SUV, Diesel)
+    - Toyota Corolla 1.8 Hybrid (2023, Sedan, Hybrid)
+    - Volkswagen Golf 1.5 TSI (2021, Hatchback, Petrol)
 
-Import nie nadpisuje istniejących danych - możesz go uruchomić bezpiecznie w każdej chwili!
+Import won't overwrite existing data - you can run it safely anytime!
 
 ## 🔌 REST API Endpoints
 
-### 1. Lista samochodów
+### 1. List of offers
 ```
-GET /wp-json/flexmile/v1/samochody
-```
-
-**Parametry filtrowania:**
-- `marka` - slug marki
-- `typ_nadwozia` - slug typu nadwozia
-- `paliwo` - slug rodzaju paliwa
-- `rocznik_od` - rocznik od
-- `rocznik_do` - rocznik do
-- `przebieg_max` - maksymalny przebieg
-- `cena_od` - cena minimalna
-- `cena_do` - cena maksymalna
-- `page` - numer strony (infinite scroll)
-- `per_page` - liczba wyników (max 100)
-
-**Przykład:**
-```
-GET /wp-json/flexmile/v1/samochody?marka=bmw&rocznik_od=2020&page=1&per_page=10
+GET /wp-json/flexmile/v1/offers
 ```
 
-**Odpowiedź:**
+**Filter parameters:**
+- `car_brand` - brand slug
+- `body_type` - body type slug
+- `fuel_type` - fuel type slug
+- `year_from` - year from
+- `year_to` - year to
+- `max_mileage` - maximum mileage
+- `price_from` - minimum price
+- `price_to` - maximum price
+- `page` - page number (infinite scroll)
+- `per_page` - results per page (max 100)
+
+**Example:**
+```
+GET /wp-json/flexmile/v1/offers?car_brand=bmw&year_from=2020&page=1&per_page=10
+```
+
+**Response (list - lightweight):**
 ```json
-[
-  {
-    "id": 123,
-    "nazwa": "BMW X5 3.0d",
-    "opis": "Opis samochodu...",
-    "slug": "bmw-x5-30d",
-    "obrazek_glowny": "https://...",
-    "miniaturka": "https://...",
-    "galeria": [...],
-    "parametry": {
-      "rocznik": 2022,
-      "przebieg": 50000,
-      "moc": 286,
-      "pojemnosc": 2993,
-      "skrzynia": "automatic",
-      "kolor": "czarny",
-      "liczba_miejsc": 5,
-      "numer_vin": "..."
-    },
-    "marka": {
-      "id": 1,
-      "nazwa": "BMW",
-      "slug": "bmw"
-    },
-    "typ_nadwozia": {...},
-    "paliwo": {...},
-    "ceny": {
-      "cena_bazowa": 2500.00,
-      "cena_za_km": 0.50
-    },
-    "dostepny": true
+{
+  "offers": [
+    {
+      "id": 123,
+      "title": "BMW X5 3.0d",
+      "slug": "bmw-x5-30d",
+      "image": {
+        "thumbnail": "https://...",
+        "medium": "https://...",
+        "large": "https://..."
+      },
+      "engine": "3.0d xDrive",
+      "horsepower": 286,
+      "transmission": "automatic",
+      "year": 2022,
+      "mileage": 50000,
+      "brand": {
+        "id": 1,
+        "name": "BMW",
+        "slug": "bmw"
+      },
+      "body_type": {
+        "name": "SUV",
+        "slug": "suv"
+      },
+      "fuel_type": {
+        "name": "Diesel",
+        "slug": "diesel"
+      },
+      "price_from": 2200.00,
+      "attributes": {
+        "new": true,
+        "available_immediately": true,
+        "coming_soon": false,
+        "popular": true,
+        "featured": true
+      },
+      "available": true
+    }
+  ],
+  "meta": {
+    "total": 25,
+    "total_pages": 3,
+    "current_page": 1,
+    "per_page": 10
   }
-]
+}
 ```
 
-**Headers:**
-- `X-WP-Total` - łączna liczba wyników
-- `X-WP-TotalPages` - liczba stron
+**Legacy Headers (backward compatibility):**
+- `X-WP-Total` - total results
+- `X-WP-TotalPages` - total pages
 
-### 2. Pojedynczy samochód
+### 2. Single offer
 ```
-GET /wp-json/flexmile/v1/samochody/{id}
+GET /wp-json/flexmile/v1/offers/{id}
 ```
 
-### 3. Tworzenie rezerwacji
+**Response (full data):**
+```json
+{
+  "id": 123,
+  "title": "BMW X5 3.0d xDrive",
+  "description": "Full description...",
+  "slug": "bmw-x5-30d",
+  "featured_image": "https://...",
+  "thumbnail": "https://...",
+  "gallery": [
+    {
+      "id": 456,
+      "url": "https://...",
+      "thumbnail": "https://...",
+      "medium": "https://...",
+      "large": "https://..."
+    }
+  ],
+  "specs": {
+    "year": 2022,
+    "mileage": 50000,
+    "engine": "3.0d xDrive",
+    "horsepower": 286,
+    "engine_capacity": 2993,
+    "transmission": "automatic",
+    "drivetrain": "AWD",
+    "color": "Black metallic",
+    "seats": 5,
+    "doors": 4,
+    "vin_number": "WBAKR810501A23456"
+  },
+  "brand": {
+    "id": 1,
+    "name": "BMW",
+    "slug": "bmw"
+  },
+  "body_type": {
+    "id": 2,
+    "name": "SUV",
+    "slug": "suv"
+  },
+  "fuel_type": {
+    "id": 3,
+    "name": "Diesel",
+    "slug": "diesel"
+  },
+  "pricing": {
+    "rental_periods": [12, 24, 36, 48],
+    "mileage_limits": [10000, 15000, 20000],
+    "price_matrix": {
+      "12_10000": 2800.00,
+      "12_15000": 2900.00,
+      "12_20000": 3000.00,
+      "24_10000": 2600.00,
+      "24_15000": 2700.00,
+      "24_20000": 2800.00,
+      "36_10000": 2400.00,
+      "36_15000": 2500.00,
+      "36_20000": 2600.00,
+      "48_10000": 2200.00,
+      "48_15000": 2300.00,
+      "48_20000": 2400.00
+    },
+    "lowest_price": 2200.00
+  },
+  "standard_equipment": [
+    "ABS",
+    "ESP",
+    "Air conditioning",
+    "GPS Navigation",
+    "Bluetooth"
+  ],
+  "additional_equipment": [
+    "Leather seats",
+    "Panoramic roof",
+    "360° camera",
+    "Parking sensors",
+    "Adaptive cruise control"
+  ],
+  "attributes": {
+    "new": true,
+    "available_immediately": true,
+    "coming_soon": false,
+    "popular": true,
+    "featured": true
+  },
+  "available": true
+}
 ```
-POST /wp-json/flexmile/v1/rezerwacje
+
+### 3. Reserved offers only
+```
+GET /wp-json/flexmile/v1/offers/reserved
+```
+
+Returns only reserved offers (same structure as list endpoint).
+
+### 4. Create reservation
+```
+POST /wp-json/flexmile/v1/reservations
 Content-Type: application/json
 
 {
-  "samochod_id": 123,
-  "imie": "Jan",
-  "nazwisko": "Kowalski",
-  "email": "jan@example.com",
-  "telefon": "+48 123 456 789",
-  "ilosc_miesiecy": 12,
-  "ilosc_km": 15000,
-  "wiadomosc": "Dodatkowe pytanie..."
+  "offer_id": 123,
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john@example.com",
+  "phone": "+48 123 456 789",
+  "rental_months": 12,
+  "annual_mileage_limit": 15000,
+  "message": "Additional question..."
 }
 ```
 
-**Odpowiedź:**
+**Response:**
 ```json
 {
   "success": true,
-  "message": "Rezerwacja została złożona pomyślnie",
-  "rezerwacja_id": 456,
-  "cena_calkowita": 32500.00
+  "message": "Reservation created successfully",
+  "reservation_id": 456,
+  "pricing": {
+    "monthly_price": 2700.00,
+    "total_price": 32400.00,
+    "rental_months": 12,
+    "annual_mileage_limit": 15000
+  }
 }
 ```
 
-## ⚙️ Konfiguracja CORS
+## ⚙️ CORS Configuration
 
-Aby aplikacja Angular mogła łączyć się z API, dodaj do `wp-config.php`:
+For your Angular app to connect to the API, add to `wp-config.php`:
 
 ```php
-// CORS dla headless WordPress
-header('Access-Control-Allow-Origin: http://localhost:4200'); // Adres aplikacji Angular
+// CORS for headless WordPress
+header('Access-Control-Allow-Origin: http://localhost:4200'); // Angular app URL
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
@@ -160,95 +276,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 ```
 
-**WAŻNE:** W produkcji zmień `*` lub `localhost:4200` na faktyczny adres Twojej aplikacji Angular!
+**IMPORTANT:** In production, change `localhost:4200` to your actual Angular app domain!
 
-## 📧 Konfiguracja maili
+## 📧 Email Configuration
 
-Wtyczka wysyła maile po każdej rezerwacji:
-- **Do administratora** - pełne szczegóły rezerwacji
-- **Do klienta** - potwierdzenie rezerwacji
+The plugin sends emails after each reservation:
+- **To administrator** - full reservation details
+- **To customer** - confirmation
 
-Sprawdź czy WordPress może wysyłać maile. Jeśli nie, zainstaluj plugin jak:
+Check if WordPress can send emails. If not, install a plugin like:
 - WP Mail SMTP
 - Easy WP SMTP
 
-## 🎯 Workflow zarządzania rezerwacjami
+## 🎯 Reservation Management Workflow
 
-1. Klient składa rezerwację przez Angular (POST do API)
-2. System tworzy wpis w WP z statusem "Oczekująca"
-3. Wysyłane są maile (admin + klient)
-4. Administrator sprawdza rezerwację w WordPress
-5. Po zmianie statusu na "Zatwierdzona":
-   - Samochód automatycznie oznaczany jako zarezerwowany
-   - Znika z listy dostępnych aut w API
-6. Po zmianie na inny status - samochód wraca do oferty
+1. Customer creates reservation via Angular (POST to API)
+2. System creates WP post with "Pending" status
+3. Emails are sent (admin + customer)
+4. Administrator reviews reservation in WordPress
+5. After status change to "Approved":
+    - Car is automatically marked as reserved
+    - Disappears from available offers list in API
+6. After status change to other - car returns to offers
 
-## 📊 Panel administracyjny
+## 📊 Admin Panel
 
-Po zainstalowaniu dostępny w menu:
-- **FlexMile Dashboard** - statystyki i szybki dostęp
-- **Samochody** - zarządzanie flotą
-- **Rezerwacje** - lista zamówień
-- **Marki / Typy nadwozia / Paliwa** - taksonomie
-- **Ustawienia API** - dokumentacja i przykłady
+After installation available in menu:
+- **FlexMile Dashboard** - statistics and quick access
+- **Offers** - fleet management
+- **Reservations** - orders list
+- **Car Brands / Body Types / Fuel Types** - taxonomies
+- **API Settings** - documentation and examples
 
-## 🔧 Struktura plików
+## 🔧 File Structure
 
 ```
 flexmile/
-├── flexmile.php              # Główny plik wtyczki
+├── flexmile.php              # Main plugin file
 ├── includes/
 │   ├── Core/
-│   │   └── Frontend_Blocker.php    # Blokada frontendu
+│   │   └── Frontend_Blocker.php    # Frontend blocking
 │   ├── PostTypes/
-│   │   ├── Samochody.php           # CPT Samochody
-│   │   └── Rezerwacje.php          # CPT Rezerwacje
+│   │   ├── Offers.php              # CPT Offers
+│   │   └── Reservations.php        # CPT Reservations
 │   ├── API/
-│   │   ├── Samochody_Endpoint.php  # API dla aut
-│   │   └── Rezerwacje_Endpoint.php # API rezerwacji
+│   │   ├── Offers_Endpoint.php     # API for offers
+│   │   └── Reservations_Endpoint.php # API for reservations
 │   └── Admin/
-│       └── Admin_Menu.php          # Panel admina
+│       ├── Admin_Menu.php          # Admin panel
+│       └── Sample_Data_Importer.php # Sample data import
 └── README.md
 ```
 
-## 🚦 Następne kroki
+## 🚦 Next Steps
 
 ### Frontend (Angular):
-1. Stwórz serwis do komunikacji z API
-2. Lista samochodów z infinite scroll
-3. Filtry (marka, rocznik, cena)
-4. Kalkulator ceny (na podstawie km i miesięcy)
-5. Formularz rezerwacji
+1. Create service for API communication
+2. Offers list with infinite scroll
+3. Filters (brand, year, price)
+4. Price calculator (based on months and mileage)
+5. Reservation form
 
-### Backend (opcjonalnie):
-- [ ] Galeria zdjęć dla samochodów
-- [ ] Więcej statusów rezerwacji
-- [ ] Export rezerwacji do CSV
-- [ ] Powiadomienia email przy zmianie statusu
-- [ ] Historia rezerwacji dla samochodu
+### Backend (optional):
+- [ ] Photo gallery for cars
+- [ ] More reservation statuses
+- [ ] Export reservations to CSV
+- [ ] Email notifications on status change
+- [ ] Reservation history for car
 
 ## 📞 Support
 
-W razie problemów sprawdź:
-1. Czy wtyczka jest aktywowana
-2. Czy permalinki są zapisane (Ustawienia → Permalinki → Zapisz)
-3. Czy CORS jest poprawnie skonfigurowany
-4. Czy endpointy działają (sprawdź w przeglądarce)
+If you encounter problems, check:
+1. Is plugin activated
+2. Are permalinks saved (Settings → Permalinks → Save)
+3. Is CORS properly configured
+4. Do endpoints work (check in browser)
 
-## 🔐 Bezpieczeństwo
+## 🔐 Security
 
-- API jest publiczne dla GET (samochody)
-- POST (rezerwacje) ma walidację danych
-- Lista rezerwacji wymaga uprawnień admina
-- Frontend całkowicie zablokowany
-- Wszystkie dane są sanitizowane
+- API is public for GET (offers)
+- POST (reservations) has data validation
+- Reservations list requires admin permissions
+- Frontend completely blocked
+- All data is sanitized
 
-## 📝 Licencja
+## 📝 License
 
-MIT License - użyj jak chcesz!
+MIT License - use as you wish!
 
 ---
 
-**Autor:** FlexMile Team  
-**Wersja:** 1.1.0  
-**Wymaga:** WordPress 5.8+, PHP 7.4+
+**Author:** FlexMile Team  
+**Version:** 2.0.0  
+**Requires:** WordPress 5.8+, PHP 7.4+
