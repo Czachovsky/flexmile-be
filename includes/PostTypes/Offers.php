@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Custom Post Type dla Samochodów
- * Z zaawansowanym systemem macierzy cen
+ * Z meta polami dla marki i modelu zamiast taksonomii
  */
 class Offers {
 
@@ -21,6 +21,7 @@ class Offers {
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
 
         add_action('wp_ajax_flexmile_generate_price_matrix', [$this, 'ajax_generate_price_matrix']);
+        add_action('wp_ajax_flexmile_get_models', [$this, 'ajax_get_models']);
     }
 
     /**
@@ -59,21 +60,9 @@ class Offers {
     }
 
     /**
-     * Rejestracja taksonomii
+     * Rejestracja taksonomii (tylko body_type i fuel_type, bez car_brand)
      */
     public function register_taxonomies() {
-        register_taxonomy('car_brand', self::POST_TYPE, [
-            'labels' => [
-                'name' => 'Marki',
-                'singular_name' => 'Marka',
-                'add_new_item' => 'Dodaj markę',
-            ],
-            'hierarchical' => true,
-            'show_in_rest' => true,
-            'rest_base' => 'brands',
-            'rewrite' => false,
-        ]);
-
         register_taxonomy('body_type', self::POST_TYPE, [
             'labels' => [
                 'name' => 'Typy nadwozia',
@@ -113,6 +102,18 @@ class Offers {
                 '1.0',
                 true
             );
+
+            wp_enqueue_script(
+                'flexmile-dropdown',
+                plugins_url('../../assets/admin-dropdown.js', __FILE__),
+                ['jquery'],
+                '1.0',
+                true
+            );
+
+            wp_localize_script('flexmile-dropdown', 'flexmileDropdown', [
+                'nonce' => wp_create_nonce('flexmile_dropdown')
+            ]);
 
             wp_enqueue_style(
                 'flexmile-admin-styles',
@@ -189,6 +190,43 @@ class Offers {
             'side',
             'default'
         );
+    }
+
+    /**
+     * Ładuje config z JSON
+     */
+    private function load_config() {
+        $config_file = FLEXMILE_PLUGIN_DIR . 'config.json';
+
+        if (!file_exists($config_file)) {
+            return null;
+        }
+
+        $json = file_get_contents($config_file);
+        return json_decode($json, true);
+    }
+
+    /**
+     * AJAX: Pobiera modele dla wybranej marki
+     */
+    public function ajax_get_models() {
+        check_ajax_referer('flexmile_dropdown', 'nonce');
+
+        $brand_slug = isset($_POST['brand_slug']) ? sanitize_text_field($_POST['brand_slug']) : '';
+
+        if (empty($brand_slug)) {
+            wp_send_json_error(['message' => 'Nie podano marki']);
+        }
+
+        $config = $this->load_config();
+
+        if (!$config || !isset($config['brands'][$brand_slug])) {
+            wp_send_json_error(['message' => 'Nie znaleziono marki']);
+        }
+
+        $models = $config['brands'][$brand_slug]['models'];
+
+        wp_send_json_success(['models' => $models]);
     }
 
     /**
@@ -284,6 +322,11 @@ class Offers {
      * Renderuje meta box ze szczegółami
      */
     public function render_details_meta_box($post) {
+        $config = $this->load_config();
+
+        $car_brand_slug = get_post_meta($post->ID, '_car_brand_slug', true);
+        $car_model = get_post_meta($post->ID, '_car_model', true);
+
         $rocznik = get_post_meta($post->ID, '_year', true);
         $przebieg = get_post_meta($post->ID, '_mileage', true);
         $moc = get_post_meta($post->ID, '_horsepower', true);
@@ -305,6 +348,39 @@ class Offers {
 
             <div id="tab-podstawowe" class="flexmile-tab-content">
                 <div class="flexmile-form-grid">
+                    <div class="flexmile-field">
+                        <label for="car_brand">
+                            <span class="flexmile-label-icon">🏷️</span>
+                            <strong>Marka</strong>
+                        </label>
+                        <select id="car_brand" name="car_brand_slug" class="flexmile-input" required>
+                            <option value="">-- Wybierz markę --</option>
+                            <?php if ($config && isset($config['brands'])): ?>
+                                <?php foreach ($config['brands'] as $slug => $brand): ?>
+                                    <option value="<?php echo esc_attr($slug); ?>" <?php selected($car_brand_slug, $slug); ?>>
+                                        <?php echo esc_html($brand['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                        <p class="description">Wybierz markę z listy</p>
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="car_model">
+                            <span class="flexmile-label-icon">🚗</span>
+                            <strong>Model</strong>
+                        </label>
+                        <select id="car_model"
+                                name="car_model"
+                                class="flexmile-input"
+                                data-initial-model="<?php echo esc_attr($car_model); ?>"
+                                <?php echo empty($car_brand_slug) ? 'disabled' : ''; ?>>
+                            <option value="">-- Najpierw wybierz markę --</option>
+                        </select>
+                        <p class="description">Dostępne po wybraniu marki</p>
+                    </div>
+
                     <div class="flexmile-field">
                         <label for="year">
                             <span class="flexmile-label-icon">📅</span>
@@ -518,7 +594,7 @@ class Offers {
     }
 
     /**
-     * Renderuje meta box z konfiguracją cen (NOWY SYSTEM)
+     * Renderuje meta box z konfiguracją cen
      */
     public function render_pricing_meta_box($post) {
         $rezerwacja_aktywna = get_post_meta($post->ID, '_reservation_active', true);
@@ -822,7 +898,7 @@ class Offers {
     }
 
     /**
-     * Zapisuje meta dane (ZAKTUALIZOWANE - nowy system cen)
+     * Zapisuje meta dane (ZAKTUALIZOWANE - nowy system marki/modelu)
      */
     public function save_meta($post_id, $post) {
         if (!isset($_POST['flexmile_samochod_nonce']) ||
@@ -840,6 +916,15 @@ class Offers {
 
         if (isset($_POST['gallery'])) {
             update_post_meta($post_id, '_gallery', sanitize_text_field($_POST['gallery']));
+        }
+
+        // Zapisz markę i model (meta pola)
+        if (isset($_POST['car_brand_slug'])) {
+            update_post_meta($post_id, '_car_brand_slug', sanitize_text_field($_POST['car_brand_slug']));
+        }
+
+        if (isset($_POST['car_model'])) {
+            update_post_meta($post_id, '_car_model', sanitize_text_field($_POST['car_model']));
         }
 
         $fields = [

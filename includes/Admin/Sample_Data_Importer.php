@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Import przykładowych danych do systemu
+ * Bez importu taksonomii car_brand (używamy meta pól)
  */
 class Sample_Data_Importer {
 
@@ -43,14 +44,10 @@ class Sample_Data_Importer {
         check_admin_referer('flexmile_import_sample_data', 'flexmile_nonce');
 
         $results = [
-            'brands' => 0,
             'body_types' => 0,
             'fuel_types' => 0,
             'offers' => 0,
         ];
-
-        // Import marek
-        $results['brands'] = $this->import_brands();
 
         // Import typów nadwozia
         $results['body_types'] = $this->import_body_types();
@@ -63,8 +60,7 @@ class Sample_Data_Importer {
 
         // Przekieruj z komunikatem
         $message = sprintf(
-            'Imported: %d brands, %d body types, %d fuel types, %d offers',
-            $results['brands'],
+            'Imported: %d body types, %d fuel types, %d offers',
             $results['body_types'],
             $results['fuel_types'],
             $results['offers']
@@ -76,41 +72,6 @@ class Sample_Data_Importer {
             'message' => urlencode($message)
         ], admin_url('admin.php')));
         exit;
-    }
-
-    /**
-     * Importuje marki samochodów
-     */
-    private function import_brands() {
-        $config = $this->load_config();
-
-        // Użyj marek z config.json jeśli dostępne
-        if ($config && isset($config['brands'])) {
-            $marki = $config['brands'];
-        } else {
-            // Fallback - hardkodowane marki
-            $marki = [
-                'Audi', 'BMW', 'Mercedes-Benz', 'Volkswagen', 'Toyota',
-                'Honda', 'Ford', 'Opel', 'Peugeot', 'Renault',
-                'Skoda', 'Seat', 'Fiat', 'Alfa Romeo', 'Volvo',
-                'Mazda', 'Nissan', 'Hyundai', 'Kia', 'Lexus',
-                'Porsche', 'Tesla', 'Land Rover', 'Jaguar', 'Mini',
-                'Chevrolet', 'Subaru', 'Mitsubishi', 'Suzuki', 'Dacia'
-            ];
-        }
-
-        $count = 0;
-        foreach ($marki as $marka) {
-            $existing = term_exists($marka, 'car_brand');
-            if (!$existing) {
-                $result = wp_insert_term($marka, 'car_brand');
-                if (!is_wp_error($result)) {
-                    $count++;
-                }
-            }
-        }
-
-        return $count;
     }
 
     /**
@@ -126,15 +87,15 @@ class Sample_Data_Importer {
             // Fallback - hardkodowane typy
             $typy = [
                 'Sedan',
-                'Kombi',
+                'Wagon',
                 'SUV',
                 'Hatchback',
                 'Coupe',
-                'Cabrio',
+                'Convertible',
                 'Minivan',
                 'Pickup',
-                'Kompakt',
-                'Sportowy'
+                'Compact',
+                'Sports'
             ];
         }
 
@@ -164,12 +125,12 @@ class Sample_Data_Importer {
         } else {
             // Fallback - hardkodowane paliwa
             $paliwa = [
-                'Benzyna',
+                'Petrol',
                 'Diesel',
-                'Hybryda',
-                'Elektryczny',
-                'Benzyna + LPG',
-                'Benzyna + CNG',
+                'Hybrid',
+                'Electric',
+                'Petrol + LPG',
+                'Petrol + CNG',
                 'Plug-in Hybrid'
             ];
         }
@@ -196,7 +157,8 @@ class Sample_Data_Importer {
             [
                 'title' => 'BMW X5 3.0d xDrive',
                 'description' => 'Luksusowy SUV premium z napędem na cztery koła. Doskonały stan techniczny, bogate wyposażenie. Idealny do długich tras i rodzinnych wyjazdów. Samochód serwisowany w ASO, kompletna historia przeglądów.',
-                'brand' => 'BMW',
+                'brand_slug' => 'bmw',
+                'model' => 'X5',
                 'body_type' => 'SUV',
                 'fuel_type' => 'Diesel',
                 'year' => 2022,
@@ -236,9 +198,10 @@ class Sample_Data_Importer {
             [
                 'title' => 'Toyota Corolla 1.8 Hybrid',
                 'description' => 'Ekonomiczny sedan hybrydowy o niskim spalaniu (4.5l/100km). Idealne auto do miasta i trasy. Bezawaryjny napęd hybrydowy, cicha kabina, niskie koszty eksploatacji. Jeden właściciel, ASO.',
-                'brand' => 'Toyota',
+                'brand_slug' => 'toyota',
+                'model' => 'Corolla',
                 'body_type' => 'Sedan',
-                'fuel_type' => 'Hybryda',
+                'fuel_type' => 'Hybrid',
                 'year' => 2023,
                 'mileage' => 28000,
                 'horsepower' => 122,
@@ -276,9 +239,10 @@ class Sample_Data_Importer {
             [
                 'title' => 'Volkswagen Golf 1.5 TSI',
                 'description' => 'Klasyczny hatchback z segmentu C. Sprawdzony silnik benzynowy 1.5 TSI o mocy 150 KM. Oszczędny, dynamiczny i praktyczny. Wyposażenie: klimatyzacja, nawigacja, czujniki parkowania, kamera cofania.',
-                'brand' => 'Volkswagen',
+                'brand_slug' => 'volkswagen',
+                'model' => 'Golf',
                 'body_type' => 'Hatchback',
-                'fuel_type' => 'Benzyna',
+                'fuel_type' => 'Petrol',
                 'year' => 2021,
                 'mileage' => 62000,
                 'horsepower' => 150,
@@ -334,12 +298,11 @@ class Sample_Data_Importer {
                 ]);
 
                 if ($post_id && !is_wp_error($post_id)) {
-                    // Dodaj taksonomie
-                    $brand_term = term_exists($offer['brand'], 'car_brand');
-                    if ($brand_term) {
-                        wp_set_object_terms($post_id, (int)$brand_term['term_id'], 'car_brand');
-                    }
+                    // Zapisz markę i model jako meta pola
+                    update_post_meta($post_id, '_car_brand_slug', $offer['brand_slug']);
+                    update_post_meta($post_id, '_car_model', $offer['model']);
 
+                    // Dodaj taksonomie (body_type, fuel_type)
                     $body_type_term = term_exists($offer['body_type'], 'body_type');
                     if ($body_type_term) {
                         wp_set_object_terms($post_id, (int)$body_type_term['term_id'], 'body_type');
@@ -384,14 +347,7 @@ class Sample_Data_Importer {
      * Sprawdza czy przykładowe dane już istnieją
      */
     public static function has_sample_data() {
-        $brands = get_terms([
-            'taxonomy' => 'car_brand',
-            'hide_empty' => false,
-            'count' => true,
-        ]);
-
         $offers = wp_count_posts('offer');
-
-        return (!empty($brands) && count($brands) > 5) || ($offers && $offers->publish > 0);
+        return ($offers && $offers->publish > 0);
     }
 }

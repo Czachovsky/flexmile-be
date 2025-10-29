@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * REST API Endpoint dla Ofert
- * Z obsługą macierzy cen
+ * Z filtrowaniem po meta polach brand i model
  */
 class Offers_Endpoint {
 
@@ -55,6 +55,20 @@ class Offers_Endpoint {
             'callback' => [$this, 'get_samochod'],
             'permission_callback' => '__return_true',
         ]);
+
+        // Nowy endpoint: lista dostępnych marek
+        register_rest_route(self::NAMESPACE, '/' . self::BASE . '/brands', [
+            'methods' => 'GET',
+            'callback' => [$this, 'get_brands'],
+            'permission_callback' => '__return_true',
+        ]);
+
+        // Nowy endpoint: modele dla wybranej marki
+        register_rest_route(self::NAMESPACE, '/' . self::BASE . '/brands/(?P<brand_slug>[a-z0-9-]+)/models', [
+            'methods' => 'GET',
+            'callback' => [$this, 'get_models_for_brand'],
+            'permission_callback' => '__return_true',
+        ]);
     }
 
     /**
@@ -95,11 +109,21 @@ class Offers_Endpoint {
             ];
         }
 
+        // Filtrowanie po marce (meta pole zamiast taksonomii)
         if (!empty($params['car_brand'])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'car_brand',
-                'field' => 'slug',
-                'terms' => sanitize_text_field($params['car_brand']),
+            $args['meta_query'][] = [
+                'key' => '_car_brand_slug',
+                'value' => sanitize_text_field($params['car_brand']),
+                'compare' => '=',
+            ];
+        }
+
+        // Filtrowanie po modelu (meta pole)
+        if (!empty($params['car_model'])) {
+            $args['meta_query'][] = [
+                'key' => '_car_model',
+                'value' => sanitize_text_field($params['car_model']),
+                'compare' => '=',
             ];
         }
 
@@ -252,15 +276,64 @@ class Offers_Endpoint {
     }
 
     /**
-     * NOWA METODA: Przygotowuje MINIMALNE dane samochodu dla listy (lightweight)
-     *
-     * Zawiera tylko:
-     * - id, nazwa, slug
-     * - grafika (thumbnail + main)
-     * - podstawowe parametry (silnik, paliwo, skrzynia, KM, marka)
-     * - cena_od (najniższa cena)
-     * - atrybuty/flagi
-     * - status dostępności
+     * Zwraca listę dostępnych marek z config.json
+     */
+    public function get_brands() {
+        $config = $this->load_config();
+
+        if (!$config || !isset($config['brands'])) {
+            return new \WP_Error('config_error', 'Nie można załadować konfiguracji marek', ['status' => 500]);
+        }
+
+        $brands = [];
+        foreach ($config['brands'] as $slug => $brand) {
+            $brands[] = [
+                'slug' => $slug,
+                'name' => $brand['name'],
+                'models_count' => count($brand['models'])
+            ];
+        }
+
+        return new \WP_REST_Response($brands);
+    }
+
+    /**
+     * Zwraca modele dla wybranej marki
+     */
+    public function get_models_for_brand($request) {
+        $brand_slug = sanitize_text_field($request['brand_slug']);
+
+        $config = $this->load_config();
+
+        if (!$config || !isset($config['brands'][$brand_slug])) {
+            return new \WP_Error('not_found', 'Nie znaleziono marki', ['status' => 404]);
+        }
+
+        $models = $config['brands'][$brand_slug]['models'];
+
+        return new \WP_REST_Response([
+            'brand_slug' => $brand_slug,
+            'brand_name' => $config['brands'][$brand_slug]['name'],
+            'models' => $models
+        ]);
+    }
+
+    /**
+     * Ładuje config z JSON
+     */
+    private function load_config() {
+        $config_file = FLEXMILE_PLUGIN_DIR . 'config.json';
+
+        if (!file_exists($config_file)) {
+            return null;
+        }
+
+        $json = file_get_contents($config_file);
+        return json_decode($json, true);
+    }
+
+    /**
+     * Przygotowuje MINIMALNE dane samochodu dla listy (lightweight)
      */
     private function prepare_samochod_data_minimal($post) {
         $data = [
@@ -281,12 +354,23 @@ class Offers_Endpoint {
         $data['year'] = (int) get_post_meta($post->ID, '_year', true);
         $data['mileage'] = (int) get_post_meta($post->ID, '_mileage', true);
 
-        $marka = wp_get_post_terms($post->ID, 'car_brand');
-        $data['brand'] = !empty($marka) ? [
-            'id' => $marka[0]->term_id,
-            'name' => $marka[0]->name,
-            'slug' => $marka[0]->slug,
-        ] : null;
+        // Marka i model z meta pól
+        $brand_slug = get_post_meta($post->ID, '_car_brand_slug', true);
+        $model = get_post_meta($post->ID, '_car_model', true);
+
+        $config = $this->load_config();
+        $brand_name = '';
+
+        if ($config && isset($config['brands'][$brand_slug])) {
+            $brand_name = $config['brands'][$brand_slug]['name'];
+        }
+
+        $data['brand'] = [
+            'slug' => $brand_slug,
+            'name' => $brand_name,
+        ];
+
+        $data['model'] = $model;
 
         $typ_nadwozia = wp_get_post_terms($post->ID, 'body_type');
         $data['body_type'] = !empty($typ_nadwozia) ? [
@@ -360,12 +444,23 @@ class Offers_Endpoint {
             'vin_number' => get_post_meta($post->ID, '_vin_number', true),
         ];
 
-        $marka = wp_get_post_terms($post->ID, 'car_brand');
-        $data['brand'] = !empty($marka) ? [
-            'id' => $marka[0]->term_id,
-            'name' => $marka[0]->name,
-            'slug' => $marka[0]->slug,
-        ] : null;
+        // Marka i model z meta pól
+        $brand_slug = get_post_meta($post->ID, '_car_brand_slug', true);
+        $model = get_post_meta($post->ID, '_car_model', true);
+
+        $config = $this->load_config();
+        $brand_name = '';
+
+        if ($config && isset($config['brands'][$brand_slug])) {
+            $brand_name = $config['brands'][$brand_slug]['name'];
+        }
+
+        $data['brand'] = [
+            'slug' => $brand_slug,
+            'name' => $brand_name,
+        ];
+
+        $data['model'] = $model;
 
         $typ_nadwozia = wp_get_post_terms($post->ID, 'body_type');
         $data['body_type'] = !empty($typ_nadwozia) ? [
@@ -381,13 +476,13 @@ class Offers_Endpoint {
             'slug' => $paliwo[0]->slug,
         ] : null;
 
-        $config = get_post_meta($post->ID, '_pricing_config', true);
+        $config_price = get_post_meta($post->ID, '_pricing_config', true);
 
-        if (!empty($config)) {
+        if (!empty($config_price)) {
             $data['pricing'] = [
-                'rental_periods' => $config['rental_periods'],
-                'mileage_limits' => $config['mileage_limits'],
-                'price_matrix' => $config['prices'],
+                'rental_periods' => $config_price['rental_periods'],
+                'mileage_limits' => $config_price['mileage_limits'],
+                'price_matrix' => $config_price['prices'],
                 'lowest_price' => (float) get_post_meta($post->ID, '_lowest_price', true),
             ];
         } else {
@@ -468,6 +563,10 @@ class Offers_Endpoint {
             ],
             'car_brand' => [
                 'description' => 'Filtr po marce (slug)',
+                'type' => 'string',
+            ],
+            'car_model' => [
+                'description' => 'Filtr po modelu',
                 'type' => 'string',
             ],
             'body_type' => [
