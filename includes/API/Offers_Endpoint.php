@@ -8,6 +8,7 @@ if (!defined('ABSPATH')) {
 /**
  * REST API Endpoint dla Ofert
  * Z filtrowaniem po meta polach brand i model
+ * Z reference ID w formacie FLX-LA-YYYY-XXX
  */
 class Offers_Endpoint {
 
@@ -269,7 +270,7 @@ class Offers_Endpoint {
         $post = get_post($id);
 
         if (!$post || $post->post_type !== 'offer') {
-            return new \WP_Error('not_found', 'Samochód nie został znaleziony', ['status' => 404]);
+            return new \WP_Error('not_found', 'Oferta nie została znaleziona', ['status' => 404]);
         }
 
         return $this->prepare_samochod_data($post);
@@ -338,6 +339,7 @@ class Offers_Endpoint {
     private function prepare_samochod_data_minimal($post) {
         $data = [
             'id' => $post->ID,
+            'car_reference_id' => get_post_meta($post->ID, '_car_reference_id', true) ?: null,
             'title' => $post->post_title,
             'slug' => $post->post_name,
         ];
@@ -406,6 +408,7 @@ class Offers_Endpoint {
     private function prepare_samochod_data($post) {
         $data = [
             'id' => $post->ID,
+            'car_reference_id' => get_post_meta($post->ID, '_car_reference_id', true) ?: null,
             'title' => $post->post_title,
             'description' => $post->post_content,
             'slug' => $post->post_name,

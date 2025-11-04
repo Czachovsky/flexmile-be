@@ -8,6 +8,7 @@ if (!defined('ABSPATH')) {
 /**
  * Custom Post Type dla Samochodów
  * Z meta polami dla marki i modelu zamiast taksonomii
+ * Z systemem reference ID: FLX-LA-YYYY-XXX
  */
 class Offers {
 
@@ -22,6 +23,89 @@ class Offers {
 
         add_action('wp_ajax_flexmile_generate_price_matrix', [$this, 'ajax_generate_price_matrix']);
         add_action('wp_ajax_flexmile_get_models', [$this, 'ajax_get_models']);
+
+        // Generuj reference ID przy tworzeniu nowego posta
+        add_action('transition_post_status', [$this, 'generate_reference_id'], 10, 3);
+
+        // Dodaj kolumnę z reference ID w liście postów
+        add_filter('manage_' . self::POST_TYPE . '_posts_columns', [$this, 'add_reference_id_column']);
+        add_action('manage_' . self::POST_TYPE . '_posts_custom_column', [$this, 'display_reference_id_column'], 10, 2);
+    }
+
+    /**
+     * Generuje unikalny reference ID w formacie FLX-LA-YYYY-XXX
+     */
+    public function generate_reference_id($new_status, $old_status, $post) {
+        // Tylko dla nowych postów typu 'offer' które są publikowane
+        if ($post->post_type !== self::POST_TYPE) {
+            return;
+        }
+
+        // Tylko dla nowo publikowanych postów
+        if ($new_status !== 'publish' || $old_status === 'publish') {
+            return;
+        }
+
+        // Sprawdź czy już ma reference ID
+        $existing_ref = get_post_meta($post->ID, '_car_reference_id', true);
+        if (!empty($existing_ref)) {
+            return;
+        }
+
+        // Wygeneruj nowy ID
+        $reference_id = $this->get_next_reference_id();
+
+        // Zapisz
+        update_post_meta($post->ID, '_car_reference_id', $reference_id);
+    }
+
+    /**
+     * Pobiera następny dostępny reference ID
+     * Numeracja jest globalna i nigdy się nie resetuje
+     */
+    private function get_next_reference_id() {
+        $current_year = date('Y');
+        $option_key = 'flexmile_last_car_number'; // Globalny klucz (bez roku)
+
+        // Pobierz ostatni numer globalny
+        $last_number = get_option($option_key, 100);
+
+        // Inkrementuj
+        $new_number = $last_number + 1;
+
+        // Zapisz nowy numer
+        update_option($option_key, $new_number);
+
+        // Zwróć sformatowany ID (rok aktualny, numer globalny)
+        return sprintf('FLX-LA-%s-%03d', $current_year, $new_number);
+    }
+
+    /**
+     * Dodaje kolumnę Reference ID do listy postów
+     */
+ public function add_reference_id_column($columns) {
+     $new_columns = [];
+     foreach ($columns as $key => $value) {
+         $new_columns[$key] = $value;
+         if ($key === 'title') {
+             $new_columns['car_reference_id'] = '🔖 ID';
+         }
+     }
+     return $new_columns;
+ }
+
+    /**
+     * Wyświetla Reference ID w kolumnie
+     */
+    public function display_reference_id_column($column, $post_id) {
+        if ($column === 'car_reference_id') {
+            $ref_id = get_post_meta($post_id, '_car_reference_id', true);
+            if ($ref_id) {
+                echo '<strong style="color: #667eea; font-family: monospace; font-size: 13px;">' . esc_html($ref_id) . '</strong>';
+            } else {
+                echo '<span style="color: #94a3b8;">—</span>';
+            }
+        }
     }
 
     /**
@@ -137,6 +221,16 @@ class Offers {
      * Dodaje meta boxy
      */
     public function add_meta_boxes() {
+        // Metabox z Reference ID (tylko do odczytu)
+        add_meta_box(
+            'flexmile_car_reference',
+            'ID oferty',
+            [$this, 'render_reference_id_meta_box'],
+            self::POST_TYPE,
+            'side',
+            'high'
+        );
+
         add_meta_box(
             'flexmile_samochod_gallery',
             'Galeria zdjęć',
@@ -190,6 +284,38 @@ class Offers {
             'side',
             'default'
         );
+    }
+
+    /**
+     * Renderuje meta box z Reference ID (tylko do odczytu)
+     */
+    public function render_reference_id_meta_box($post) {
+        $ref_id = get_post_meta($post->ID, '_car_reference_id', true);
+
+        if (empty($ref_id)) {
+            ?>
+            <div style="padding: 15px; text-align: center; background: #f8fafc; border-radius: 8px;">
+                <p style="margin: 0; color: #64748b; font-size: 13px;">
+                  ID oferty zostanie wygenerowane<br>automatycznie po opublikowaniu oferty.
+
+                </p>
+            </div>
+            <?php
+        } else {
+            ?>
+            <div style="padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; text-align: center;">
+                <div style="font-size: 11px; color: rgba(255,255,255,0.8); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">
+                    ID Oferty
+                </div>
+                <div style="font-size: 24px; font-weight: bold; color: white; font-family: monospace; letter-spacing: 2px;">
+                    <?php echo esc_html($ref_id); ?>
+                </div>
+                <div style="margin-top: 10px; font-size: 11px; color: rgba(255,255,255,0.7);">
+                    To ID jest unikalne i nie może być zmienione
+                </div>
+            </div>
+            <?php
+        }
     }
 
     /**
@@ -898,7 +1024,7 @@ class Offers {
     }
 
     /**
-     * Zapisuje meta dane (ZAKTUALIZOWANE - nowy system marki/modelu)
+     * Zapisuje meta dane
      */
     public function save_meta($post_id, $post) {
         if (!isset($_POST['flexmile_samochod_nonce']) ||
