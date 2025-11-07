@@ -178,6 +178,7 @@ class Reservations {
 
     /**
      * Renderuje meta box z informacją o samochodzie
+     * FIXED: Now uses meta fields instead of taxonomy
      */
     public function render_car_meta_box($post) {
         $samochod_id = get_post_meta($post->ID, '_offer_id', true);
@@ -192,14 +193,38 @@ class Reservations {
                 }
                 echo '<strong>' . esc_html($samochod->post_title) . '</strong></a></p>';
 
-                $marka = wp_get_post_terms($samochod_id, 'car_brand');
-                if (!empty($marka)) {
-                    echo '<p>Marka: ' . esc_html($marka[0]->name) . '</p>';
+                // Get brand from meta field (new system)
+                $brand_slug = get_post_meta($samochod_id, '_car_brand_slug', true);
+                if ($brand_slug) {
+                    $config = $this->load_config();
+                    if ($config && isset($config['brands'][$brand_slug])) {
+                        echo '<p>Marka: ' . esc_html($config['brands'][$brand_slug]['name']) . '</p>';
+                    }
+                }
+
+                // Get model
+                $model = get_post_meta($samochod_id, '_car_model', true);
+                if ($model) {
+                    echo '<p>Model: ' . esc_html($model) . '</p>';
                 }
             }
         } else {
             echo '<p>Brak przypisanego samochodu</p>';
         }
+    }
+
+    /**
+     * Load config from JSON
+     */
+    private function load_config() {
+        $config_file = FLEXMILE_PLUGIN_DIR . 'config.json';
+
+        if (!file_exists($config_file)) {
+            return null;
+        }
+
+        $json = file_get_contents($config_file);
+        return json_decode($json, true);
     }
 
     /**

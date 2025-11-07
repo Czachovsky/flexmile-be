@@ -290,8 +290,7 @@ class Offers_Endpoint {
         foreach ($config['brands'] as $slug => $brand) {
             $brands[] = [
                 'slug' => $slug,
-                'name' => $brand['name'],
-                'models_count' => count($brand['models'])
+                'name' => $brand['name']
             ];
         }
 
@@ -614,4 +613,4 @@ class Offers_Endpoint {
             ],
         ];
     }
-}
+}gallery
