@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Custom Post Type dla Samochodów
- * Z meta polami dla marki i modelu zamiast taksonomii
+ * body_type i fuel_type są teraz META POLAMI (tak jak transmission)
  * Z systemem reference ID: FLX-LA-YYYY-XXX
  */
 class Offers {
@@ -16,7 +16,6 @@ class Offers {
 
     public function __construct() {
         add_action('init', [$this, 'register_post_type']);
-        add_action('init', [$this, 'register_taxonomies']);
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
@@ -36,63 +35,50 @@ class Offers {
      * Generuje unikalny reference ID w formacie FLX-LA-YYYY-XXX
      */
     public function generate_reference_id($new_status, $old_status, $post) {
-        // Tylko dla nowych postów typu 'offer' które są publikowane
         if ($post->post_type !== self::POST_TYPE) {
             return;
         }
 
-        // Tylko dla nowo publikowanych postów
         if ($new_status !== 'publish' || $old_status === 'publish') {
             return;
         }
 
-        // Sprawdź czy już ma reference ID
         $existing_ref = get_post_meta($post->ID, '_car_reference_id', true);
         if (!empty($existing_ref)) {
             return;
         }
 
-        // Wygeneruj nowy ID
         $reference_id = $this->get_next_reference_id();
-
-        // Zapisz
         update_post_meta($post->ID, '_car_reference_id', $reference_id);
     }
 
     /**
      * Pobiera następny dostępny reference ID
-     * Numeracja jest globalna i nigdy się nie resetuje
      */
     private function get_next_reference_id() {
         $current_year = date('Y');
-        $option_key = 'flexmile_last_car_number'; // Globalny klucz (bez roku)
+        $option_key = 'flexmile_last_car_number';
 
-        // Pobierz ostatni numer globalny
         $last_number = get_option($option_key, 100);
-
-        // Inkrementuj
         $new_number = $last_number + 1;
-
-        // Zapisz nowy numer
         update_option($option_key, $new_number);
 
-        // Zwróć sformatowany ID (rok aktualny, numer globalny)
         return sprintf('FLX-LA-%s-%03d', $current_year, $new_number);
     }
 
     /**
      * Dodaje kolumnę Reference ID do listy postów
      */
- public function add_reference_id_column($columns) {
-     $new_columns = [];
-     foreach ($columns as $key => $value) {
-         $new_columns[$key] = $value;
-         if ($key === 'title') {
-             $new_columns['car_reference_id'] = '🔖 ID';
-         }
-     }
-     return $new_columns;
- }
+    public function add_reference_id_column($columns) {
+        $new_columns = [];
+        foreach ($columns as $key => $value) {
+            $new_columns[$key] = $value;
+            if ($key === 'title') {
+                $new_columns['car_reference_id'] = '🔖 ID';
+            }
+        }
+        return $new_columns;
+    }
 
     /**
      * Wyświetla Reference ID w kolumnie
@@ -141,33 +127,6 @@ class Offers {
         ];
 
         register_post_type(self::POST_TYPE, $args);
-    }
-
-    /**
-     * Rejestracja taksonomii (tylko body_type i fuel_type, bez car_brand)
-     */
-    public function register_taxonomies() {
-        register_taxonomy('body_type', self::POST_TYPE, [
-            'labels' => [
-                'name' => 'Typy nadwozia',
-                'singular_name' => 'Typ nadwozia',
-            ],
-            'hierarchical' => true,
-            'show_in_rest' => true,
-            'rest_base' => 'body-types',
-            'rewrite' => false,
-        ]);
-
-        register_taxonomy('fuel_type', self::POST_TYPE, [
-            'labels' => [
-                'name' => 'Rodzaje paliwa',
-                'singular_name' => 'Rodzaj paliwa',
-            ],
-            'hierarchical' => true,
-            'show_in_rest' => true,
-            'rest_base' => 'fuel-types',
-            'rewrite' => false,
-        ]);
     }
 
     /**
@@ -221,7 +180,6 @@ class Offers {
      * Dodaje meta boxy
      */
     public function add_meta_boxes() {
-        // Metabox z Reference ID (tylko do odczytu)
         add_meta_box(
             'flexmile_car_reference',
             'ID oferty',
@@ -287,7 +245,7 @@ class Offers {
     }
 
     /**
-     * Renderuje meta box z Reference ID (tylko do odczytu)
+     * Renderuje meta box z Reference ID
      */
     public function render_reference_id_meta_box($post) {
         $ref_id = get_post_meta($post->ID, '_car_reference_id', true);
@@ -296,8 +254,7 @@ class Offers {
             ?>
             <div style="padding: 15px; text-align: center; background: #f8fafc; border-radius: 8px;">
                 <p style="margin: 0; color: #64748b; font-size: 13px;">
-                  ID oferty zostanie wygenerowane<br>automatycznie po opublikowaniu oferty.
-
+                    ID oferty zostanie wygenerowane<br>automatycznie po opublikowaniu oferty.
                 </p>
             </div>
             <?php
@@ -446,6 +403,7 @@ class Offers {
 
     /**
      * Renderuje meta box ze szczegółami
+     * UPDATED: body_type i fuel_type są teraz dropdownami (tak jak transmission)
      */
     public function render_details_meta_box($post) {
         $config = $this->load_config();
@@ -458,12 +416,18 @@ class Offers {
         $moc = get_post_meta($post->ID, '_horsepower', true);
         $pojemnosc = get_post_meta($post->ID, '_engine_capacity', true);
         $skrzynia = get_post_meta($post->ID, '_transmission', true);
+        $body_type = get_post_meta($post->ID, '_body_type', true); // META POLE
+        $fuel_type = get_post_meta($post->ID, '_fuel_type', true); // META POLE
         $kolor = get_post_meta($post->ID, '_color', true);
         $liczba_miejsc = get_post_meta($post->ID, '_seats', true);
         $liczba_drzwi = get_post_meta($post->ID, '_doors', true);
         $naped = get_post_meta($post->ID, '_drivetrain', true);
         $silnik = get_post_meta($post->ID, '_engine', true);
         $numer_vin = get_post_meta($post->ID, '_vin_number', true);
+
+        // Pobierz typy nadwozia i paliwa z config.json
+        $body_types = $config['body_types'] ?? [];
+        $fuel_types = $config['fuel_types'] ?? [];
         ?>
         <div class="flexmile-tabs">
             <ul class="flexmile-tab-nav">
@@ -505,6 +469,36 @@ class Offers {
                             <option value="">-- Najpierw wybierz markę --</option>
                         </select>
                         <p class="description">Dostępne po wybraniu marki</p>
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="body_type">
+                            <span class="flexmile-label-icon">🚙</span>
+                            <strong>Typ nadwozia</strong>
+                        </label>
+                        <select id="body_type" name="body_type" class="flexmile-input">
+                            <option value="">-- Wybierz --</option>
+                            <?php foreach ($body_types as $type): ?>
+                                <option value="<?php echo esc_attr($type); ?>" <?php selected($body_type, $type); ?>>
+                                    <?php echo esc_html($type); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="flexmile-field">
+                        <label for="fuel_type">
+                            <span class="flexmile-label-icon">⛽</span>
+                            <strong>Rodzaj paliwa</strong>
+                        </label>
+                        <select id="fuel_type" name="fuel_type" class="flexmile-input">
+                            <option value="">-- Wybierz --</option>
+                            <?php foreach ($fuel_types as $fuel): ?>
+                                <option value="<?php echo esc_attr($fuel); ?>" <?php selected($fuel_type, $fuel); ?>>
+                                    <?php echo esc_html($fuel); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
                     <div class="flexmile-field">
@@ -838,7 +832,7 @@ class Offers {
     }
 
     /**
-     * Renderuje macierz cen (tabelę)
+     * Renderuje macierz cen
      */
     private function render_price_matrix($config) {
         if (empty($config['rental_periods']) || empty($config['mileage_limits'])) {
@@ -944,7 +938,7 @@ class Offers {
     }
 
     /**
-     * Renderuje meta box z flagami statusu i wyróżnienia
+     * Renderuje meta box z flagami
      */
     public function render_flags_meta_box($post) {
         $nowy = get_post_meta($post->ID, '_new_car', true);
@@ -1025,6 +1019,7 @@ class Offers {
 
     /**
      * Zapisuje meta dane
+     * UPDATED: body_type i fuel_type są teraz zapisywane jako meta pola
      */
     public function save_meta($post_id, $post) {
         if (!isset($_POST['flexmile_samochod_nonce']) ||
@@ -1044,13 +1039,22 @@ class Offers {
             update_post_meta($post_id, '_gallery', sanitize_text_field($_POST['gallery']));
         }
 
-        // Zapisz markę i model (meta pola)
+        // Zapisz markę i model
         if (isset($_POST['car_brand_slug'])) {
             update_post_meta($post_id, '_car_brand_slug', sanitize_text_field($_POST['car_brand_slug']));
         }
 
         if (isset($_POST['car_model'])) {
             update_post_meta($post_id, '_car_model', sanitize_text_field($_POST['car_model']));
+        }
+
+        // Zapisz body_type i fuel_type jako meta pola (NOWOŚĆ!)
+        if (isset($_POST['body_type'])) {
+            update_post_meta($post_id, '_body_type', sanitize_text_field($_POST['body_type']));
+        }
+
+        if (isset($_POST['fuel_type'])) {
+            update_post_meta($post_id, '_fuel_type', sanitize_text_field($_POST['fuel_type']));
         }
 
         $fields = [

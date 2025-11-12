@@ -7,8 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * REST API Endpoint dla Ofert
- * Z filtrowaniem po meta polach brand i model
- * Z reference ID w formacie FLX-LA-YYYY-XXX
+ * KOMPLETNY ZESTAW FILTRÓW v2.1
  */
 class Offers_Endpoint {
 
@@ -57,14 +56,12 @@ class Offers_Endpoint {
             'permission_callback' => '__return_true',
         ]);
 
-        // Nowy endpoint: lista dostępnych marek
         register_rest_route(self::NAMESPACE, '/' . self::BASE . '/brands', [
             'methods' => 'GET',
             'callback' => [$this, 'get_brands'],
             'permission_callback' => '__return_true',
         ]);
 
-        // Nowy endpoint: modele dla wybranej marki
         register_rest_route(self::NAMESPACE, '/' . self::BASE . '/brands/(?P<brand_slug>[a-z0-9-]+)/models', [
             'methods' => 'GET',
             'callback' => [$this, 'get_models_for_brand'],
@@ -74,6 +71,7 @@ class Offers_Endpoint {
 
     /**
      * Pobiera listę samochodów z filtrowaniem
+     * ZAKTUALIZOWANE: dodano wszystkie filtry
      */
     public function get_samochody($request) {
         $params = $request->get_params();
@@ -85,17 +83,36 @@ class Offers_Endpoint {
             'paged' => isset($params['page']) ? intval($params['page']) : 1,
             'orderby' => isset($params['orderby']) ? sanitize_text_field($params['orderby']) : 'date',
             'order' => isset($params['order']) ? sanitize_text_field($params['order']) : 'DESC',
-            'meta_query' => [],
-            'tax_query' => [],
+            'meta_query' => ['relation' => 'AND'],
         ];
 
-        if (isset($params['only_reserved']) && $params['only_reserved'] === 'true') {
+        // ========================================
+        // FILTR: Tylko dostępne (nie zarezerwowane)
+        // ========================================
+        if (isset($params['available_only']) && $params['available_only'] === 'true') {
+            $args['meta_query'][] = [
+                'relation' => 'OR',
+                [
+                    'key' => '_reservation_active',
+                    'compare' => 'NOT EXISTS',
+                ],
+                [
+                    'key' => '_reservation_active',
+                    'value' => '1',
+                    'compare' => '!=',
+                ],
+            ];
+        }
+        // Alternatywnie: pokaż tylko zarezerwowane
+        elseif (isset($params['only_reserved']) && $params['only_reserved'] === 'true') {
             $args['meta_query'][] = [
                 'key' => '_reservation_active',
                 'value' => '1',
                 'compare' => '=',
             ];
-        } elseif (!isset($params['show_reserved']) || $params['show_reserved'] !== 'true') {
+        }
+        // Domyślnie: ukryj zarezerwowane (chyba że show_reserved=true)
+        elseif (!isset($params['show_reserved']) || $params['show_reserved'] !== 'true') {
             $args['meta_query'][] = [
                 'relation' => 'OR',
                 [
@@ -110,7 +127,9 @@ class Offers_Endpoint {
             ];
         }
 
-        // Filtrowanie po marce (meta pole zamiast taksonomii)
+        // ========================================
+        // FILTR: Marka
+        // ========================================
         if (!empty($params['car_brand'])) {
             $args['meta_query'][] = [
                 'key' => '_car_brand_slug',
@@ -119,7 +138,9 @@ class Offers_Endpoint {
             ];
         }
 
-        // Filtrowanie po modelu (meta pole)
+        // ========================================
+        // FILTR: Model
+        // ========================================
         if (!empty($params['car_model'])) {
             $args['meta_query'][] = [
                 'key' => '_car_model',
@@ -128,43 +149,67 @@ class Offers_Endpoint {
             ];
         }
 
+        // ========================================
+        // FILTR: Typ nadwozia
+        // ========================================
         if (!empty($params['body_type'])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'body_type',
-                'field' => 'slug',
-                'terms' => sanitize_text_field($params['body_type']),
+            $args['meta_query'][] = [
+                'key' => '_body_type',
+                'value' => sanitize_text_field($params['body_type']),
+                'compare' => '=',
             ];
         }
 
+        // ========================================
+        // FILTR: Typ paliwa
+        // ========================================
         if (!empty($params['fuel_type'])) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'fuel_type',
-                'field' => 'slug',
-                'terms' => sanitize_text_field($params['fuel_type']),
+            $args['meta_query'][] = [
+                'key' => '_fuel_type',
+                'value' => sanitize_text_field($params['fuel_type']),
+                'compare' => '=',
             ];
         }
 
+        // ========================================
+        // FILTR: Typ skrzyni (NOWOŚĆ!)
+        // ========================================
+        if (!empty($params['transmission'])) {
+            $transmission = sanitize_text_field($params['transmission']);
+
+            // Akceptuj: manual, automatic
+            if (in_array($transmission, ['manual', 'automatic'])) {
+                $args['meta_query'][] = [
+                    'key' => '_transmission',
+                    'value' => $transmission,
+                    'compare' => '=',
+                ];
+            }
+        }
+
+        // ========================================
+        // FILTR: Rocznik od/do
+        // ========================================
         if (!empty($params['year_from']) || !empty($params['year_to'])) {
             $rocznik_query = ['key' => '_year', 'type' => 'NUMERIC'];
 
-            if (!empty($params['year_from'])) {
+            if (!empty($params['year_from']) && !empty($params['year_to'])) {
+                $rocznik_query['value'] = [intval($params['year_from']), intval($params['year_to'])];
+                $rocznik_query['compare'] = 'BETWEEN';
+            } elseif (!empty($params['year_from'])) {
                 $rocznik_query['value'] = intval($params['year_from']);
                 $rocznik_query['compare'] = '>=';
-            }
-
-            if (!empty($params['year_to'])) {
-                if (!empty($params['year_from'])) {
-                    $rocznik_query['value'] = [intval($params['year_from']), intval($params['year_to'])];
-                    $rocznik_query['compare'] = 'BETWEEN';
-                } else {
-                    $rocznik_query['value'] = intval($params['year_to']);
-                    $rocznik_query['compare'] = '<=';
-                }
+            } else {
+                $rocznik_query['value'] = intval($params['year_to']);
+                $rocznik_query['compare'] = '<=';
             }
 
             $args['meta_query'][] = $rocznik_query;
         }
 
+        // ========================================
+        // FILTR: Przebieg maksymalny
+        // ========================================
         if (!empty($params['max_mileage'])) {
             $args['meta_query'][] = [
                 'key' => '_mileage',
@@ -174,6 +219,9 @@ class Offers_Endpoint {
             ];
         }
 
+        // ========================================
+        // FILTR: Cena od/do
+        // ========================================
         if (!empty($params['price_from']) || !empty($params['price_to'])) {
             $cena_query = ['key' => '_lowest_price', 'type' => 'NUMERIC'];
 
@@ -191,6 +239,7 @@ class Offers_Endpoint {
             $args['meta_query'][] = $cena_query;
         }
 
+        // Wykonaj zapytanie
         $query = new \WP_Query($args);
 
         $samochody = [];
@@ -217,7 +266,7 @@ class Offers_Endpoint {
     }
 
     /**
-     * Pobiera TYLKO zarezerwowane samochody (też lightweight)
+     * Pobiera TYLKO zarezerwowane samochody
      */
     public function get_zarezerwowane($request) {
         $params = $request->get_params();
@@ -263,7 +312,7 @@ class Offers_Endpoint {
     }
 
     /**
-     * Pobiera pojedynczy samochód (PEŁNE DANE)
+     * Pobiera pojedynczy samochód
      */
     public function get_samochod($request) {
         $id = (int) $request['id'];
@@ -277,7 +326,7 @@ class Offers_Endpoint {
     }
 
     /**
-     * Zwraca listę dostępnych marek z config.json
+     * Zwraca listę dostępnych marek
      */
     public function get_brands() {
         $config = $this->load_config();
@@ -333,7 +382,7 @@ class Offers_Endpoint {
     }
 
     /**
-     * Przygotowuje MINIMALNE dane samochodu dla listy (lightweight)
+     * Przygotowuje MINIMALNE dane samochodu dla listy
      */
     private function prepare_samochod_data_minimal($post) {
         $data = [
@@ -355,7 +404,7 @@ class Offers_Endpoint {
         $data['year'] = (int) get_post_meta($post->ID, '_year', true);
         $data['mileage'] = (int) get_post_meta($post->ID, '_mileage', true);
 
-        // Marka i model z meta pól
+        // Marka i model
         $brand_slug = get_post_meta($post->ID, '_car_brand_slug', true);
         $model = get_post_meta($post->ID, '_car_model', true);
 
@@ -373,17 +422,9 @@ class Offers_Endpoint {
 
         $data['model'] = $model;
 
-        $typ_nadwozia = wp_get_post_terms($post->ID, 'body_type');
-        $data['body_type'] = !empty($typ_nadwozia) ? [
-            'name' => $typ_nadwozia[0]->name,
-            'slug' => $typ_nadwozia[0]->slug,
-        ] : null;
-
-        $paliwo = wp_get_post_terms($post->ID, 'fuel_type');
-        $data['fuel_type'] = !empty($paliwo) ? [
-            'name' => $paliwo[0]->name,
-            'slug' => $paliwo[0]->slug,
-        ] : null;
+        // Body type i fuel type z meta pól
+        $data['body_type'] = get_post_meta($post->ID, '_body_type', true);
+        $data['fuel_type'] = get_post_meta($post->ID, '_fuel_type', true);
 
         $cena_najnizsza = (float) get_post_meta($post->ID, '_lowest_price', true);
         $data['price_from'] = $cena_najnizsza;
@@ -402,7 +443,7 @@ class Offers_Endpoint {
     }
 
     /**
-     * Przygotowuje PEŁNE dane samochodu (dla pojedynczego widoku)
+     * Przygotowuje PEŁNE dane samochodu
      */
     private function prepare_samochod_data($post) {
         $data = [
@@ -446,7 +487,7 @@ class Offers_Endpoint {
             'vin_number' => get_post_meta($post->ID, '_vin_number', true),
         ];
 
-        // Marka i model z meta pól
+        // Marka i model
         $brand_slug = get_post_meta($post->ID, '_car_brand_slug', true);
         $model = get_post_meta($post->ID, '_car_model', true);
 
@@ -464,19 +505,9 @@ class Offers_Endpoint {
 
         $data['model'] = $model;
 
-        $typ_nadwozia = wp_get_post_terms($post->ID, 'body_type');
-        $data['body_type'] = !empty($typ_nadwozia) ? [
-            'id' => $typ_nadwozia[0]->term_id,
-            'name' => $typ_nadwozia[0]->name,
-            'slug' => $typ_nadwozia[0]->slug,
-        ] : null;
-
-        $paliwo = wp_get_post_terms($post->ID, 'fuel_type');
-        $data['fuel_type'] = !empty($paliwo) ? [
-            'id' => $paliwo[0]->term_id,
-            'name' => $paliwo[0]->name,
-            'slug' => $paliwo[0]->slug,
-        ] : null;
+        // Body type i fuel type
+        $data['body_type'] = get_post_meta($post->ID, '_body_type', true);
+        $data['fuel_type'] = get_post_meta($post->ID, '_fuel_type', true);
 
         $config_price = get_post_meta($post->ID, '_pricing_config', true);
 
@@ -516,7 +547,7 @@ class Offers_Endpoint {
     }
 
     /**
-     * Parsuje textarea na tablicę (każda nowa linia to element)
+     * Parsuje textarea na tablicę
      */
     private function parse_textarea_to_array($text) {
         if (empty($text)) {
@@ -535,6 +566,7 @@ class Offers_Endpoint {
 
     /**
      * Parametry dla kolekcji
+     * ZAKTUALIZOWANE: dodano wszystkie filtry
      */
     private function get_collection_params() {
         return [
@@ -563,22 +595,35 @@ class Offers_Endpoint {
                 'default' => 'DESC',
                 'enum' => ['ASC', 'DESC'],
             ],
+
+            // ========================================
+            // FILTRY PODSTAWOWE
+            // ========================================
             'car_brand' => [
-                'description' => 'Filtr po marce (slug)',
+                'description' => 'Filtr po marce (slug, np. "bmw")',
                 'type' => 'string',
             ],
             'car_model' => [
-                'description' => 'Filtr po modelu',
+                'description' => 'Filtr po modelu (np. "X5")',
                 'type' => 'string',
             ],
             'body_type' => [
-                'description' => 'Filtr po typie nadwozia (slug)',
+                'description' => 'Filtr po typie nadwozia (np. "SUV")',
                 'type' => 'string',
             ],
             'fuel_type' => [
-                'description' => 'Filtr po rodzaju paliwa (slug)',
+                'description' => 'Filtr po rodzaju paliwa (np. "Diesel")',
                 'type' => 'string',
             ],
+            'transmission' => [
+                'description' => 'Filtr po typie skrzyni ("manual" lub "automatic")',
+                'type' => 'string',
+                'enum' => ['manual', 'automatic'],
+            ],
+
+            // ========================================
+            // FILTRY ZAKRESOWE
+            // ========================================
             'year_from' => [
                 'description' => 'Rocznik od',
                 'type' => 'integer',
@@ -592,15 +637,25 @@ class Offers_Endpoint {
                 'type' => 'integer',
             ],
             'price_from' => [
-                'description' => 'Cena od (najniższa)',
+                'description' => 'Cena od (najniższa cena miesięczna)',
                 'type' => 'number',
             ],
             'price_to' => [
-                'description' => 'Cena do (najniższa)',
+                'description' => 'Cena do (najniższa cena miesięczna)',
                 'type' => 'number',
             ],
+
+            // ========================================
+            // FILTRY DOSTĘPNOŚCI
+            // ========================================
+            'available_only' => [
+                'description' => 'Tylko dostępne samochody (nie zarezerwowane)',
+                'type' => 'string',
+                'enum' => ['true', 'false'],
+                'default' => 'false',
+            ],
             'show_reserved' => [
-                'description' => 'Pokaż zarezerwowane samochody',
+                'description' => 'Pokaż także zarezerwowane samochody',
                 'type' => 'string',
                 'enum' => ['true', 'false'],
                 'default' => 'false',
@@ -613,4 +668,4 @@ class Offers_Endpoint {
             ],
         ];
     }
-}gallery
+}

@@ -6,8 +6,8 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Import przykładowych danych do systemu
- * Bez importu taksonomii car_brand (używamy meta pól)
+ * Import przykładowych danych
+ * UPDATED: body_type i fuel_type są teraz zapisywane jako META POLA
  */
 class Sample_Data_Importer {
 
@@ -33,36 +33,25 @@ class Sample_Data_Importer {
 
     /**
      * Importuje przykładowe dane
+     * UPDATED: Nie importujemy już taksonomii body_type i fuel_type
      */
     public function import_sample_data() {
-        // Sprawdź uprawnienia
         if (!current_user_can('manage_options')) {
             wp_die('Brak uprawnień');
         }
 
-        // Sprawdź nonce
         check_admin_referer('flexmile_import_sample_data', 'flexmile_nonce');
 
         $results = [
-            'body_types' => 0,
-            'fuel_types' => 0,
             'offers' => 0,
         ];
-
-        // Import typów nadwozia
-        $results['body_types'] = $this->import_body_types();
-
-        // Import rodzajów paliwa
-        $results['fuel_types'] = $this->import_fuel_types();
 
         // Import przykładowych samochodów
         $results['offers'] = $this->import_offers();
 
         // Przekieruj z komunikatem
         $message = sprintf(
-            'Imported: %d body types, %d fuel types, %d offers',
-            $results['body_types'],
-            $results['fuel_types'],
+            'Imported: %d sample offers',
             $results['offers']
         );
 
@@ -75,82 +64,8 @@ class Sample_Data_Importer {
     }
 
     /**
-     * Importuje typy nadwozia
-     */
-    private function import_body_types() {
-        $config = $this->load_config();
-
-        // Użyj typów z config.json jeśli dostępne
-        if ($config && isset($config['body_types'])) {
-            $typy = $config['body_types'];
-        } else {
-            // Fallback - hardkodowane typy
-            $typy = [
-                'Sedan',
-                'Wagon',
-                'SUV',
-                'Hatchback',
-                'Coupe',
-                'Convertible',
-                'Minivan',
-                'Pickup',
-                'Compact',
-                'Sports'
-            ];
-        }
-
-        $count = 0;
-        foreach ($typy as $typ) {
-            $existing = term_exists($typ, 'body_type');
-            if (!$existing) {
-                $result = wp_insert_term($typ, 'body_type');
-                if (!is_wp_error($result)) {
-                    $count++;
-                }
-            }
-        }
-
-        return $count;
-    }
-
-    /**
-     * Importuje rodzaje paliwa
-     */
-    private function import_fuel_types() {
-        $config = $this->load_config();
-
-        // Użyj paliw z config.json jeśli dostępne
-        if ($config && isset($config['fuel_types'])) {
-            $paliwa = $config['fuel_types'];
-        } else {
-            // Fallback - hardkodowane paliwa
-            $paliwa = [
-                'Petrol',
-                'Diesel',
-                'Hybrid',
-                'Electric',
-                'Petrol + LPG',
-                'Petrol + CNG',
-                'Plug-in Hybrid'
-            ];
-        }
-
-        $count = 0;
-        foreach ($paliwa as $paliwo) {
-            $existing = term_exists($paliwo, 'fuel_type');
-            if (!$existing) {
-                $result = wp_insert_term($paliwo, 'fuel_type');
-                if (!is_wp_error($result)) {
-                    $count++;
-                }
-            }
-        }
-
-        return $count;
-    }
-
-    /**
      * Importuje przykładowe samochody
+     * UPDATED: body_type i fuel_type jako meta pola
      */
     private function import_offers() {
         $offers = [
@@ -302,16 +217,9 @@ class Sample_Data_Importer {
                     update_post_meta($post_id, '_car_brand_slug', $offer['brand_slug']);
                     update_post_meta($post_id, '_car_model', $offer['model']);
 
-                    // Dodaj taksonomie (body_type, fuel_type)
-                    $body_type_term = term_exists($offer['body_type'], 'body_type');
-                    if ($body_type_term) {
-                        wp_set_object_terms($post_id, (int)$body_type_term['term_id'], 'body_type');
-                    }
-
-                    $fuel_term = term_exists($offer['fuel_type'], 'fuel_type');
-                    if ($fuel_term) {
-                        wp_set_object_terms($post_id, (int)$fuel_term['term_id'], 'fuel_type');
-                    }
+                    // NOWOŚĆ: body_type i fuel_type jako META POLA (nie taksonomie)
+                    update_post_meta($post_id, '_body_type', $offer['body_type']);
+                    update_post_meta($post_id, '_fuel_type', $offer['fuel_type']);
 
                     // Dodaj meta pola
                     update_post_meta($post_id, '_year', $offer['year']);
@@ -326,7 +234,7 @@ class Sample_Data_Importer {
                     update_post_meta($post_id, '_pricing_config', $offer['pricing_config']);
                     update_post_meta($post_id, '_reservation_active', '0');
 
-                    // Dodaj flagi jeśli są
+                    // Dodaj flagi
                     if (isset($offer['attributes'])) {
                         update_post_meta($post_id, '_new_car', $offer['attributes']['new'] ? '1' : '0');
                         update_post_meta($post_id, '_available_immediately', $offer['attributes']['available_immediately'] ? '1' : '0');

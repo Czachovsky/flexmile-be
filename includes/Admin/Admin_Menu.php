@@ -335,92 +335,188 @@ add_action('init', function() {
                     </tbody>
                 </table>
 
-                <h3>📋 Zaktualizowane filtry:</h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th>Parametr</th>
-                            <th>Typ</th>
-                            <th>Opis</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>car_brand</code></td>
-                            <td>string</td>
-                            <td>Filtrowanie po marce (slug, np. "bmw", "toyota")</td>
-                        </tr>
-                        <tr>
-                            <td><code>car_model</code></td>
-                            <td>string</td>
-                            <td><strong>NOWOŚĆ!</strong> Filtrowanie po modelu (np. "X5", "Corolla")</td>
-                        </tr>
-                        <tr>
-                            <td><code>year_from</code></td>
-                            <td>integer</td>
-                            <td>Rocznik od</td>
-                        </tr>
-                        <tr>
-                            <td><code>year_to</code></td>
-                            <td>integer</td>
-                            <td>Rocznik do</td>
-                        </tr>
-                        <tr>
-                            <td><code>max_mileage</code></td>
-                            <td>integer</td>
-                            <td>Maksymalny przebieg</td>
-                        </tr>
-                        <tr>
-                            <td><code>price_from</code></td>
-                            <td>float</td>
-                            <td>Cena minimalna</td>
-                        </tr>
-                        <tr>
-                            <td><code>price_to</code></td>
-                            <td>float</td>
-                            <td>Cena maksymalna</td>
-                        </tr>
-                        <tr>
-                            <td><code>page</code></td>
-                            <td>integer</td>
-                            <td>Numer strony (infinite scroll)</td>
-                        </tr>
-                        <tr>
-                            <td><code>per_page</code></td>
-                            <td>integer</td>
-                            <td>Liczba wyników na stronę (max 100)</td>
-                        </tr>
-                    </tbody>
-                </table>
+<h3>📋 Wszystkie dostępne filtry:</h3>
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th>Parametr</th>
+                    <th>Typ</th>
+                    <th>Opis</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- MARKA I MODEL -->
+                <tr style="background: #f0f9ff;">
+                    <td colspan="3"><strong>🚗 Marka i model</strong></td>
+                </tr>
+                <tr>
+                    <td><code>car_brand</code></td>
+                    <td>string</td>
+                    <td>Marka (slug, np. "bmw", "toyota")</td>
+                </tr>
+                <tr>
+                    <td><code>car_model</code></td>
+                    <td>string</td>
+                    <td>Model (np. "X5", "Corolla")</td>
+                </tr>
 
-                <h3>💡 Przykładowe zapytania:</h3>
-                <ul class="api-examples">
-                    <li>
-                        <strong>Wszystkie oferty:</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers'); ?></code>
-                    </li>
-                    <li>
-                        <strong>Lista wszystkich marek:</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers/brands'); ?></code>
-                    </li>
-                    <li>
-                        <strong>Modele BMW:</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers/brands/bmw/models'); ?></code>
-                    </li>
-                    <li>
-                        <strong>BMW X5 z lat 2020-2023:</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers?car_brand=bmw&car_model=X5&year_from=2020&year_to=2023'); ?></code>
-                    </li>
-                    <li>
-                        <strong>Wszystkie Toyoty:</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers?car_brand=toyota'); ?></code>
-                    </li>
-                    <li>
-                        <strong>Infinite scroll (strona 2):</strong><br>
-                        <code><?php echo rest_url('flexmile/v1/offers?page=2&per_page=10'); ?></code>
-                    </li>
-                </ul>
-            </div>
+                <!-- PARAMETRY TECHNICZNE -->
+                <tr style="background: #f0f9ff;">
+                    <td colspan="3"><strong>⚙️ Parametry techniczne</strong></td>
+                </tr>
+                <tr>
+                    <td><code>body_type</code></td>
+                    <td>string</td>
+                    <td>Typ nadwozia (np. "SUV", "Sedan", "Hatchback")</td>
+                </tr>
+                <tr>
+                    <td><code>fuel_type</code></td>
+                    <td>string</td>
+                    <td>Rodzaj paliwa (np. "Diesel", "Petrol", "Hybrid", "Electric")</td>
+                </tr>
+                <tr>
+                    <td><code>transmission</code></td>
+                    <td>enum</td>
+                    <td><strong>🆕 NOWOŚĆ!</strong> Typ skrzyni: "manual" lub "automatic"</td>
+                </tr>
+
+                <!-- ZAKRES WARTOŚCI -->
+                <tr style="background: #f0f9ff;">
+                    <td colspan="3"><strong>📊 Zakresy wartości</strong></td>
+                </tr>
+                <tr>
+                    <td><code>year_from</code></td>
+                    <td>integer</td>
+                    <td>Rocznik od (np. 2020)</td>
+                </tr>
+                <tr>
+                    <td><code>year_to</code></td>
+                    <td>integer</td>
+                    <td>Rocznik do (np. 2023)</td>
+                </tr>
+                <tr>
+                    <td><code>max_mileage</code></td>
+                    <td>integer</td>
+                    <td>Maksymalny przebieg w km (np. 50000)</td>
+                </tr>
+                <tr>
+                    <td><code>price_from</code></td>
+                    <td>float</td>
+                    <td>Cena minimalna w zł/mies. (np. 1500)</td>
+                </tr>
+                <tr>
+                    <td><code>price_to</code></td>
+                    <td>float</td>
+                    <td>Cena maksymalna w zł/mies. (np. 3000)</td>
+                </tr>
+
+                <!-- DOSTĘPNOŚĆ -->
+                <tr style="background: #f0f9ff;">
+                    <td colspan="3"><strong>✅ Dostępność</strong></td>
+                </tr>
+                <tr>
+                    <td><code>available_only</code></td>
+                    <td>boolean</td>
+                    <td><strong>🆕 NOWOŚĆ!</strong> Tylko dostępne (nie zarezerwowane): "true" lub "false"</td>
+                </tr>
+                <tr>
+                    <td><code>show_reserved</code></td>
+                    <td>boolean</td>
+                    <td>Pokaż także zarezerwowane: "true" lub "false"</td>
+                </tr>
+                <tr>
+                    <td><code>only_reserved</code></td>
+                    <td>boolean</td>
+                    <td>Tylko zarezerwowane: "true" lub "false"</td>
+                </tr>
+
+                <!-- PAGINACJA -->
+                <tr style="background: #f0f9ff;">
+                    <td colspan="3"><strong>📄 Paginacja i sortowanie</strong></td>
+                </tr>
+                <tr>
+                    <td><code>page</code></td>
+                    <td>integer</td>
+                    <td>Numer strony (infinite scroll, domyślnie: 1)</td>
+                </tr>
+                <tr>
+                    <td><code>per_page</code></td>
+                    <td>integer</td>
+                    <td>Liczba wyników na stronę (max 100, domyślnie: 10)</td>
+                </tr>
+                <tr>
+                    <td><code>orderby</code></td>
+                    <td>enum</td>
+                    <td>Sortowanie: "date" lub "title" (domyślnie: "date")</td>
+                </tr>
+                <tr>
+                    <td><code>order</code></td>
+                    <td>enum</td>
+                    <td>Kierunek: "ASC" lub "DESC" (domyślnie: "DESC")</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>💡 Przykładowe zapytania:</h3>
+        <ul class="api-examples">
+            <li>
+                <strong>Wszystkie dostępne oferty:</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?available_only=true'); ?></code>
+            </li>
+            <li>
+                <strong>Lista wszystkich marek:</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers/brands'); ?></code>
+            </li>
+            <li>
+                <strong>Modele BMW:</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers/brands/bmw/models'); ?></code>
+            </li>
+            <li>
+                <strong>BMW X5 automatyczne z lat 2020-2023:</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?car_brand=bmw&car_model=X5&transmission=automatic&year_from=2020&year_to=2023&available_only=true'); ?></code>
+            </li>
+            <li>
+                <strong>Tanie SUV-y (do 2000 zł):</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?body_type=SUV&price_to=2000&available_only=true'); ?></code>
+            </li>
+            <li>
+                <strong>Diesle z manualną skrzynią:</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?fuel_type=Diesel&transmission=manual&available_only=true'); ?></code>
+            </li>
+            <li>
+                <strong>Nowe hybrydy (2022+, max 30k km):</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?fuel_type=Hybrid&year_from=2022&max_mileage=30000&available_only=true'); ?></code>
+            </li>
+            <li>
+                <strong>Wszystkie Toyoty (dostępne):</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?car_brand=toyota&available_only=true'); ?></code>
+            </li>
+            <li>
+                <strong>Zaawansowane filtrowanie (SUV, Diesel, auto, 2020+, max 50k, 2000-3000 zł):</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?body_type=SUV&fuel_type=Diesel&transmission=automatic&year_from=2020&max_mileage=50000&price_from=2000&price_to=3000&available_only=true'); ?></code>
+            </li>
+            <li>
+                <strong>Infinite scroll (strona 2, 20 wyników):</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?page=2&per_page=20&available_only=true'); ?></code>
+            </li>
+        </ul>
+
+        <div style="background: #d1fae5; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0;">
+            <h4 style="margin-top: 0; color: #065f46;">💡 Porady dotyczące filtrów:</h4>
+            <ul style="margin-bottom: 0;">
+                <li><strong>Zalecane:</strong> Zawsze używaj <code>available_only=true</code> aby ukryć zarezerwowane samochody</li>
+                <li><strong>Case-sensitivity:</strong>
+                    <ul>
+                        <li><code>car_brand</code>: małe litery (bmw, toyota)</li>
+                        <li><code>car_model</code>: dokładnie jak w config.json (X5, Corolla)</li>
+                        <li><code>fuel_type</code>: pierwsza wielka (Diesel, Hybrid)</li>
+                        <li><code>body_type</code>: pierwsza wielka (SUV, Sedan)</li>
+                        <li><code>transmission</code>: małe litery (manual, automatic)</li>
+                    </ul>
+                </li>
+                <li><strong>Kombinacje:</strong> Możesz łączyć dowolną liczbę filtrów jednocześnie</li>
+                <li><strong>Performance:</strong> Im więcej filtrów użyjesz, tym szybsze będzie zapytanie (mniej danych do przetworzenia)</li>
+            </ul>
         </div>
 
         <style>

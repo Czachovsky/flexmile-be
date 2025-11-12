@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Custom Post Type dla Rezerwacji
- * Zaktualizowane o nowy system cen
+ * UPDATED: używa meta pól zamiast taksonomii
  */
 class Reservations {
 
@@ -91,7 +91,7 @@ class Reservations {
     }
 
     /**
-     * Renderuje meta box ze szczegółami klienta (ZAKTUALIZOWANE)
+     * Renderuje meta box ze szczegółami klienta
      */
     public function render_details_meta_box($post) {
         $imie = get_post_meta($post->ID, '_first_name', true);
@@ -178,7 +178,7 @@ class Reservations {
 
     /**
      * Renderuje meta box z informacją o samochodzie
-     * FIXED: Now uses meta fields instead of taxonomy
+     * UPDATED: używa meta pól zamiast taksonomii
      */
     public function render_car_meta_box($post) {
         $samochod_id = get_post_meta($post->ID, '_offer_id', true);
@@ -193,7 +193,7 @@ class Reservations {
                 }
                 echo '<strong>' . esc_html($samochod->post_title) . '</strong></a></p>';
 
-                // Get brand from meta field (new system)
+                // Pobierz markę z meta pola
                 $brand_slug = get_post_meta($samochod_id, '_car_brand_slug', true);
                 if ($brand_slug) {
                     $config = $this->load_config();
@@ -202,10 +202,21 @@ class Reservations {
                     }
                 }
 
-                // Get model
+                // Pobierz model
                 $model = get_post_meta($samochod_id, '_car_model', true);
                 if ($model) {
                     echo '<p>Model: ' . esc_html($model) . '</p>';
+                }
+
+                // NOWOŚĆ: body_type i fuel_type z meta pól
+                $body_type = get_post_meta($samochod_id, '_body_type', true);
+                if ($body_type) {
+                    echo '<p>Typ nadwozia: ' . esc_html($body_type) . '</p>';
+                }
+
+                $fuel_type = get_post_meta($samochod_id, '_fuel_type', true);
+                if ($fuel_type) {
+                    echo '<p>Paliwo: ' . esc_html($fuel_type) . '</p>';
                 }
             }
         } else {
@@ -214,7 +225,7 @@ class Reservations {
     }
 
     /**
-     * Load config from JSON
+     * Ładuje config z JSON
      */
     private function load_config() {
         $config_file = FLEXMILE_PLUGIN_DIR . 'config.json';
@@ -267,7 +278,7 @@ class Reservations {
     }
 
     /**
-     * Dodaje własne kolumny w liście rezerwacji (ZAKTUALIZOWANE)
+     * Dodaje własne kolumny w liście rezerwacji
      */
     public function custom_columns($columns) {
         $new_columns = [];
@@ -283,7 +294,7 @@ class Reservations {
     }
 
     /**
-     * Wypełnia zawartość własnych kolumn (ZAKTUALIZOWANE)
+     * Wypełnia zawartość własnych kolumn
      */
     public function custom_column_content($column, $post_id) {
         switch ($column) {
