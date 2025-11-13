@@ -74,6 +74,7 @@ class FlexMile_Plugin {
         // REST API
         new FlexMile\API\Offers_Endpoint();
         new FlexMile\API\Reservations_Endpoint();
+        new FlexMile\API\Contact_Endpoint();
 
         // Admin
         new FlexMile\Admin\Admin_Menu();
