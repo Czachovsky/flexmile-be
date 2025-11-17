@@ -1281,34 +1281,50 @@
         "XC 70",
         "XC 90"
       ]
-    },
-    "xiaomi": {
-      "name": "Xiaomi",
-      "models": [
-        "SU7",
-        "YU7"
-      ]
     }
   },
   "body_types": [
-    "Sedan",
-    "Wagon",
-    "SUV",
-    "Hatchback",
-    "Coupe",
-    "Convertible",
-    "Minivan",
-    "Pickup",
-    "Compact",
-    "Sports"
+    {
+      "id": "suv",
+      "label": "SUV"
+    },
+    {
+      "id": "sedan",
+      "label": "Sedan"
+    },
+    {
+      "id": "hatchback",
+      "label": "Hatchback"
+    },
+    {
+      "id": "combi",
+      "label": "Kombi"
+    },
+    {
+      "id": "coupe",
+      "label": "Coupe"
+    }
   ],
   "fuel_types": [
-    "Petrol",
-    "Diesel",
-    "Hybrid",
-    "Electric",
-    "Petrol + LPG",
-    "Petrol + CNG",
-    "Plug-in Hybrid"
+    {
+      "id": "diesel",
+      "label": "Diesel"
+    },
+    {
+      "id": "petrol",
+      "label": "Bezołowiowa"
+    },
+    {
+      "id": "electric",
+      "label": "Elektryczny"
+    },
+    {
+      "id": "hybrid",
+      "label": "Hybryda"
+    },
+    {
+      "id": "plug_in_hybrid",
+      "label": "Hybryda Plug-in"
+    }
   ]
 }

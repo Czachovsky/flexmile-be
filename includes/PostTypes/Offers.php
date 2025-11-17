@@ -479,8 +479,8 @@ class Offers {
                         <select id="body_type" name="body_type" class="flexmile-input">
                             <option value="">-- Wybierz --</option>
                             <?php foreach ($body_types as $type): ?>
-                                <option value="<?php echo esc_attr($type); ?>" <?php selected($body_type, $type); ?>>
-                                    <?php echo esc_html($type); ?>
+                                <option value="<?php echo esc_attr($type['id']); ?>" <?php selected($body_type, $type['id']); ?>>
+                                    <?php echo esc_html($type['label']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -494,8 +494,8 @@ class Offers {
                         <select id="fuel_type" name="fuel_type" class="flexmile-input">
                             <option value="">-- Wybierz --</option>
                             <?php foreach ($fuel_types as $fuel): ?>
-                                <option value="<?php echo esc_attr($fuel); ?>" <?php selected($fuel_type, $fuel); ?>>
-                                    <?php echo esc_html($fuel); ?>
+                                <option value="<?php echo esc_attr($fuel['id']); ?>" <?php selected($fuel_type, $fuel['id']); ?>>
+                                    <?php echo esc_html($fuel['label']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
