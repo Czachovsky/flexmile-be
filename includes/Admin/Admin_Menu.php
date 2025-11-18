@@ -46,6 +46,15 @@ class Admin_Menu {
             'flexmile-api',
             [$this, 'render_api_settings']
         );
+
+        add_submenu_page(
+            'flexmile',
+            'Bannery',
+            'Bannery',
+            'manage_options',
+            'flexmile-banners',
+            [$this, 'render_banners']
+        );
     }
 
     /**
@@ -186,6 +195,10 @@ class Admin_Menu {
                         <li>
                             <code>POST <?php echo rest_url('flexmile/v1/reservations'); ?></code>
                             <span>Nowa rezerwacja</span>
+                        </li>
+                        <li>
+                            <code>GET <?php echo rest_url('flexmile/v1/banners'); ?></code>
+                            <span>Lista bannerów (max 3)</span>
                         </li>
                     </ul>
                 </div>
@@ -547,6 +560,161 @@ add_action('init', function() {
                 display: block;
                 margin-top: 5px;
                 word-break: break-all;
+            }
+        </style>
+        <?php
+    }
+
+    /**
+     * Renderuje stronę zarządzania bannerami
+     */
+    public function render_banners() {
+        // Obsługa zapisu formularza
+        if (isset($_POST['flexmile_save_banners']) && check_admin_referer('flexmile_banners_nonce')) {
+            $saved = 0;
+            for ($i = 1; $i <= 3; $i++) {
+                $label = isset($_POST["banner_{$i}_label"]) ? sanitize_text_field($_POST["banner_{$i}_label"]) : '';
+                $description = isset($_POST["banner_{$i}_description"]) ? sanitize_textarea_field($_POST["banner_{$i}_description"]) : '';
+                
+                update_option("flexmile_banner_{$i}_label", $label);
+                update_option("flexmile_banner_{$i}_description", $description);
+                
+                if (!empty($label)) {
+                    $saved++;
+                }
+            }
+            
+            $message = $saved > 0 
+                ? sprintf('Zapisano %d %s.', $saved, $saved === 1 ? 'banner' : 'bannerów')
+                : 'Wszystkie bannery zostały usunięte.';
+            ?>
+            <div class="notice notice-success is-dismissible">
+                <p><strong>✅ Sukces!</strong> <?php echo esc_html($message); ?></p>
+            </div>
+            <?php
+        }
+
+        // Pobierz istniejące bannery
+        $banners = [];
+        for ($i = 1; $i <= 3; $i++) {
+            $banners[$i] = [
+                'label' => get_option("flexmile_banner_{$i}_label", ''),
+                'description' => get_option("flexmile_banner_{$i}_description", ''),
+            ];
+        }
+        ?>
+        <div class="wrap">
+            <h1>🎯 Zarządzanie Bannerami</h1>
+            <p>Możesz dodać maksymalnie 3 bannery. Każdy banner składa się z nagłówka (label) i opisu (description).</p>
+
+            <form method="post" action="">
+                <?php wp_nonce_field('flexmile_banners_nonce'); ?>
+                
+                <div class="flexmile-banners-container">
+                    <?php for ($i = 1; $i <= 3; $i++): ?>
+                        <div class="banner-box">
+                            <h2>Banner <?php echo $i; ?></h2>
+                            <table class="form-table">
+                                <tr>
+                                    <th scope="row">
+                                        <label for="banner_<?php echo $i; ?>_label">Nagłówek (Label) *</label>
+                                    </th>
+                                    <td>
+                                        <input 
+                                            type="text" 
+                                            id="banner_<?php echo $i; ?>_label" 
+                                            name="banner_<?php echo $i; ?>_label" 
+                                            value="<?php echo esc_attr($banners[$i]['label']); ?>" 
+                                            class="regular-text"
+                                            placeholder="np. Nowa oferta specjalna"
+                                        />
+                                        <p class="description">Nagłówek banneru wyświetlany jako główny tekst</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">
+                                        <label for="banner_<?php echo $i; ?>_description">Opis (Description)</label>
+                                    </th>
+                                    <td>
+                                        <textarea 
+                                            id="banner_<?php echo $i; ?>_description" 
+                                            name="banner_<?php echo $i; ?>_description" 
+                                            rows="4" 
+                                            class="large-text"
+                                            placeholder="np. Sprawdź nasze najnowsze promocje na wybrane modele samochodów"
+                                        ><?php echo esc_textarea($banners[$i]['description']); ?></textarea>
+                                        <p class="description">Szczegółowy opis banneru</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    <?php endfor; ?>
+                </div>
+
+                <p class="submit">
+                    <input type="submit" name="flexmile_save_banners" class="button button-primary" value="💾 Zapisz bannery" />
+                </p>
+            </form>
+
+            <div class="flexmile-banners-info">
+                <h2>📡 Endpoint API</h2>
+                <p>Bannery są dostępne przez endpoint:</p>
+                <code><?php echo rest_url('flexmile/v1/banners'); ?></code>
+                <p class="description">Endpoint zwraca tablicę maksymalnie 3 bannerów w formacie:</p>
+                <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;"><code>[
+  {
+    "label": "Nagłówek 1",
+    "description": "Opis 1"
+  },
+  {
+    "label": "Nagłówek 2",
+    "description": "Opis 2"
+  },
+  {
+    "label": "Nagłówek 3",
+    "description": "Opis 3"
+  }
+]</code></pre>
+            </div>
+        </div>
+
+        <style>
+            .flexmile-banners-container {
+                display: grid;
+                gap: 20px;
+                margin: 20px 0;
+            }
+            .banner-box {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                border-left: 4px solid #2271b1;
+            }
+            .banner-box h2 {
+                margin-top: 0;
+                padding-bottom: 10px;
+                border-bottom: 1px solid #f0f0f0;
+            }
+            .flexmile-banners-info {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                margin-top: 30px;
+            }
+            .flexmile-banners-info code {
+                background: #f5f5f5;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 14px;
+                color: #d63638;
+                display: inline-block;
+                margin: 10px 0;
+            }
+            .flexmile-banners-info pre {
+                max-width: 100%;
+                overflow-x: auto;
             }
         </style>
         <?php
