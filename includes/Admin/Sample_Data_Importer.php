@@ -66,133 +66,114 @@ class Sample_Data_Importer {
     /**
      * Importuje przykładowe samochody
      * UPDATED: body_type i fuel_type jako meta pola
+     * Generuje 100 ofert do testów
      */
     private function import_offers() {
-        $offers = [
-            [
-                'title' => 'BMW X5 3.0d xDrive',
-                'description' => 'Luksusowy SUV premium z napędem na cztery koła. Doskonały stan techniczny, bogate wyposażenie. Idealny do długich tras i rodzinnych wyjazdów. Samochód serwisowany w ASO, kompletna historia przeglądów.',
-                'brand_slug' => 'bmw',
-                'model' => 'X5',
-                'body_type' => 'SUV',
-                'fuel_type' => 'Diesel',
-                'year' => 2022,
-                'mileage' => 45000,
-                'horsepower' => 286,
-                'engine_capacity' => 2993,
-                'transmission' => 'automatic',
-                'color' => 'Czarny metalik',
-                'seats' => 5,
-                'vin' => 'WBAKR810501A23456',
-                'lowest_price' => 2800.00,
-                'pricing_config' => [
-                    'rental_periods' => [12, 24, 36, 48],
-                    'mileage_limits' => [10000, 15000, 20000],
-                    'prices' => [
-                        '12_10000' => 2800.00,
-                        '12_15000' => 2900.00,
-                        '12_20000' => 3000.00,
-                        '24_10000' => 2600.00,
-                        '24_15000' => 2700.00,
-                        '24_20000' => 2800.00,
-                        '36_10000' => 2400.00,
-                        '36_15000' => 2500.00,
-                        '36_20000' => 2600.00,
-                        '48_10000' => 2200.00,
-                        '48_15000' => 2300.00,
-                        '48_20000' => 2400.00,
-                    ]
-                ],
-                'attributes' => [
-                    'new' => true,
-                    'available_immediately' => true,
-                    'popular' => true,
-                    'featured' => true,
-                ],
-            ],
-            [
-                'title' => 'Toyota Corolla 1.8 Hybrid',
-                'description' => 'Ekonomiczny sedan hybrydowy o niskim spalaniu (4.5l/100km). Idealne auto do miasta i trasy. Bezawaryjny napęd hybrydowy, cicha kabina, niskie koszty eksploatacji. Jeden właściciel, ASO.',
-                'brand_slug' => 'toyota',
-                'model' => 'Corolla',
-                'body_type' => 'Sedan',
-                'fuel_type' => 'Hybrid',
-                'year' => 2023,
-                'mileage' => 28000,
-                'horsepower' => 122,
-                'engine_capacity' => 1798,
-                'transmission' => 'automatic',
-                'color' => 'Srebrny',
-                'seats' => 5,
-                'vin' => 'NMTBB6EE3NR023789',
-                'lowest_price' => 1900.00,
-                'pricing_config' => [
-                    'rental_periods' => [12, 24, 36, 48],
-                    'mileage_limits' => [10000, 15000, 20000],
-                    'prices' => [
-                        '12_10000' => 1900.00,
-                        '12_15000' => 2000.00,
-                        '12_20000' => 2100.00,
-                        '24_10000' => 1800.00,
-                        '24_15000' => 1900.00,
-                        '24_20000' => 2000.00,
-                        '36_10000' => 1700.00,
-                        '36_15000' => 1800.00,
-                        '36_20000' => 1900.00,
-                        '48_10000' => 1600.00,
-                        '48_15000' => 1700.00,
-                        '48_20000' => 1800.00,
-                    ]
-                ],
-                'attributes' => [
-                    'new' => true,
-                    'available_immediately' => true,
-                    'popular' => false,
-                    'featured' => false,
-                ],
-            ],
-            [
-                'title' => 'Volkswagen Golf 1.5 TSI',
-                'description' => 'Klasyczny hatchback z segmentu C. Sprawdzony silnik benzynowy 1.5 TSI o mocy 150 KM. Oszczędny, dynamiczny i praktyczny. Wyposażenie: klimatyzacja, nawigacja, czujniki parkowania, kamera cofania.',
-                'brand_slug' => 'volkswagen',
-                'model' => 'Golf',
-                'body_type' => 'Hatchback',
-                'fuel_type' => 'Petrol',
-                'year' => 2021,
-                'mileage' => 62000,
-                'horsepower' => 150,
-                'engine_capacity' => 1498,
-                'transmission' => 'manual',
-                'color' => 'Biały',
-                'seats' => 5,
-                'vin' => 'WVWZZZ1KZMW012345',
-                'lowest_price' => 1600.00,
-                'pricing_config' => [
-                    'rental_periods' => [12, 24, 36, 48],
-                    'mileage_limits' => [10000, 15000, 20000],
-                    'prices' => [
-                        '12_10000' => 1600.00,
-                        '12_15000' => 1700.00,
-                        '12_20000' => 1800.00,
-                        '24_10000' => 1500.00,
-                        '24_15000' => 1600.00,
-                        '24_20000' => 1700.00,
-                        '36_10000' => 1400.00,
-                        '36_15000' => 1500.00,
-                        '36_20000' => 1600.00,
-                        '48_10000' => 1300.00,
-                        '48_15000' => 1400.00,
-                        '48_20000' => 1500.00,
-                    ]
-                ],
-                'attributes' => [
-                    'new' => false,
-                    'available_immediately' => false,
-                    'popular' => true,
-                    'featured' => false,
-                ],
-            ],
+        // Dane do generowania różnorodnych ofert
+        $brands = [
+            ['slug' => 'bmw', 'name' => 'BMW', 'models' => ['X5', 'X3', '3 Series', '5 Series', 'X1']],
+            ['slug' => 'toyota', 'name' => 'Toyota', 'models' => ['Corolla', 'Camry', 'RAV4', 'Prius', 'Yaris']],
+            ['slug' => 'volkswagen', 'name' => 'Volkswagen', 'models' => ['Golf', 'Passat', 'Tiguan', 'Polo', 'Touareg']],
+            ['slug' => 'audi', 'name' => 'Audi', 'models' => ['A4', 'A6', 'Q5', 'Q7', 'A3']],
+            ['slug' => 'mercedes', 'name' => 'Mercedes-Benz', 'models' => ['C-Class', 'E-Class', 'GLC', 'GLE', 'A-Class']],
+            ['slug' => 'ford', 'name' => 'Ford', 'models' => ['Focus', 'Mondeo', 'Kuga', 'Fiesta', 'Edge']],
+            ['slug' => 'skoda', 'name' => 'Škoda', 'models' => ['Octavia', 'Superb', 'Kodiaq', 'Kamiq', 'Fabia']],
+            ['slug' => 'hyundai', 'name' => 'Hyundai', 'models' => ['i30', 'Tucson', 'Kona', 'Elantra', 'Santa Fe']],
+            ['slug' => 'peugeot', 'name' => 'Peugeot', 'models' => ['308', '3008', '208', '508', '5008']],
+            ['slug' => 'opel', 'name' => 'Opel', 'models' => ['Astra', 'Insignia', 'Crossland', 'Grandland', 'Corsa']],
         ];
+        
+        $body_types = ['SUV', 'Sedan', 'Hatchback', 'Kombi', 'Coupe'];
+        $fuel_types = ['Diesel', 'Petrol', 'Hybrid', 'Electric'];
+        $transmissions = ['automatic', 'manual'];
+        $colors = ['Czarny metalik', 'Biały', 'Srebrny', 'Szary', 'Niebieski', 'Czerwony', 'Zielony'];
+        
+        $offers = [];
+        
+        // Generuj 100 ofert
+        for ($i = 1; $i <= 100; $i++) {
+            $brand = $brands[($i - 1) % count($brands)];
+            $model = $brand['models'][($i - 1) % count($brand['models'])];
+            $body_type = $body_types[($i - 1) % count($body_types)];
+            $fuel_type = $fuel_types[($i - 1) % count($fuel_types)];
+            $transmission = $transmissions[($i - 1) % count($transmissions)];
+            $color = $colors[($i - 1) % count($colors)];
+            
+            // Losowe wartości
+            $year = rand(2019, 2024);
+            $mileage = rand(10000, 150000);
+            $horsepower = rand(100, 400);
+            $engine_capacity = rand(1200, 3500);
+            $seats = rand(4, 7);
+            
+            // Cena bazowa zależna od marki i roku
+            $base_price = rand(1200, 3500);
+            $lowest_price = $base_price;
+            
+            // Generuj VIN (uproszczony)
+            $vin = strtoupper(substr(md5($i . time()), 0, 17));
+            
+            // Generuj pricing_config
+            $pricing_config = [
+                'rental_periods' => [12, 24, 36, 48],
+                'mileage_limits' => [10000, 15000, 20000],
+                'prices' => []
+            ];
+            
+            foreach ([12, 24, 36, 48] as $period) {
+                foreach ([10000, 15000, 20000] as $mileage_limit) {
+                    $price_key = $period . '_' . $mileage_limit;
+                    // Cena maleje z okresem i rośnie z limitem przebiegu
+                    $price = $base_price - ($period / 12 * 200) + ($mileage_limit / 10000 * 100);
+                    $pricing_config['prices'][$price_key] = round($price, 2);
+                    if ($price < $lowest_price) {
+                        $lowest_price = round($price, 2);
+                    }
+                }
+            }
+            
+            // Atrybuty (losowe)
+            $is_new = ($i % 3 == 0);
+            $is_available = ($i % 4 != 0);
+            $is_popular = ($i % 5 == 0);
+            $is_featured = ($i % 10 == 0);
+            
+            $offers[] = [
+                'title' => $brand['name'] . ' ' . $model . ' ' . ($engine_capacity / 1000) . ($fuel_type === 'Diesel' ? 'd' : ($fuel_type === 'Electric' ? 'e' : 'i')),
+                'description' => sprintf(
+                    'Przykładowy samochód %s %s z %d roku. %s, %s, %s. Przebieg: %d km, moc: %d KM. %s',
+                    $brand['name'],
+                    $model,
+                    $year,
+                    $body_type,
+                    $fuel_type,
+                    $transmission === 'automatic' ? 'automatyczna' : 'manualna',
+                    $mileage,
+                    $horsepower,
+                    $is_new ? 'Nowy samochód.' : 'Używany samochód w dobrym stanie.'
+                ),
+                'brand_slug' => $brand['slug'],
+                'model' => $model,
+                'body_type' => $body_type,
+                'fuel_type' => $fuel_type,
+                'year' => $year,
+                'mileage' => $mileage,
+                'horsepower' => $horsepower,
+                'engine_capacity' => $engine_capacity,
+                'transmission' => $transmission,
+                'color' => $color,
+                'seats' => $seats,
+                'vin' => $vin,
+                'lowest_price' => $lowest_price,
+                'pricing_config' => $pricing_config,
+                'attributes' => [
+                    'new' => $is_new,
+                    'available_immediately' => $is_available,
+                    'popular' => $is_popular,
+                    'featured' => $is_featured,
+                ],
+            ];
+        }
 
         $count = 0;
         foreach ($offers as $offer) {
