@@ -387,9 +387,7 @@ class Offers_Endpoint {
     private function prepare_samochod_data_minimal($post) {
         $data = [
             'id' => $post->ID,
-            'car_reference_id' => get_post_meta($post->ID, '_car_reference_id', true) ?: null,
             'title' => $post->post_title,
-            'slug' => $post->post_name,
         ];
 
         $data['image'] = [
@@ -401,8 +399,7 @@ class Offers_Endpoint {
         $data['engine'] = get_post_meta($post->ID, '_engine', true) ?: 'Brak danych';
         $data['horsepower'] = (int) get_post_meta($post->ID, '_horsepower', true);
         $data['transmission'] = get_post_meta($post->ID, '_transmission', true);
-        $data['year'] = (int) get_post_meta($post->ID, '_year', true);
-        $data['mileage'] = (int) get_post_meta($post->ID, '_mileage', true);
+        $data['engine_capacity'] = (int) get_post_meta($post->ID, '_engine_capacity', true);
 
         // Marka i model
         $brand_slug = get_post_meta($post->ID, '_car_brand_slug', true);
@@ -422,8 +419,7 @@ class Offers_Endpoint {
 
         $data['model'] = $model;
 
-        // Body type i fuel type z meta pól
-        $data['body_type'] = get_post_meta($post->ID, '_body_type', true);
+        // Fuel type z meta pól
         $data['fuel_type'] = get_post_meta($post->ID, '_fuel_type', true);
 
         $cena_najnizsza = (float) get_post_meta($post->ID, '_lowest_price', true);
@@ -669,6 +665,8 @@ class Offers_Endpoint {
         ];
     }
 }
+
+
 
 
 
