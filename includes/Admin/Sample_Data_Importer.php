@@ -84,7 +84,7 @@ class Sample_Data_Importer {
         ];
         
         $body_types = ['SUV', 'Sedan', 'Hatchback', 'Kombi', 'Coupe'];
-        $fuel_types = ['Diesel', 'Petrol', 'Hybrid', 'Electric'];
+        $fuel_types = ['diesel', 'petrol', 'hybrid', 'electric'];
         $transmissions = ['automatic', 'manual'];
         $colors = ['Czarny metalik', 'Biały', 'Srebrny', 'Szary', 'Niebieski', 'Czerwony', 'Zielony'];
         
@@ -105,6 +105,9 @@ class Sample_Data_Importer {
             $horsepower = rand(100, 400);
             $engine_capacity = rand(1200, 3500);
             $seats = rand(4, 7);
+            
+            // Generuj oznaczenie silnika
+            $engine = $this->generate_engine_designation($brand['slug'], $fuel_type, $engine_capacity, $horsepower);
             
             // Cena bazowa zależna od marki i roku
             $base_price = rand(1200, 3500);
@@ -140,18 +143,6 @@ class Sample_Data_Importer {
             
             $offers[] = [
                 'title' => $brand['name'] . ' ' . $model . ' ' . ($engine_capacity / 1000) . ($fuel_type === 'Diesel' ? 'd' : ($fuel_type === 'Electric' ? 'e' : 'i')),
-                'description' => sprintf(
-                    'Przykładowy samochód %s %s z %d roku. %s, %s, %s. Przebieg: %d km, moc: %d KM. %s',
-                    $brand['name'],
-                    $model,
-                    $year,
-                    $body_type,
-                    $fuel_type,
-                    $transmission === 'automatic' ? 'automatyczna' : 'manualna',
-                    $mileage,
-                    $horsepower,
-                    $is_new ? 'Nowy samochód.' : 'Używany samochód w dobrym stanie.'
-                ),
                 'brand_slug' => $brand['slug'],
                 'model' => $model,
                 'body_type' => $body_type,
@@ -160,6 +151,7 @@ class Sample_Data_Importer {
                 'mileage' => $mileage,
                 'horsepower' => $horsepower,
                 'engine_capacity' => $engine_capacity,
+                'engine' => $engine,
                 'transmission' => $transmission,
                 'color' => $color,
                 'seats' => $seats,
@@ -189,7 +181,7 @@ class Sample_Data_Importer {
                 $post_id = wp_insert_post([
                     'post_type' => 'offer',
                     'post_title' => $offer['title'],
-                    'post_content' => $offer['description'],
+                    'post_content' => '',
                     'post_status' => 'publish',
                 ]);
 
@@ -207,6 +199,7 @@ class Sample_Data_Importer {
                     update_post_meta($post_id, '_mileage', $offer['mileage']);
                     update_post_meta($post_id, '_horsepower', $offer['horsepower']);
                     update_post_meta($post_id, '_engine_capacity', $offer['engine_capacity']);
+                    update_post_meta($post_id, '_engine', $offer['engine']);
                     update_post_meta($post_id, '_transmission', $offer['transmission']);
                     update_post_meta($post_id, '_color', $offer['color']);
                     update_post_meta($post_id, '_seats', $offer['seats']);
@@ -230,6 +223,98 @@ class Sample_Data_Importer {
         }
 
         return $count;
+    }
+
+    /**
+     * Generuje oznaczenie silnika na podstawie marki, paliwa i parametrów
+     */
+    private function generate_engine_designation($brand_slug, $fuel_type, $engine_capacity, $horsepower) {
+        $capacity_liters = round($engine_capacity / 1000, 1);
+        
+        // Mapowanie oznaczeń silników dla różnych marek
+        $engine_patterns = [
+            'bmw' => [
+                'diesel' => ['{capacity}d', '{capacity}d xDrive', '{capacity}d sDrive'],
+                'petrol' => ['{capacity}i', '{capacity}i xDrive', '{capacity}i sDrive'],
+                'hybrid' => ['{capacity}i eDrive', '{capacity}i xDrive eDrive'],
+                'electric' => ['eDrive', 'xDrive eDrive'],
+            ],
+            'toyota' => [
+                'diesel' => ['{capacity} D-4D', '{capacity} D-CAT'],
+                'petrol' => ['{capacity} VVT-i', '{capacity} Dual VVT-i'],
+                'hybrid' => ['{capacity} Hybrid', '{capacity} Hybrid AWD'],
+                'electric' => ['e-TNGA', 'Electric'],
+            ],
+            'volkswagen' => [
+                'diesel' => ['{capacity} TDI', '{capacity} TDI 4MOTION'],
+                'petrol' => ['{capacity} TSI', '{capacity} TSI 4MOTION'],
+                'hybrid' => ['{capacity} eTSI', '{capacity} eTSI 4MOTION'],
+                'electric' => ['e-Golf', 'ID.'],
+            ],
+            'audi' => [
+                'diesel' => ['{capacity} TDI', '{capacity} TDI quattro'],
+                'petrol' => ['{capacity} TFSI', '{capacity} TFSI quattro'],
+                'hybrid' => ['{capacity} e-tron', '{capacity} e-tron quattro'],
+                'electric' => ['e-tron', 'e-tron quattro'],
+            ],
+            'mercedes' => [
+                'diesel' => ['{capacity} d', '{capacity} d 4MATIC'],
+                'petrol' => ['{capacity}', '{capacity} 4MATIC'],
+                'hybrid' => ['{capacity} EQ Power', '{capacity} EQ Power 4MATIC'],
+                'electric' => ['EQ', 'EQ 4MATIC'],
+            ],
+            'ford' => [
+                'diesel' => ['{capacity} TDCi', '{capacity} TDCi AWD'],
+                'petrol' => ['{capacity} EcoBoost', '{capacity} EcoBoost AWD'],
+                'hybrid' => ['{capacity} Hybrid', '{capacity} Hybrid AWD'],
+                'electric' => ['Electric', 'Electric AWD'],
+            ],
+            'skoda' => [
+                'diesel' => ['{capacity} TDI', '{capacity} TDI 4x4'],
+                'petrol' => ['{capacity} TSI', '{capacity} TSI 4x4'],
+                'hybrid' => ['{capacity} eTSI', '{capacity} eTSI 4x4'],
+                'electric' => ['e-', 'Electric'],
+            ],
+            'hyundai' => [
+                'diesel' => ['{capacity} CRDi', '{capacity} CRDi AWD'],
+                'petrol' => ['{capacity} GDI', '{capacity} GDI AWD'],
+                'hybrid' => ['{capacity} Hybrid', '{capacity} Hybrid AWD'],
+                'electric' => ['Electric', 'Electric AWD'],
+            ],
+            'peugeot' => [
+                'diesel' => ['{capacity} HDi', '{capacity} BlueHDi'],
+                'petrol' => ['{capacity} PureTech', '{capacity} PureTech EAT8'],
+                'hybrid' => ['{capacity} Hybrid', '{capacity} Hybrid EAT8'],
+                'electric' => ['e-', 'Electric'],
+            ],
+            'opel' => [
+                'diesel' => ['{capacity} CDTI', '{capacity} CDTI 4x4'],
+                'petrol' => ['{capacity} Turbo', '{capacity} Turbo 4x4'],
+                'hybrid' => ['{capacity} Hybrid', '{capacity} Hybrid 4x4'],
+                'electric' => ['Electric', 'Electric 4x4'],
+            ],
+        ];
+        
+        // Domyślne wzorce jeśli marka nie jest w mapowaniu
+        $default_patterns = [
+            'diesel' => ['{capacity} TDI', '{capacity} D'],
+            'petrol' => ['{capacity} TSI', '{capacity}'],
+            'hybrid' => ['{capacity} Hybrid', '{capacity} HEV'],
+            'electric' => ['Electric', 'e-'],
+        ];
+        
+        // Wybierz wzorce dla marki lub użyj domyślnych
+        $patterns = isset($engine_patterns[$brand_slug][$fuel_type]) 
+            ? $engine_patterns[$brand_slug][$fuel_type]
+            : ($default_patterns[$fuel_type] ?? ['{capacity}']);
+        
+        // Wybierz losowy wzorzec
+        $pattern = $patterns[array_rand($patterns)];
+        
+        // Zastąp placeholder pojemnością
+        $engine = str_replace('{capacity}', $capacity_liters, $pattern);
+        
+        return $engine;
     }
 
     /**
