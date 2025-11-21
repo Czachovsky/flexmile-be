@@ -70,6 +70,7 @@ class FlexMile_Plugin {
         // Custom Post Types
         new FlexMile\PostTypes\Offers();
         new FlexMile\PostTypes\Reservations();
+        new FlexMile\PostTypes\Orders();
 
         // REST API
         new FlexMile\API\Offers_Endpoint();
@@ -90,6 +91,7 @@ class FlexMile_Plugin {
         // Register CPT before flush
         new FlexMile\PostTypes\Offers();
         new FlexMile\PostTypes\Reservations();
+        new FlexMile\PostTypes\Orders();
 
         flush_rewrite_rules();
     }

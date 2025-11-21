@@ -41,6 +41,14 @@ $formatted_total_price = number_format((float) $cena_calkowita, 2, ',', ' ');
 $formatted_mileage = $annual_mileage_limit ? number_format($annual_mileage_limit, 0, ',', ' ') . ' km' : '—';
 $formatted_months = $rental_months ? sprintf('%d mies.', $rental_months) : '—';
 $reservation_number = sprintf('#%d', $rezerwacja_id);
+$consent_email = !empty($params['consent_email']);
+$consent_phone = !empty($params['consent_phone']);
+$pickup_location = $params['pickup_location'] ?? '';
+$pickup_labels = [
+    'salon' => 'Odbiór w salonie FlexMile',
+    'home_delivery' => 'Dostawa pod wskazany adres',
+];
+$pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -219,6 +227,50 @@ $reservation_number = sprintf('#%d', $rezerwacja_id);
                 </tr>
 
               </tbody></table>
+
+            </td>
+          </tr>
+
+          <!-- CONSENTS -->
+          <tr>
+            <td style="padding: 0 24px 40px 24px;">
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-bottom:10px;">
+                <tbody><tr>
+                  <td style="font-size: 18px;font-weight: bold;color: #000;padding-bottom: 12px;border-bottom: 1px solid #eeeeee;">
+                    Twoje preferencje
+                  </td>
+                </tr>
+              </tbody></table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tbody>
+                <tr>
+                  <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;">
+                    Zgoda na kontakt e-mail
+                  </td>
+                  <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold;">
+                    <?php echo $consent_email ? 'Tak' : 'Nie'; ?>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;">
+                    Zgoda na kontakt telefoniczny
+                  </td>
+                  <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold;">
+                    <?php echo $consent_phone ? 'Tak' : 'Nie'; ?>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 0;font-size:15px;color:#333;">
+                    Preferowane miejsce wydania
+                  </td>
+                  <td align="right" style="padding:12px 0;font-size:15px;color:#333;font-weight: bold;">
+                    <?php echo esc_html($pickup_text); ?>
+                  </td>
+                </tr>
+                </tbody>
+              </table>
 
             </td>
           </tr>

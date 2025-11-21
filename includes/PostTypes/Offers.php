@@ -28,7 +28,7 @@ class Offers {
 
         // Dodaj kolumnę z reference ID w liście postów
         add_filter('manage_' . self::POST_TYPE . '_posts_columns', [$this, 'add_reference_id_column']);
-        add_action('manage_' . self::POST_TYPE . '_posts_custom_column', [$this, 'display_reference_id_column'], 10, 2);
+        add_action('manage_' . self::POST_TYPE . '_posts_custom_column', [$this, 'render_custom_columns'], 10, 2);
     }
 
     /**
@@ -75,6 +75,7 @@ class Offers {
             $new_columns[$key] = $value;
             if ($key === 'title') {
                 $new_columns['car_reference_id'] = '🔖 ID';
+                $new_columns['car_status'] = 'Status';
             }
         }
         return $new_columns;
@@ -83,7 +84,7 @@ class Offers {
     /**
      * Wyświetla Reference ID w kolumnie
      */
-    public function display_reference_id_column($column, $post_id) {
+    public function render_custom_columns($column, $post_id) {
         if ($column === 'car_reference_id') {
             $ref_id = get_post_meta($post_id, '_car_reference_id', true);
             if ($ref_id) {
@@ -91,7 +92,73 @@ class Offers {
             } else {
                 echo '<span style="color: #94a3b8;">—</span>';
             }
+            return;
         }
+
+        if ($column === 'car_status') {
+            $badges = $this->build_status_badges($post_id);
+            if (!empty($badges)) {
+                echo implode('<br>', $badges);
+            } else {
+                echo '<span style="color: #94a3b8;">Brak</span>';
+            }
+        }
+    }
+
+    /**
+     * Buduje znaczniki statusu na podstawie powiązanych rezerwacji i zamówień
+     */
+    private function build_status_badges($post_id) {
+        $badges = [];
+
+        $reserved_active = get_post_meta($post_id, '_reservation_active', true) === '1';
+        if ($reserved_active) {
+            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#fee2e2;color:#b91c1c;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">🔒 Zarezerwowany</span>';
+        } elseif ($this->has_entry_with_status($post_id, 'reservation', ['pending'])) {
+            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#fef3c7;color:#92400e;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">⏳ Rezerwacja oczekująca</span>';
+        }
+
+        if ($this->has_entry_with_status($post_id, 'order', ['pending', 'approved'])) {
+            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#dbeafe;color:#1d4ed8;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">🛒 Zamówienie</span>';
+        }
+
+        return $badges;
+    }
+
+    /**
+     * Sprawdza, czy istnieje wpis (rezerwacja/zamówienie) w określonym statusie dla danego samochodu
+     */
+    private function has_entry_with_status($offer_id, $post_type, $statuses) {
+        $cache_key = $post_type . '_' . $offer_id . '_' . implode('_', $statuses);
+        static $cache = [];
+
+        if (isset($cache[$cache_key])) {
+            return $cache[$cache_key];
+        }
+
+        $query = new \WP_Query([
+            'post_type' => $post_type,
+            'post_status' => 'publish',
+            'posts_per_page' => 1,
+            'no_found_rows' => true,
+            'fields' => 'ids',
+            'meta_query' => [
+                [
+                    'key' => '_offer_id',
+                    'value' => $offer_id,
+                ],
+                [
+                    'key' => '_status',
+                    'value' => $statuses,
+                    'compare' => 'IN',
+                ],
+            ],
+        ]);
+
+        $has_entry = !empty($query->posts);
+        $cache[$cache_key] = $has_entry;
+
+        return $has_entry;
     }
 
     /**

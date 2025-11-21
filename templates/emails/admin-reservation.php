@@ -13,6 +13,15 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+$consent_email = !empty($params['consent_email']);
+$consent_phone = !empty($params['consent_phone']);
+$pickup_location = $params['pickup_location'] ?? '';
+$pickup_labels = [
+    'salon' => 'Odbiór w salonie',
+    'home_delivery' => 'Dostawa pod wskazany adres',
+];
+$pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -90,6 +99,22 @@ if (!defined('ABSPATH')) {
                                             <?php echo esc_html($params['phone']); ?>
                                         </a>
                                     </td>
+                                </tr>
+                            </table>
+
+                            <h2 style="color: #2c3e50; margin-top: 30px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">Preferencje klienta</h2>
+                            <table width="100%" cellpadding="8" cellspacing="0">
+                                <tr>
+                                    <td style="color: #7f8c8d; font-weight: bold; width: 40%;">Zgoda na e-mail:</td>
+                                    <td style="color: #2c3e50;"><?php echo $consent_email ? 'Tak' : 'Nie'; ?></td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #7f8c8d; font-weight: bold;">Zgoda na telefon:</td>
+                                    <td style="color: #2c3e50;"><?php echo $consent_phone ? 'Tak' : 'Nie'; ?></td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #7f8c8d; font-weight: bold;">Miejsce wydania:</td>
+                                    <td style="color: #2c3e50;"><?php echo esc_html($pickup_text); ?></td>
                                 </tr>
                             </table>
 

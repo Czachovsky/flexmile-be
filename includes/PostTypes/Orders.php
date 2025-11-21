@@ -6,12 +6,11 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Custom Post Type dla Rezerwacji
- * UPDATED: używa meta pól zamiast taksonomii
+ * Custom Post Type dla Zamówień
  */
-class Reservations {
+class Orders {
 
-    const POST_TYPE = 'reservation';
+    const POST_TYPE = 'order';
 
     public function __construct() {
         add_action('init', [$this, 'register_post_type']);
@@ -22,21 +21,21 @@ class Reservations {
     }
 
     /**
-     * Rejestracja CPT Rezerwacja
+     * Rejestracja CPT Zamówienie
      */
     public function register_post_type() {
         $labels = [
-            'name' => 'Rezerwacje',
-            'singular_name' => 'Rezerwacja',
-            'menu_name' => 'Rezerwacje',
-            'add_new' => 'Dodaj rezerwację',
-            'add_new_item' => 'Dodaj nową rezerwację',
-            'edit_item' => 'Edytuj rezerwację',
-            'new_item' => 'Nowa rezerwacja',
-            'view_item' => 'Zobacz rezerwację',
-            'search_items' => 'Szukaj rezerwacji',
-            'not_found' => 'Nie znaleziono rezerwacji',
-            'all_items' => 'Wszystkie rezerwacje',
+            'name' => 'Zamówienia',
+            'singular_name' => 'Zamówienie',
+            'menu_name' => 'Zamówienia',
+            'add_new' => 'Dodaj zamówienie',
+            'add_new_item' => 'Dodaj nowe zamówienie',
+            'edit_item' => 'Edytuj zamówienie',
+            'new_item' => 'Nowe zamówienie',
+            'view_item' => 'Zobacz zamówienie',
+            'search_items' => 'Szukaj zamówień',
+            'not_found' => 'Nie znaleziono zamówień',
+            'all_items' => 'Wszystkie zamówienia',
         ];
 
         $args = [
@@ -45,8 +44,8 @@ class Reservations {
             'show_ui' => true,
             'show_in_menu' => true,
             'show_in_rest' => true,
-            'rest_base' => 'reservations',
-            'menu_icon' => 'dashicons-clipboard',
+            'rest_base' => 'orders',
+            'menu_icon' => 'dashicons-cart',
             'supports' => ['title', 'custom-fields'],
             'capability_type' => 'post',
             'capabilities' => [
@@ -63,8 +62,8 @@ class Reservations {
      */
     public function add_meta_boxes() {
         add_meta_box(
-            'flexmile_rezerwacja_details',
-            'Szczegóły rezerwacji',
+            'flexmile_zamowienie_details',
+            'Szczegóły zamówienia',
             [$this, 'render_details_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -72,8 +71,8 @@ class Reservations {
         );
 
         add_meta_box(
-            'flexmile_rezerwacja_status',
-            'Status rezerwacji',
+            'flexmile_zamowienie_status',
+            'Status zamówienia',
             [$this, 'render_status_meta_box'],
             self::POST_TYPE,
             'side',
@@ -81,8 +80,8 @@ class Reservations {
         );
 
         add_meta_box(
-            'flexmile_rezerwacja_car',
-            'Zarezerwowany samochód',
+            'flexmile_zamowienie_car',
+            'Zamówiony samochód',
             [$this, 'render_car_meta_box'],
             self::POST_TYPE,
             'side',
@@ -151,9 +150,9 @@ class Reservations {
                 <th><strong>Miejsce wydania:</strong></th>
                 <td><?php echo esc_html($pickup_text); ?></td>
             </tr>
-            <tr style="background: #f0f9ff; border-top: 2px solid #0369a1; border-bottom: 2px solid #0369a1;">
-                <th colspan="2" style="padding: 12px; text-align: center; font-size: 16px; color: #0369a1;">
-                    💰 WYBRANA KONFIGURACJA
+            <tr style="background: #f8fafc; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a;">
+                <th colspan="2" style="padding: 12px; text-align: center; font-size: 16px; color: #0f172a;">
+                    📝 WYBRANA KONFIGURACJA
                 </th>
             </tr>
             <tr>
@@ -166,11 +165,11 @@ class Reservations {
             </tr>
             <tr>
                 <th><strong>Cena miesięczna:</strong></th>
-                <td><strong style="color: #10b981; font-size: 15px;"><?php echo number_format($cena_miesieczna, 2, ',', ' '); ?> zł/mies.</strong></td>
+                <td><strong style="color: #0ea5e9; font-size: 15px;"><?php echo number_format($cena_miesieczna, 2, ',', ' '); ?> zł/mies.</strong></td>
             </tr>
-            <tr style="background: #d1fae5;">
+            <tr style="background: #e0f2fe;">
                 <th><strong>Cena całkowita:</strong></th>
-                <td><strong style="color: #059669; font-size: 18px;"><?php echo number_format($cena_calkowita, 2, ',', ' '); ?> zł</strong></td>
+                <td><strong style="color: #0284c7; font-size: 18px;"><?php echo number_format($cena_calkowita, 2, ',', ' '); ?> zł</strong></td>
             </tr>
             <?php if ($wiadomosc): ?>
             <tr>
@@ -186,7 +185,7 @@ class Reservations {
      * Renderuje meta box ze statusem
      */
     public function render_status_meta_box($post) {
-        wp_nonce_field('flexmile_rezerwacja_status', 'flexmile_rezerwacja_status_nonce');
+        wp_nonce_field('flexmile_zamowienie_status', 'flexmile_zamowienie_status_nonce');
 
         $status = get_post_meta($post->ID, '_status', true);
         if (empty($status)) {
@@ -196,19 +195,18 @@ class Reservations {
         <p>
             <label for="status"><strong>Status:</strong></label><br>
             <select id="status" name="status" class="widefat">
-                <option value="pending" <?php selected($status, 'pending'); ?>>⏳ Oczekująca</option>
-                <option value="approved" <?php selected($status, 'approved'); ?>>✅ Zatwierdzona</option>
-                <option value="rejected" <?php selected($status, 'rejected'); ?>>❌ Odrzucona</option>
-                <option value="completed" <?php selected($status, 'completed'); ?>>🎉 Zrealizowana</option>
+                <option value="pending" <?php selected($status, 'pending'); ?>>⏳ Oczekujące</option>
+                <option value="approved" <?php selected($status, 'approved'); ?>>✅ Zatwierdzone</option>
+                <option value="rejected" <?php selected($status, 'rejected'); ?>>❌ Odrzucone</option>
+                <option value="completed" <?php selected($status, 'completed'); ?>>🎉 Zrealizowane</option>
             </select>
         </p>
-        <p class="description">Po zatwierdzeniu rezerwacji, samochód zostanie automatycznie oznaczony jako zarezerwowany.</p>
+        <p class="description">Status nie blokuje dostępności samochodu.</p>
         <?php
     }
 
     /**
      * Renderuje meta box z informacją o samochodzie
-     * UPDATED: używa meta pól zamiast taksonomii
      */
     public function render_car_meta_box($post) {
         $samochod_id = get_post_meta($post->ID, '_offer_id', true);
@@ -223,7 +221,6 @@ class Reservations {
                 }
                 echo '<strong>' . esc_html($samochod->post_title) . '</strong></a></p>';
 
-                // Pobierz markę z meta pola
                 $brand_slug = get_post_meta($samochod_id, '_car_brand_slug', true);
                 if ($brand_slug) {
                     $config = $this->load_config();
@@ -232,13 +229,11 @@ class Reservations {
                     }
                 }
 
-                // Pobierz model
                 $model = get_post_meta($samochod_id, '_car_model', true);
                 if ($model) {
                     echo '<p>Model: ' . esc_html($model) . '</p>';
                 }
 
-                // NOWOŚĆ: body_type i fuel_type z meta pól
                 $body_type = get_post_meta($samochod_id, '_body_type', true);
                 if ($body_type) {
                     echo '<p>Typ nadwozia: ' . esc_html($body_type) . '</p>';
@@ -272,8 +267,8 @@ class Reservations {
      * Zapisuje meta dane
      */
     public function save_meta($post_id, $post) {
-        if (!isset($_POST['flexmile_rezerwacja_status_nonce']) ||
-            !wp_verify_nonce($_POST['flexmile_rezerwacja_status_nonce'], 'flexmile_rezerwacja_status')) {
+        if (!isset($_POST['flexmile_zamowienie_status_nonce']) ||
+            !wp_verify_nonce($_POST['flexmile_zamowienie_status_nonce'], 'flexmile_zamowienie_status')) {
             return;
         }
 
@@ -286,29 +281,13 @@ class Reservations {
         }
 
         if (isset($_POST['status'])) {
-            $old_status = get_post_meta($post_id, '_status', true);
             $new_status = sanitize_text_field($_POST['status']);
-
             update_post_meta($post_id, '_status', $new_status);
-
-            if ($new_status === 'approved' && $old_status !== 'approved') {
-                $samochod_id = get_post_meta($post_id, '_offer_id', true);
-                if ($samochod_id) {
-                    update_post_meta($samochod_id, '_reservation_active', '1');
-                }
-            }
-
-            if ($old_status === 'approved' && $new_status !== 'approved') {
-                $samochod_id = get_post_meta($post_id, '_offer_id', true);
-                if ($samochod_id) {
-                    update_post_meta($samochod_id, '_reservation_active', '0');
-                }
-            }
         }
     }
 
     /**
-     * Dodaje własne kolumny w liście rezerwacji
+     * Dodaje własne kolumny w liście zamówień
      */
     public function custom_columns($columns) {
         $new_columns = [];
@@ -341,10 +320,10 @@ class Reservations {
             case 'status':
                 $status = get_post_meta($post_id, '_status', true);
                 $labels = [
-                    'pending' => '<span style="color: orange;">⏳ Oczekująca</span>',
-                    'approved' => '<span style="color: green;">✅ Zatwierdzona</span>',
-                    'rejected' => '<span style="color: red;">❌ Odrzucona</span>',
-                    'completed' => '<span style="color: blue;">🎉 Zrealizowana</span>',
+                    'pending' => '<span style="color: orange;">⏳ Oczekujące</span>',
+                    'approved' => '<span style="color: green;">✅ Zatwierdzone</span>',
+                    'rejected' => '<span style="color: red;">❌ Odrzucone</span>',
+                    'completed' => '<span style="color: blue;">🎉 Zrealizowane</span>',
                 ];
                 echo $labels[$status] ?? $labels['pending'];
                 break;
@@ -362,3 +341,5 @@ class Reservations {
         }
     }
 }
+
+

@@ -13,6 +13,28 @@ class Reservations_Endpoint {
 
     const NAMESPACE = 'flexmile/v1';
     const BASE = 'reservations';
+    private const ENTRY_CONFIG = [
+        'reservation' => [
+            'post_type' => 'reservation',
+            'title_prefix' => 'Rezerwacja',
+            'success_message' => 'Rezerwacja została złożona pomyślnie',
+            'admin_email_template' => 'admin-reservation',
+            'customer_email_template' => 'customer-reservation',
+            'admin_email_subject' => '[FlexMile] Nowa rezerwacja #%d - %s',
+            'customer_email_subject' => 'Potwierdzenie rezerwacji - FlexMile',
+            'should_lock_vehicle' => true,
+        ],
+        'order' => [
+            'post_type' => 'order',
+            'title_prefix' => 'Zamówienie',
+            'success_message' => 'Zamówienie zostało złożone pomyślnie',
+            'admin_email_template' => 'admin-order',
+            'customer_email_template' => 'customer-order',
+            'admin_email_subject' => '[FlexMile] Nowe zamówienie #%d - %s',
+            'customer_email_subject' => 'Potwierdzenie zamówienia - FlexMile',
+            'should_lock_vehicle' => false,
+        ],
+    ];
 
     public function __construct() {
         add_action('rest_api_init', [$this, 'register_routes']);
@@ -35,6 +57,7 @@ class Reservations_Endpoint {
             'permission_callback' => function() {
                 return current_user_can('manage_options');
             },
+            'args' => $this->get_list_params(),
         ]);
     }
 
@@ -44,6 +67,9 @@ class Reservations_Endpoint {
     public function create_rezerwacja($request) {
         $params = $request->get_params();
 
+        $entry_type = $this->resolve_entry_type($params['type'] ?? null);
+        $entry_config = $this->get_entry_config($entry_type);
+
         $samochod_id = intval($params['offer_id']);
         $samochod = get_post($samochod_id);
 
@@ -52,7 +78,7 @@ class Reservations_Endpoint {
         }
 
         $rezerwacja_aktywna = get_post_meta($samochod_id, '_reservation_active', true);
-        if ($rezerwacja_aktywna === '1') {
+        if ($entry_config['should_lock_vehicle'] && $rezerwacja_aktywna === '1') {
             return new \WP_Error('car_reserved', 'Ten samochód jest już zarezerwowany', ['status' => 400]);
         }
 
@@ -106,14 +132,15 @@ class Reservations_Endpoint {
         $cena_calkowita = $cena_miesieczna * $ilosc_miesiecy;
 
         $tytul = sprintf(
-            'Rezerwacja: %s - %s %s',
+            '%s: %s - %s %s',
+            $entry_config['title_prefix'],
             $company_name,
             $samochod->post_title,
             date('Y-m-d H:i')
         );
 
         $post_data = [
-            'post_type' => 'reservation',
+            'post_type' => $entry_config['post_type'],
             'post_title' => $tytul,
             'post_status' => 'publish',
             'post_author' => 1,
@@ -135,6 +162,7 @@ class Reservations_Endpoint {
         update_post_meta($rezerwacja_id, '_monthly_price', $cena_miesieczna);
         update_post_meta($rezerwacja_id, '_total_price', $cena_calkowita);
         update_post_meta($rezerwacja_id, '_status', 'pending');
+        update_post_meta($rezerwacja_id, '_entry_type', $entry_type);
 
         if (!empty($params['first_name'])) {
             update_post_meta($rezerwacja_id, '_first_name', sanitize_text_field($params['first_name']));
@@ -148,15 +176,26 @@ class Reservations_Endpoint {
             update_post_meta($rezerwacja_id, '_message', sanitize_textarea_field($params['message']));
         }
 
+        $consent_email = $this->sanitize_bool($params['consent_email'] ?? false);
+        $consent_phone = $this->sanitize_bool($params['consent_phone'] ?? false);
+        $pickup_location = $this->sanitize_pickup_location($params['pickup_location'] ?? null);
+
+        update_post_meta($rezerwacja_id, '_consent_email', $consent_email ? '1' : '0');
+        update_post_meta($rezerwacja_id, '_consent_phone', $consent_phone ? '1' : '0');
+        update_post_meta($rezerwacja_id, '_pickup_location', $pickup_location);
+
         $params['company_name'] = $company_name;
         $params['tax_id'] = $tax_id;
+        $params['consent_email'] = $consent_email;
+        $params['consent_phone'] = $consent_phone;
+        $params['pickup_location'] = $pickup_location;
 
-        $this->send_admin_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita);
-        $this->send_customer_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita);
+        $this->send_admin_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita, $entry_config);
+        $this->send_customer_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita, $entry_config);
 
         return new \WP_REST_Response([
             'success' => true,
-            'message' => 'Rezerwacja została złożona pomyślnie',
+            'message' => $entry_config['success_message'],
             'reservation_id' => $rezerwacja_id,
             'pricing' => [
                 'monthly_price' => $cena_miesieczna,
@@ -164,6 +203,7 @@ class Reservations_Endpoint {
                 'rental_months' => $ilosc_miesiecy,
                 'annual_mileage_limit' => $limit_km_rocznie,
             ],
+            'type' => $entry_type,
         ], 201);
     }
 
@@ -171,8 +211,11 @@ class Reservations_Endpoint {
      * Pobiera listę rezerwacji (tylko dla adminów)
      */
     public function get_rezerwacje($request) {
+        $entry_type = $this->resolve_entry_type($request->get_param('type'));
+        $entry_config = $this->get_entry_config($entry_type);
+
         $args = [
-            'post_type' => 'reservation',
+            'post_type' => $entry_config['post_type'],
             'post_status' => 'publish',
             'posts_per_page' => -1,
             'orderby' => 'date',
@@ -200,6 +243,7 @@ class Reservations_Endpoint {
             'id' => $post->ID,
             'created_at' => $post->post_date,
             'status' => get_post_meta($post->ID, '_status', true),
+            'type' => $this->detect_entry_type($post),
             'customer' => [
                 'company_name' => $this->get_company_meta($post->ID),
                 'tax_id' => $this->get_tax_meta($post->ID),
@@ -217,6 +261,11 @@ class Reservations_Endpoint {
                 'total_price' => (float) get_post_meta($post->ID, '_total_price', true),
             ],
             'message' => get_post_meta($post->ID, '_message', true),
+            'consents' => [
+                'email' => $this->get_bool_meta($post->ID, '_consent_email'),
+                'phone' => $this->get_bool_meta($post->ID, '_consent_phone'),
+            ],
+            'pickup_location' => get_post_meta($post->ID, '_pickup_location', true) ?: null,
         ];
     }
 
@@ -277,16 +326,17 @@ class Reservations_Endpoint {
     /**
      * Wysyła email do administratora (ZAKTUALIZOWANE)
      */
-    private function send_admin_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita) {
+    private function send_admin_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita, $entry_config) {
         $admin_email = get_option('admin_email');
-        $subject = sprintf('[FlexMile] Nowa rezerwacja #%d - %s', $rezerwacja_id, $samochod->post_title);
+        $subject = sprintf($entry_config['admin_email_subject'], $rezerwacja_id, $samochod->post_title);
 
-        $message = $this->load_email_template('admin-reservation', [
+        $message = $this->load_email_template($entry_config['admin_email_template'], [
             'rezerwacja_id' => $rezerwacja_id,
             'samochod' => $samochod,
             'params' => $params,
             'cena_miesieczna' => $cena_miesieczna,
             'cena_calkowita' => $cena_calkowita,
+            'entry_type' => $entry_config['post_type'],
         ]);
 
         $headers = [
@@ -299,16 +349,17 @@ class Reservations_Endpoint {
     /**
      * Wysyła email potwierdzający do klienta (ZAKTUALIZOWANE)
      */
-    private function send_customer_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita) {
+    private function send_customer_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita, $entry_config) {
         $to = $params['email'];
-        $subject = 'Potwierdzenie rezerwacji - FlexMile';
+        $subject = $entry_config['customer_email_subject'];
 
-        $message = $this->load_email_template('customer-reservation', [
+        $message = $this->load_email_template($entry_config['customer_email_template'], [
             'rezerwacja_id' => $rezerwacja_id,
             'samochod' => $samochod,
             'params' => $params,
             'cena_miesieczna' => $cena_miesieczna,
             'cena_calkowita' => $cena_calkowita,
+            'entry_type' => $entry_config['post_type'],
         ]);
 
         $headers = [
@@ -352,6 +403,12 @@ class Reservations_Endpoint {
      */
     private function get_create_params() {
         return [
+            'type' => [
+                'required' => false,
+                'type' => 'string',
+                'enum' => ['reservation', 'order'],
+                'description' => 'Typ zgłoszenia: rezerwacja (domyślnie) lub zamówienie',
+            ],
             'offer_id' => [
                 'required' => true,
                 'type' => 'integer',
@@ -405,8 +462,117 @@ class Reservations_Endpoint {
                 'type' => 'string',
                 'description' => 'Dodatkowa wiadomość od klienta',
             ],
+            'consent_email' => [
+                'required' => false,
+                'type' => 'boolean',
+                'default' => false,
+                'description' => 'Zgoda na kontakt e-mail',
+            ],
+            'consent_phone' => [
+                'required' => false,
+                'type' => 'boolean',
+                'default' => false,
+                'description' => 'Zgoda na kontakt telefoniczny',
+            ],
+            'pickup_location' => [
+                'required' => false,
+                'type' => 'string',
+                'enum' => ['salon', 'home_delivery'],
+                'description' => 'Preferowane miejsce wydania (salon/home_delivery)',
+            ],
         ];
     }
+
+    /**
+     * Parametry zapytań GET
+     */
+    private function get_list_params() {
+        return [
+            'type' => [
+                'required' => false,
+                'type' => 'string',
+                'enum' => ['reservation', 'order'],
+                'description' => 'Filtruj po typie zgłoszenia',
+            ],
+        ];
+    }
+
+    /**
+     * Rozpoznaje typ zgłoszenia
+     */
+    private function resolve_entry_type($type) {
+        if (is_string($type) && strtolower($type) === 'order') {
+            return 'order';
+        }
+
+        return 'reservation';
+    }
+
+    /**
+     * Zwraca konfigurację dla typu zgłoszenia
+     */
+    private function get_entry_config($entry_type) {
+        return self::ENTRY_CONFIG[$entry_type] ?? self::ENTRY_CONFIG['reservation'];
+    }
+
+    /**
+     * Wykrywa typ wpisu na podstawie meta danych
+     */
+    private function detect_entry_type($post) {
+        $meta_type = get_post_meta($post->ID, '_entry_type', true);
+
+        if (!empty($meta_type)) {
+            return $meta_type;
+        }
+
+        return $post->post_type === 'order' ? 'order' : 'reservation';
+    }
+
+    /**
+     * Sanityzacja wartości bool
+     */
+    private function sanitize_bool($value) {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $value = strtolower($value);
+            return in_array($value, ['1', 'true', 'yes', 'on'], true);
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value === 1;
+        }
+
+        return false;
+    }
+
+    /**
+     * Sanityzacja miejsca odbioru
+     */
+    private function sanitize_pickup_location($value) {
+        if (!is_string($value)) {
+            return '';
+        }
+
+        $value = strtolower(trim($value));
+
+        if (in_array($value, ['salon', 'home_delivery'], true)) {
+            return $value;
+        }
+
+        return '';
+    }
+
+    /**
+     * Pobiera meta bool jako bool
+     */
+    private function get_bool_meta($post_id, $meta_key) {
+        $value = get_post_meta($post_id, $meta_key, true);
+        return $value === '1';
+    }
 }
+
 
 
