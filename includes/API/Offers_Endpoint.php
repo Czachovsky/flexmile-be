@@ -433,6 +433,9 @@ class Offers_Endpoint {
             'featured' => get_post_meta($post->ID, '_featured', true) === '1',
         ];
 
+        $coming_soon_date = get_post_meta($post->ID, '_coming_soon_date', true);
+        $data['coming_soon_date'] = !empty($coming_soon_date) ? $coming_soon_date : null;
+
         $data['available'] = get_post_meta($post->ID, '_reservation_active', true) !== '1';
 
         return $data;
@@ -536,6 +539,9 @@ class Offers_Endpoint {
             'popular' => get_post_meta($post->ID, '_most_popular', true) === '1',
             'featured' => get_post_meta($post->ID, '_featured', true) === '1',
         ];
+
+        $coming_soon_date = get_post_meta($post->ID, '_coming_soon_date', true);
+        $data['coming_soon_date'] = !empty($coming_soon_date) ? $coming_soon_date : null;
 
         $data['available'] = get_post_meta($post->ID, '_reservation_active', true) !== '1';
 
@@ -665,6 +671,8 @@ class Offers_Endpoint {
         ];
     }
 }
+
+
 
 
 

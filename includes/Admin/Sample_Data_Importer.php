@@ -215,6 +215,7 @@ class Sample_Data_Importer {
                         update_post_meta($post_id, '_most_popular', $offer['attributes']['popular'] ? '1' : '0');
                         update_post_meta($post_id, '_featured', $offer['attributes']['featured'] ? '1' : '0');
                         update_post_meta($post_id, '_coming_soon', '0');
+                        delete_post_meta($post_id, '_coming_soon_date');
                     }
 
                     $count++;

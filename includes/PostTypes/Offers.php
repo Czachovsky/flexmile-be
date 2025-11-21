@@ -944,8 +944,12 @@ class Offers {
         $nowy = get_post_meta($post->ID, '_new_car', true);
         $od_reki = get_post_meta($post->ID, '_available_immediately', true);
         $wkrotce = get_post_meta($post->ID, '_coming_soon', true);
+        $wkrotce_data = get_post_meta($post->ID, '_coming_soon_date', true);
         $najczesciej = get_post_meta($post->ID, '_most_popular', true);
         $wyrozniany = get_post_meta($post->ID, '_featured', true);
+        $coming_soon_toggle_id = 'coming-soon-flag-' . absint($post->ID);
+        $coming_soon_wrapper_id = 'coming-soon-wrapper-' . absint($post->ID);
+        $coming_soon_input_id = 'coming-soon-date-' . absint($post->ID);
         ?>
         <div style="padding: 5px;">
             <div style="margin-bottom: 20px;">
@@ -976,12 +980,30 @@ class Offers {
                 <p style="margin: 0 0 10px 0;">
                     <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
                            onmouseover="this.style.background='#f8fafc'"
-                           onmouseout="this.style.background='transparent'">
-                        <input type="checkbox" name="coming_soon" value="1" <?php checked($wkrotce, '1'); ?>
+                           onmouseout="this.style.background='transparent'"
+                           for="<?php echo esc_attr($coming_soon_toggle_id); ?>">
+                        <input type="checkbox" id="<?php echo esc_attr($coming_soon_toggle_id); ?>" name="coming_soon" value="1" <?php checked($wkrotce, '1'); ?>
                                style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
                         <span style="font-size: 14px;">⏳ Dostępny wkrótce</span>
                     </label>
                 </p>
+                <div id="<?php echo esc_attr($coming_soon_wrapper_id); ?>"
+                     style="margin-left: 34px; margin-top: -6px; margin-bottom: 12px; <?php echo $wkrotce === '1' ? '' : 'display: none;'; ?>">
+                    <label for="<?php echo esc_attr($coming_soon_input_id); ?>"
+                           style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+                        Planowana dostępność (miesiąc i rok)
+                    </label>
+                    <input type="text"
+                           id="<?php echo esc_attr($coming_soon_input_id); ?>"
+                           name="coming_soon_date"
+                           value="<?php echo esc_attr($wkrotce_data); ?>"
+                           placeholder="Np. Listopad 2025"
+                           autocomplete="off"
+                           style="width: 100%; max-width: 240px; border: 1px solid #cbd5f5; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #0f172a;">
+                    <span class="description" style="display: block; font-size: 12px; color: #64748b; margin-top: 4px;">
+                        Możesz wpisać miesiąc i rok w formacie „Listopad 2025”.
+                    </span>
+                </div>
 
                 <p style="margin: 0;">
                     <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
@@ -1014,6 +1036,22 @@ class Offers {
                 </p>
             </div>
         </div>
+        <script>
+            (function() {
+                const toggle = document.getElementById('<?php echo esc_js($coming_soon_toggle_id); ?>');
+                const wrapper = document.getElementById('<?php echo esc_js($coming_soon_wrapper_id); ?>');
+                if (!toggle || !wrapper) {
+                    return;
+                }
+
+                const refreshVisibility = () => {
+                    wrapper.style.display = toggle.checked ? 'block' : 'none';
+                };
+
+                toggle.addEventListener('change', refreshVisibility);
+                refreshVisibility();
+            })();
+        </script>
         <?php
     }
 
@@ -1117,6 +1155,16 @@ class Offers {
         foreach ($flags as $meta_key => $post_key) {
             $value = isset($_POST[$post_key]) ? '1' : '0';
             update_post_meta($post_id, $meta_key, $value);
+        }
+
+        $coming_soon_flag = isset($_POST['coming_soon']) ? '1' : '0';
+        $coming_soon_date = isset($_POST['coming_soon_date']) ? sanitize_text_field($_POST['coming_soon_date']) : '';
+        $coming_soon_date = trim($coming_soon_date);
+
+        if ($coming_soon_flag === '1' && !empty($coming_soon_date)) {
+            update_post_meta($post_id, '_coming_soon_date', $coming_soon_date);
+        } else {
+            delete_post_meta($post_id, '_coming_soon_date');
         }
 
         if (isset($_POST['standard_equipment'])) {

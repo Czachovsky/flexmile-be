@@ -236,8 +236,8 @@ Content-Type: application/json
 
 {
   "offer_id": 123,
-  "first_name": "Jan",
-  "last_name": "Kowalski",
+  "company_name": "Jan Kowalski Sp. z o.o.",
+  "tax_id": "1234567890",
   "email": "jan@example.com",
   "phone": "+48 123 456 789",
   "rental_months": 12,

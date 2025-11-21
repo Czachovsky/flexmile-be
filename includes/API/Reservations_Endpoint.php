@@ -62,6 +62,17 @@ class Reservations_Endpoint {
             return new \WP_Error('no_pricing', 'Samochód nie ma skonfigurowanych cen', ['status' => 400]);
         }
 
+        $company_name = $this->resolve_company_name($params);
+        $tax_id = $this->resolve_tax_id($params);
+
+        if (empty($company_name)) {
+            return new \WP_Error('missing_company_name', 'Nazwa firmy jest wymagana', ['status' => 400]);
+        }
+
+        if (empty($tax_id)) {
+            return new \WP_Error('missing_tax_id', 'NIP jest wymagany', ['status' => 400]);
+        }
+
         $ilosc_miesiecy = intval($params['rental_months']);
         $limit_km_rocznie = intval($params['annual_mileage_limit']);
 
@@ -96,7 +107,7 @@ class Reservations_Endpoint {
 
         $tytul = sprintf(
             'Rezerwacja: %s - %s %s',
-            sanitize_text_field($params['first_name']) . ' ' . sanitize_text_field($params['last_name']),
+            $company_name,
             $samochod->post_title,
             date('Y-m-d H:i')
         );
@@ -115,8 +126,8 @@ class Reservations_Endpoint {
         }
 
         update_post_meta($rezerwacja_id, '_offer_id', $samochod_id);
-        update_post_meta($rezerwacja_id, '_first_name', sanitize_text_field($params['first_name']));
-        update_post_meta($rezerwacja_id, '_last_name', sanitize_text_field($params['last_name']));
+        update_post_meta($rezerwacja_id, '_company_name', $company_name);
+        update_post_meta($rezerwacja_id, '_tax_id', $tax_id);
         update_post_meta($rezerwacja_id, '_email', sanitize_email($params['email']));
         update_post_meta($rezerwacja_id, '_phone', sanitize_text_field($params['phone']));
         update_post_meta($rezerwacja_id, '_rental_months', $ilosc_miesiecy);
@@ -125,9 +136,20 @@ class Reservations_Endpoint {
         update_post_meta($rezerwacja_id, '_total_price', $cena_calkowita);
         update_post_meta($rezerwacja_id, '_status', 'pending');
 
+        if (!empty($params['first_name'])) {
+            update_post_meta($rezerwacja_id, '_first_name', sanitize_text_field($params['first_name']));
+        }
+
+        if (!empty($params['last_name'])) {
+            update_post_meta($rezerwacja_id, '_last_name', sanitize_text_field($params['last_name']));
+        }
+
         if (!empty($params['message'])) {
             update_post_meta($rezerwacja_id, '_message', sanitize_textarea_field($params['message']));
         }
+
+        $params['company_name'] = $company_name;
+        $params['tax_id'] = $tax_id;
 
         $this->send_admin_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita);
         $this->send_customer_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita);
@@ -179,8 +201,8 @@ class Reservations_Endpoint {
             'created_at' => $post->post_date,
             'status' => get_post_meta($post->ID, '_status', true),
             'customer' => [
-                'first_name' => get_post_meta($post->ID, '_first_name', true),
-                'last_name' => get_post_meta($post->ID, '_last_name', true),
+                'company_name' => $this->get_company_meta($post->ID),
+                'tax_id' => $this->get_tax_meta($post->ID),
                 'email' => get_post_meta($post->ID, '_email', true),
                 'phone' => get_post_meta($post->ID, '_phone', true),
             ],
@@ -199,41 +221,79 @@ class Reservations_Endpoint {
     }
 
     /**
+     * Zwraca nazwę firmy z uwzględnieniem wstecznej kompatybilności
+     */
+    private function get_company_meta($reservation_id) {
+        $company = get_post_meta($reservation_id, '_company_name', true);
+
+        if (!empty($company)) {
+            return $company;
+        }
+
+        $first = get_post_meta($reservation_id, '_first_name', true);
+        $last = get_post_meta($reservation_id, '_last_name', true);
+
+        return trim($first . ' ' . $last);
+    }
+
+    /**
+     * Zwraca NIP z uwzględnieniem wstecznej kompatybilności
+     */
+    private function get_tax_meta($reservation_id) {
+        $tax_id = get_post_meta($reservation_id, '_tax_id', true);
+
+        if (!empty($tax_id)) {
+            return $tax_id;
+        }
+
+        return '';
+    }
+
+    /**
+     * Wyznacza nazwę firmy na podstawie parametrów requestu
+     */
+    private function resolve_company_name($params) {
+        if (!empty($params['company_name'])) {
+            return sanitize_text_field($params['company_name']);
+        }
+
+        $first = !empty($params['first_name']) ? sanitize_text_field($params['first_name']) : '';
+        $last = !empty($params['last_name']) ? sanitize_text_field($params['last_name']) : '';
+
+        return trim($first . ' ' . $last);
+    }
+
+    /**
+     * Wyznacza NIP na podstawie parametrów requestu
+     */
+    private function resolve_tax_id($params) {
+        if (empty($params['tax_id'])) {
+            return '';
+        }
+
+        return sanitize_text_field($params['tax_id']);
+    }
+
+    /**
      * Wysyła email do administratora (ZAKTUALIZOWANE)
      */
     private function send_admin_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita) {
         $admin_email = get_option('admin_email');
         $subject = sprintf('[FlexMile] Nowa rezerwacja #%d - %s', $rezerwacja_id, $samochod->post_title);
 
-        $message = "Nowa rezerwacja w systemie FlexMile!\n\n";
-        $message .= "=== SZCZEGÓŁY REZERWACJI ===\n";
-        $message .= sprintf("Numer rezerwacji: #%d\n", $rezerwacja_id);
-        $message .= sprintf("Data: %s\n\n", date('Y-m-d H:i:s'));
+        $message = $this->load_email_template('admin-reservation', [
+            'rezerwacja_id' => $rezerwacja_id,
+            'samochod' => $samochod,
+            'params' => $params,
+            'cena_miesieczna' => $cena_miesieczna,
+            'cena_calkowita' => $cena_calkowita,
+        ]);
 
-        $message .= "=== SAMOCHÓD ===\n";
-        $message .= sprintf("Nazwa: %s\n", $samochod->post_title);
-        $message .= sprintf("Link: %s\n\n", admin_url('post.php?post=' . $samochod->ID . '&action=edit'));
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+        ];
 
-        $message .= "=== KLIENT ===\n";
-        $message .= sprintf("Imię i nazwisko: %s %s\n", $params['first_name'], $params['last_name']);
-        $message .= sprintf("Email: %s\n", $params['email']);
-        $message .= sprintf("Telefon: %s\n\n", $params['phone']);
-
-        $message .= "=== PARAMETRY WYNAJMU ===\n";
-        $message .= sprintf("Okres: %d miesięcy\n", $params['rental_months']);
-        $message .= sprintf("Roczny limit km: %d km\n", $params['annual_mileage_limit']);
-        $message .= sprintf("Cena miesięczna: %.2f zł\n", $cena_miesieczna);
-        $message .= sprintf("Cena całkowita (za cały okres): %.2f zł\n\n", $cena_calkowita);
-
-        if (!empty($params['message'])) {
-            $message .= "=== WIADOMOŚĆ OD KLIENTA ===\n";
-            $message .= $params['message'] . "\n\n";
-        }
-
-        $message .= "Aby zarządzać tą rezerwacją, przejdź do:\n";
-        $message .= admin_url('post.php?post=' . $rezerwacja_id . '&action=edit');
-
-        wp_mail($admin_email, $subject, $message);
+        wp_mail($admin_email, $subject, $message, $headers);
     }
 
     /**
@@ -243,27 +303,48 @@ class Reservations_Endpoint {
         $to = $params['email'];
         $subject = 'Potwierdzenie rezerwacji - FlexMile';
 
-        $message = sprintf("Witaj %s!\n\n", $params['first_name']);
-        $message .= "Dziękujemy za złożenie rezerwacji w FlexMile.\n\n";
+        $message = $this->load_email_template('customer-reservation', [
+            'rezerwacja_id' => $rezerwacja_id,
+            'samochod' => $samochod,
+            'params' => $params,
+            'cena_miesieczna' => $cena_miesieczna,
+            'cena_calkowita' => $cena_calkowita,
+        ]);
 
-        $message .= "=== SZCZEGÓŁY TWOJEJ REZERWACJI ===\n";
-        $message .= sprintf("Numer rezerwacji: #%d\n", $rezerwacja_id);
-        $message .= sprintf("Samochód: %s\n\n", $samochod->post_title);
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_option('blogname') . ' <' . get_option('admin_email') . '>',
+        ];
 
-        $message .= "=== WYBRANA KONFIGURACJA ===\n";
-        $message .= sprintf("Okres wynajmu: %d miesięcy\n", $params['rental_months']);
-        $message .= sprintf("Roczny limit km: %d km\n", $params['annual_mileage_limit']);
-        $message .= sprintf("Cena miesięczna: %.2f zł\n", $cena_miesieczna);
-        $message .= sprintf("Cena całkowita: %.2f zł\n\n", $cena_calkowita);
+        wp_mail($to, $subject, $message, $headers);
+    }
 
-        $message .= "Twoja rezerwacja oczekuje na zatwierdzenie.\n";
-        $message .= "Skontaktujemy się z Tobą wkrótce!\n\n";
+    /**
+     * Ładuje szablon e-maila z pliku
+     * 
+     * @param string $template_name Nazwa szablonu (bez rozszerzenia .php)
+     * @param array $vars Zmienne dostępne w szablonie
+     * @return string Zawartość szablonu
+     */
+    private function load_email_template($template_name, $vars = []) {
+        $template_path = FLEXMILE_PLUGIN_DIR . 'templates/emails/' . $template_name . '.php';
+        
+        if (!file_exists($template_path)) {
+            // Fallback: zwróć podstawowy komunikat błędu
+            return sprintf(
+                'Szablon e-maila "%s" nie został znaleziony. Sprawdź plik: %s',
+                $template_name,
+                $template_path
+            );
+        }
 
-        $message .= "Pozdrawiamy,\n";
-        $message .= "Zespół FlexMile\n";
-        $message .= get_option('blogname');
+        // Wyodrębnij zmienne do osobnych zmiennych dla łatwego użycia w szablonie
+        extract($vars, EXTR_SKIP);
 
-        wp_mail($to, $subject, $message);
+        // Przechwyć output szablonu
+        ob_start();
+        include $template_path;
+        return ob_get_clean();
     }
 
     /**
@@ -276,15 +357,25 @@ class Reservations_Endpoint {
                 'type' => 'integer',
                 'description' => 'ID samochodu',
             ],
-            'first_name' => [
+            'company_name' => [
                 'required' => true,
                 'type' => 'string',
-                'description' => 'Imię klienta',
+                'description' => 'Nazwa firmy klienta',
+            ],
+            'tax_id' => [
+                'required' => true,
+                'type' => 'string',
+                'description' => 'NIP firmy klienta',
+            ],
+            'first_name' => [
+                'required' => false,
+                'type' => 'string',
+                'description' => 'Imię klienta (zgodność wsteczna)',
             ],
             'last_name' => [
-                'required' => true,
+                'required' => false,
                 'type' => 'string',
-                'description' => 'Nazwisko klienta',
+                'description' => 'Nazwisko klienta (zgodność wsteczna)',
             ],
             'email' => [
                 'required' => true,
@@ -317,3 +408,5 @@ class Reservations_Endpoint {
         ];
     }
 }
+
+

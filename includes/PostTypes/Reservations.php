@@ -94,6 +94,8 @@ class Reservations {
      * Renderuje meta box ze szczegółami klienta
      */
     public function render_details_meta_box($post) {
+        $nazwa_firmy = get_post_meta($post->ID, '_company_name', true);
+        $nip = get_post_meta($post->ID, '_tax_id', true);
         $imie = get_post_meta($post->ID, '_first_name', true);
         $nazwisko = get_post_meta($post->ID, '_last_name', true);
         $email = get_post_meta($post->ID, '_email', true);
@@ -106,12 +108,20 @@ class Reservations {
         ?>
         <table class="form-table">
             <tr>
-                <th><strong>Imię:</strong></th>
-                <td><?php echo esc_html($imie); ?></td>
+                <th><strong>Nazwa firmy:</strong></th>
+                <td>
+                    <?php
+                    if (!empty($nazwa_firmy)) {
+                        echo esc_html($nazwa_firmy);
+                    } else {
+                        echo esc_html(trim($imie . ' ' . $nazwisko));
+                    }
+                    ?>
+                </td>
             </tr>
             <tr>
-                <th><strong>Nazwisko:</strong></th>
-                <td><?php echo esc_html($nazwisko); ?></td>
+                <th><strong>NIP:</strong></th>
+                <td><?php echo esc_html($nip); ?></td>
             </tr>
             <tr>
                 <th><strong>Email:</strong></th>
