@@ -466,7 +466,7 @@ add_action('init', function() {
                 <tr>
                     <td><code>orderby</code></td>
                     <td>enum</td>
-                    <td>Sortowanie: "date" lub "title" (domyślnie: "date")</td>
+                    <td>Sortowanie: "date" lub "price" (domyślnie: "date")</td>
                 </tr>
                 <tr>
                     <td><code>order</code></td>

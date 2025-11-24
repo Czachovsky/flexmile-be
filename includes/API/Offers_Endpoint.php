@@ -76,15 +76,23 @@ class Offers_Endpoint {
     public function get_samochody($request) {
         $params = $request->get_params();
 
+        $orderby = isset($params['orderby']) ? sanitize_text_field($params['orderby']) : 'date';
+        $order = isset($params['order']) ? sanitize_text_field($params['order']) : 'DESC';
+        
         $args = [
             'post_type' => 'offer',
             'post_status' => 'publish',
             'posts_per_page' => isset($params['per_page']) ? intval($params['per_page']) : 10,
             'paged' => isset($params['page']) ? intval($params['page']) : 1,
-            'orderby' => isset($params['orderby']) ? sanitize_text_field($params['orderby']) : 'date',
-            'order' => isset($params['order']) ? sanitize_text_field($params['order']) : 'DESC',
+            'orderby' => $orderby === 'price' ? 'meta_value_num' : $orderby,
+            'order' => $order,
             'meta_query' => ['relation' => 'AND'],
         ];
+        
+        // Jeśli sortujemy po cenie, musimy ustawić meta_key
+        if ($orderby === 'price') {
+            $args['meta_key'] = '_lowest_price';
+        }
 
         // ========================================
         // FILTR: Tylko dostępne (nie zarezerwowane)
@@ -387,7 +395,6 @@ class Offers_Endpoint {
     private function prepare_samochod_data_minimal($post) {
         $data = [
             'id' => $post->ID,
-            'title' => $post->post_title,
         ];
 
         $data['image'] = [
@@ -589,7 +596,7 @@ class Offers_Endpoint {
                 'description' => 'Sortowanie',
                 'type' => 'string',
                 'default' => 'date',
-                'enum' => ['date', 'title', 'meta_value_num'],
+                'enum' => ['date', 'price'],
             ],
             'order' => [
                 'description' => 'Kierunek sortowania',
@@ -671,6 +678,7 @@ class Offers_Endpoint {
         ];
     }
 }
+
 
 
 
