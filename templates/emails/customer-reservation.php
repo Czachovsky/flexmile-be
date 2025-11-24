@@ -75,7 +75,7 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
 
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tbody><tr>
-                  <td align="left" style="font-size: 44px;font-weight:bold;font-family:Arial;">
+                  <td align="left" style="font-size: 44px;font-weight:bold;">
                     <span style="color:#863087;">flex</span><span style="color:#C1D342;">mile</span>
                   </td>
                   <td align="right" style="font-size: 12px;color:#333;">
@@ -139,7 +139,7 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-bottom:10px;">
                 <tbody><tr>
                   <td style="font-size:18px;font-weight:bold;color:#000;padding-bottom: 12px;border-bottom: 1px solid #eeeeee;">
-                    Szczegóły zamówienia
+                    Szczegóły rezerwacji
                   </td>
                 </tr>
               </tbody></table>
@@ -230,51 +230,6 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
 
             </td>
           </tr>
-
-          <!-- CONSENTS -->
-          <tr>
-            <td style="padding: 0 24px 40px 24px;">
-
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-bottom:10px;">
-                <tbody><tr>
-                  <td style="font-size: 18px;font-weight: bold;color: #000;padding-bottom: 12px;border-bottom: 1px solid #eeeeee;">
-                    Twoje preferencje
-                  </td>
-                </tr>
-              </tbody></table>
-
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tbody>
-                <tr>
-                  <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;">
-                    Zgoda na kontakt e-mail
-                  </td>
-                  <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold;">
-                    <?php echo $consent_email ? 'Tak' : 'Nie'; ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;">
-                    Zgoda na kontakt telefoniczny
-                  </td>
-                  <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold;">
-                    <?php echo $consent_phone ? 'Tak' : 'Nie'; ?>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:12px 0;font-size:15px;color:#333;">
-                    Preferowane miejsce wydania
-                  </td>
-                  <td align="right" style="padding:12px 0;font-size:15px;color:#333;font-weight: bold;">
-                    <?php echo esc_html($pickup_text); ?>
-                  </td>
-                </tr>
-                </tbody>
-              </table>
-
-            </td>
-          </tr>
-
           <!-- FOOTER -->
           <tr>
             <td style="padding:20px; font-size:12px; color:#999; text-align:center;">
