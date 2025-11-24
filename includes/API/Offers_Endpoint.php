@@ -247,6 +247,17 @@ class Offers_Endpoint {
             $args['meta_query'][] = $cena_query;
         }
 
+        // ========================================
+        // FILTR: Dostępne od ręki (available_immediately)
+        // ========================================
+        if (isset($params['available_immediately']) && $params['available_immediately'] === 'true') {
+            $args['meta_query'][] = [
+                'key' => '_available_immediately',
+                'value' => '1',
+                'compare' => '=',
+            ];
+        }
+
         // Wykonaj zapytanie
         $query = new \WP_Query($args);
 
@@ -671,6 +682,12 @@ class Offers_Endpoint {
             ],
             'only_reserved' => [
                 'description' => 'Zwróć TYLKO zarezerwowane samochody',
+                'type' => 'string',
+                'enum' => ['true', 'false'],
+                'default' => 'false',
+            ],
+            'available_immediately' => [
+                'description' => 'Tylko samochody dostępne od ręki',
                 'type' => 'string',
                 'enum' => ['true', 'false'],
                 'default' => 'false',
