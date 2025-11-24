@@ -197,12 +197,6 @@ class Reservations_Endpoint {
             'success' => true,
             'message' => $entry_config['success_message'],
             'reservation_id' => $rezerwacja_id,
-            'pricing' => [
-                'monthly_price' => $cena_miesieczna,
-                'total_price' => $cena_calkowita,
-                'rental_months' => $ilosc_miesiecy,
-                'annual_mileage_limit' => $limit_km_rocznie,
-            ],
             'type' => $entry_type,
         ], 201);
     }

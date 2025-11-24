@@ -63,9 +63,15 @@ class Admin_Menu {
     public function render_dashboard() {
         // Komunikat sukcesu po imporcie
         if (isset($_GET['import']) && $_GET['import'] === 'success') {
+            $notice_message = isset($_GET['message'])
+                ? sanitize_text_field(wp_unslash($_GET['message']))
+                : '';
+            $notice_message = $notice_message !== ''
+                ? $notice_message
+                : __('Operacja zakończyła się powodzeniem.', 'flexmile');
             ?>
             <div class="notice notice-success is-dismissible">
-                <p><strong>✅ Success!</strong> <?php echo esc_html(urldecode($_GET['message'])); ?></p>
+                <p><strong>✅ Success!</strong> <?php echo esc_html($notice_message); ?></p>
             </div>
             <?php
         }
