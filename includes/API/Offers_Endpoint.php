@@ -437,7 +437,6 @@ class Offers_Endpoint {
             'available_immediately' => get_post_meta($post->ID, '_available_immediately', true) === '1',
             'coming_soon' => get_post_meta($post->ID, '_coming_soon', true) === '1',
             'popular' => get_post_meta($post->ID, '_most_popular', true) === '1',
-            'featured' => get_post_meta($post->ID, '_featured', true) === '1',
         ];
 
         $coming_soon_date = get_post_meta($post->ID, '_coming_soon_date', true);
@@ -542,7 +541,6 @@ class Offers_Endpoint {
             'available_immediately' => get_post_meta($post->ID, '_available_immediately', true) === '1',
             'coming_soon' => get_post_meta($post->ID, '_coming_soon', true) === '1',
             'popular' => get_post_meta($post->ID, '_most_popular', true) === '1',
-            'featured' => get_post_meta($post->ID, '_featured', true) === '1',
         ];
 
         $coming_soon_date = get_post_meta($post->ID, '_coming_soon_date', true);

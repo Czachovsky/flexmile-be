@@ -106,8 +106,7 @@ GET /wp-json/flexmile/v1/offers?car_brand=bmw&year_from=2020&page=1&per_page=10
         "new": true,
         "available_immediately": true,
         "coming_soon": false,
-        "popular": true,
-        "featured": true
+        "popular": true
       },
       "available": true
     }
@@ -211,8 +210,7 @@ GET /wp-json/flexmile/v1/offers/{id}
     "new": true,
     "available_immediately": true,
     "coming_soon": false,
-    "popular": true,
-    "featured": true
+    "popular": true
   },
   "available": true
 }

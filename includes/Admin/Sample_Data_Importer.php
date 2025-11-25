@@ -135,7 +135,6 @@ class Sample_Data_Importer {
             $is_new = ($i % 3 == 0);
             $is_available = ($i % 4 != 0);
             $is_popular = ($i % 5 == 0);
-            $is_featured = ($i % 10 == 0);
             
             $offers[] = [
                 'title' => $brand['name'] . ' ' . $model . ' ' . ($engine_capacity / 1000) . ($fuel_type === 'Diesel' ? 'd' : ($fuel_type === 'Electric' ? 'e' : 'i')),
@@ -156,7 +155,6 @@ class Sample_Data_Importer {
                     'new' => $is_new,
                     'available_immediately' => $is_available,
                     'popular' => $is_popular,
-                    'featured' => $is_featured,
                 ],
             ];
         }
@@ -205,7 +203,6 @@ class Sample_Data_Importer {
                         update_post_meta($post_id, '_new_car', $offer['attributes']['new'] ? '1' : '0');
                         update_post_meta($post_id, '_available_immediately', $offer['attributes']['available_immediately'] ? '1' : '0');
                         update_post_meta($post_id, '_most_popular', $offer['attributes']['popular'] ? '1' : '0');
-                        update_post_meta($post_id, '_featured', $offer['attributes']['featured'] ? '1' : '0');
                         update_post_meta($post_id, '_coming_soon', '0');
                         delete_post_meta($post_id, '_coming_soon_date');
                     }

@@ -981,7 +981,6 @@ class Offers {
         $wkrotce = get_post_meta($post->ID, '_coming_soon', true);
         $wkrotce_data = get_post_meta($post->ID, '_coming_soon_date', true);
         $najczesciej = get_post_meta($post->ID, '_most_popular', true);
-        $wyrozniany = get_post_meta($post->ID, '_featured', true);
         $coming_soon_toggle_id = 'coming-soon-flag-' . absint($post->ID);
         $coming_soon_wrapper_id = 'coming-soon-wrapper-' . absint($post->ID);
         $coming_soon_input_id = 'coming-soon-date-' . absint($post->ID);
@@ -1051,25 +1050,6 @@ class Offers {
                 </p>
             </div>
 
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-
-            <div>
-                <p style="margin-bottom: 12px; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-                    ⭐ Wyróżnienie
-                </p>
-
-                <p style="margin: 0;">
-                    <label style="display: flex; align-items: center; padding: 12px; border-radius: 8px; cursor: pointer; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
-                        <input type="checkbox" name="featured" value="1" <?php checked($wyrozniany, '1'); ?>
-                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
-                        <span style="font-size: 14px; font-weight: 600; color: #92400e;">🌟 Wyróżniony samochód</span>
-                    </label>
-                </p>
-
-                <p class="description" style="margin-top: 10px; font-size: 12px; color: #64748b;">
-                    💡 Wyróżnione samochody są wyświetlane na górze listy i w specjalnej sekcji.
-                </p>
-            </div>
         </div>
         <script>
             (function() {
@@ -1182,7 +1162,6 @@ class Offers {
             '_available_immediately' => 'available_immediately',
             '_coming_soon' => 'coming_soon',
             '_most_popular' => 'most_popular',
-            '_featured' => 'featured',
         ];
 
         foreach ($flags as $meta_key => $post_key) {
