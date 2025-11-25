@@ -215,17 +215,6 @@ class Offers_Endpoint {
             $args['meta_query'][] = $rocznik_query;
         }
 
-        // ========================================
-        // FILTR: Przebieg maksymalny
-        // ========================================
-        if (!empty($params['max_mileage'])) {
-            $args['meta_query'][] = [
-                'key' => '_mileage',
-                'value' => intval($params['max_mileage']),
-                'type' => 'NUMERIC',
-                'compare' => '<=',
-            ];
-        }
 
         // ========================================
         // FILTR: Cena od/do
@@ -492,7 +481,6 @@ class Offers_Endpoint {
 
         $data['specs'] = [
             'year' => (int) get_post_meta($post->ID, '_year', true),
-            'mileage' => (int) get_post_meta($post->ID, '_mileage', true),
             'engine' => get_post_meta($post->ID, '_engine', true),
             'horsepower' => (int) get_post_meta($post->ID, '_horsepower', true),
             'engine_capacity' => (int) get_post_meta($post->ID, '_engine_capacity', true),
@@ -501,7 +489,6 @@ class Offers_Endpoint {
             'color' => get_post_meta($post->ID, '_color', true),
             'seats' => (int) get_post_meta($post->ID, '_seats', true),
             'doors' => (int) get_post_meta($post->ID, '_doors', true),
-            'vin_number' => get_post_meta($post->ID, '_vin_number', true),
         ];
 
         // Marka i model
@@ -650,10 +637,6 @@ class Offers_Endpoint {
             ],
             'year_to' => [
                 'description' => 'Rocznik do',
-                'type' => 'integer',
-            ],
-            'max_mileage' => [
-                'description' => 'Maksymalny przebieg',
                 'type' => 'integer',
             ],
             'price_from' => [

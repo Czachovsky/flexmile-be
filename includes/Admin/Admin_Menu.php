@@ -414,11 +414,6 @@ add_action('init', function() {
                     <td>Rocznik do (np. 2023)</td>
                 </tr>
                 <tr>
-                    <td><code>max_mileage</code></td>
-                    <td>integer</td>
-                    <td>Maksymalny przebieg w km (np. 50000)</td>
-                </tr>
-                <tr>
                     <td><code>price_from</code></td>
                     <td>float</td>
                     <td>Cena minimalna w zł/mies. (np. 1500)</td>
@@ -503,8 +498,8 @@ add_action('init', function() {
                 <code><?php echo rest_url('flexmile/v1/offers?fuel_type=Diesel&transmission=manual&available_only=true'); ?></code>
             </li>
             <li>
-                <strong>Nowe hybrydy (2022+, max 30k km):</strong><br>
-                <code><?php echo rest_url('flexmile/v1/offers?fuel_type=Hybrid&year_from=2022&max_mileage=30000&available_only=true'); ?></code>
+                <strong>Nowe hybrydy (2022+):</strong><br>
+                <code><?php echo rest_url('flexmile/v1/offers?fuel_type=Hybrid&year_from=2022&available_only=true'); ?></code>
             </li>
             <li>
                 <strong>Wszystkie Toyoty (dostępne):</strong><br>
@@ -512,7 +507,7 @@ add_action('init', function() {
             </li>
             <li>
                 <strong>Zaawansowane filtrowanie (SUV, Diesel, auto, 2020+, max 50k, 2000-3000 zł):</strong><br>
-                <code><?php echo rest_url('flexmile/v1/offers?body_type=SUV&fuel_type=Diesel&transmission=automatic&year_from=2020&max_mileage=50000&price_from=2000&price_to=3000&available_only=true'); ?></code>
+                <code><?php echo rest_url('flexmile/v1/offers?body_type=SUV&fuel_type=Diesel&transmission=automatic&year_from=2020&price_from=2000&price_to=3000&available_only=true'); ?></code>
             </li>
             <li>
                 <strong>Infinite scroll (strona 2, 20 wyników):</strong><br>

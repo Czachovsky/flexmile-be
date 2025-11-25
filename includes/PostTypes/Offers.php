@@ -479,7 +479,6 @@ class Offers {
         $car_model = get_post_meta($post->ID, '_car_model', true);
 
         $rocznik = get_post_meta($post->ID, '_year', true);
-        $przebieg = get_post_meta($post->ID, '_mileage', true);
         $moc = get_post_meta($post->ID, '_horsepower', true);
         $pojemnosc = get_post_meta($post->ID, '_engine_capacity', true);
         $skrzynia = get_post_meta($post->ID, '_transmission', true);
@@ -490,7 +489,6 @@ class Offers {
         $liczba_drzwi = get_post_meta($post->ID, '_doors', true);
         $naped = get_post_meta($post->ID, '_drivetrain', true);
         $silnik = get_post_meta($post->ID, '_engine', true);
-        $numer_vin = get_post_meta($post->ID, '_vin_number', true);
 
         // Pobierz typy nadwozia i paliwa z config.json
         $body_types = $config['body_types'] ?? [];
@@ -584,21 +582,6 @@ class Offers {
                     </div>
 
                     <div class="flexmile-field">
-                        <label for="mileage">
-                            <span class="flexmile-label-icon">🛣️</span>
-                            <strong>Przebieg (km)</strong>
-                        </label>
-                        <input type="number"
-                               id="mileage"
-                               name="mileage"
-                               value="<?php echo esc_attr($przebieg); ?>"
-                               class="flexmile-input"
-                               min="0"
-                               step="1000"
-                               placeholder="np. 45000">
-                    </div>
-
-                    <div class="flexmile-field">
                         <label for="seats">
                             <span class="flexmile-label-icon">👥</span>
                             <strong>Liczba miejsc</strong>
@@ -623,21 +606,6 @@ class Offers {
                             <option value="2" <?php selected($liczba_drzwi, '2'); ?>>2/3 drzwi</option>
                             <option value="4" <?php selected($liczba_drzwi, '4'); ?>>4/5 drzwi</option>
                         </select>
-                    </div>
-
-                    <div class="flexmile-field flexmile-field-full">
-                        <label for="vin_number">
-                            <span class="flexmile-label-icon">🔢</span>
-                            <strong>Numer VIN</strong>
-                        </label>
-                        <input type="text"
-                               id="vin_number"
-                               name="vin_number"
-                               value="<?php echo esc_attr($numer_vin); ?>"
-                               class="flexmile-input"
-                               maxlength="17"
-                               placeholder="np. WBAKR810501A23456">
-                        <p class="description">17-znakowy numer identyfikacyjny pojazdu</p>
                     </div>
                 </div>
             </div>
@@ -1164,7 +1132,6 @@ class Offers {
 
         $fields = [
             '_year' => 'intval',
-            '_mileage' => 'intval',
             '_horsepower' => 'intval',
             '_engine_capacity' => 'intval',
             '_transmission' => 'sanitize_text_field',
@@ -1173,7 +1140,6 @@ class Offers {
             '_color' => 'sanitize_text_field',
             '_seats' => 'intval',
             '_doors' => 'sanitize_text_field',
-            '_vin_number' => 'sanitize_text_field',
         ];
 
         foreach ($fields as $field => $sanitize) {

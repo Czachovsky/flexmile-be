@@ -18,8 +18,8 @@ Wtyczka do headless WordPressa dla systemu komisu samochodowego FlexMile z API d
 
 - **Blokada frontendu** - WordPress działa tylko jako headless CMS
 - **CPT Oferty** z polami:
-    - Rocznik, przebieg, moc, pojemność silnika
-    - Skrzynia biegów, kolor, liczba miejsc, VIN
+    - Rocznik, moc, pojemność silnika
+    - Skrzynia biegów, kolor, liczba miejsc
     - Macierz cen (cena miesięczna zależna od okresu wynajmu i limitu km)
     - Status rezerwacji
 - **CPT Rezerwacje** z:
@@ -61,7 +61,6 @@ GET /wp-json/flexmile/v1/offers
 - `fuel_type` - slug rodzaju paliwa
 - `year_from` - rocznik od
 - `year_to` - rocznik do
-- `max_mileage` - maksymalny przebieg
 - `price_from` - cena minimalna
 - `price_to` - cena maksymalna
 - `page` - numer strony (infinite scroll)
@@ -89,7 +88,6 @@ GET /wp-json/flexmile/v1/offers?car_brand=bmw&year_from=2020&page=1&per_page=10
       "horsepower": 286,
       "transmission": "automatic",
       "year": 2022,
-      "mileage": 50000,
       "brand": {
         "id": 1,
         "name": "BMW",
@@ -152,7 +150,6 @@ GET /wp-json/flexmile/v1/offers/{id}
   ],
   "specs": {
     "year": 2022,
-    "mileage": 50000,
     "engine": "3.0d xDrive",
     "horsepower": 286,
     "engine_capacity": 2993,
@@ -160,8 +157,7 @@ GET /wp-json/flexmile/v1/offers/{id}
     "drivetrain": "AWD",
     "color": "Czarny metalik",
     "seats": 5,
-    "doors": 4,
-    "vin_number": "WBAKR810501A23456"
+    "doors": 4
   },
   "brand": {
     "id": 1,

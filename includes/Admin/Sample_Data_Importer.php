@@ -101,7 +101,6 @@ class Sample_Data_Importer {
             
             // Losowe wartości
             $year = rand(2019, 2024);
-            $mileage = rand(10000, 150000);
             $horsepower = rand(100, 400);
             $engine_capacity = rand(1200, 3500);
             $seats = rand(4, 7);
@@ -112,9 +111,6 @@ class Sample_Data_Importer {
             // Cena bazowa zależna od marki i roku
             $base_price = rand(1200, 3500);
             $lowest_price = $base_price;
-            
-            // Generuj VIN (uproszczony)
-            $vin = strtoupper(substr(md5($i . time()), 0, 17));
             
             // Generuj pricing_config
             $pricing_config = [
@@ -148,14 +144,12 @@ class Sample_Data_Importer {
                 'body_type' => $body_type,
                 'fuel_type' => $fuel_type,
                 'year' => $year,
-                'mileage' => $mileage,
                 'horsepower' => $horsepower,
                 'engine_capacity' => $engine_capacity,
                 'engine' => $engine,
                 'transmission' => $transmission,
                 'color' => $color,
                 'seats' => $seats,
-                'vin' => $vin,
                 'lowest_price' => $lowest_price,
                 'pricing_config' => $pricing_config,
                 'attributes' => [
@@ -196,14 +190,12 @@ class Sample_Data_Importer {
 
                     // Dodaj meta pola
                     update_post_meta($post_id, '_year', $offer['year']);
-                    update_post_meta($post_id, '_mileage', $offer['mileage']);
                     update_post_meta($post_id, '_horsepower', $offer['horsepower']);
                     update_post_meta($post_id, '_engine_capacity', $offer['engine_capacity']);
                     update_post_meta($post_id, '_engine', $offer['engine']);
                     update_post_meta($post_id, '_transmission', $offer['transmission']);
                     update_post_meta($post_id, '_color', $offer['color']);
                     update_post_meta($post_id, '_seats', $offer['seats']);
-                    update_post_meta($post_id, '_vin_number', $offer['vin']);
                     update_post_meta($post_id, '_lowest_price', $offer['lowest_price']);
                     update_post_meta($post_id, '_pricing_config', $offer['pricing_config']);
                     update_post_meta($post_id, '_reservation_active', '0');
