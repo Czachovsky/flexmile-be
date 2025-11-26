@@ -152,7 +152,7 @@ class Orders {
             </tr>
             <tr style="background: #f8fafc; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a;">
                 <th colspan="2" style="padding: 12px; text-align: center; font-size: 16px; color: #0f172a;">
-                    📝 WYBRANA KONFIGURACJA
+                    WYBRANA KONFIGURACJA
                 </th>
             </tr>
             <tr>
@@ -167,7 +167,7 @@ class Orders {
                 <th><strong>Cena miesięczna:</strong></th>
                 <td><strong style="color: #0ea5e9; font-size: 15px;"><?php echo number_format($cena_miesieczna, 2, ',', ' '); ?> zł/mies.</strong></td>
             </tr>
-            <tr style="background: #e0f2fe;">
+            <tr style="background: #e0f2fe; display: none;">
                 <th><strong>Cena całkowita:</strong></th>
                 <td><strong style="color: #0284c7; font-size: 18px;"><?php echo number_format($cena_calkowita, 2, ',', ' '); ?> zł</strong></td>
             </tr>
@@ -198,10 +198,9 @@ class Orders {
                 <option value="pending" <?php selected($status, 'pending'); ?>>⏳ Oczekujące</option>
                 <option value="approved" <?php selected($status, 'approved'); ?>>✅ Zatwierdzone</option>
                 <option value="rejected" <?php selected($status, 'rejected'); ?>>❌ Odrzucone</option>
-                <option value="completed" <?php selected($status, 'completed'); ?>>🎉 Zrealizowane</option>
             </select>
         </p>
-        <p class="description">Status nie blokuje dostępności samochodu.</p>
+        <p class="description">Po zatwierdzeniu zamówienia, samochód zostanie ukryty z listy dostępnych aut.</p>
         <?php
     }
 
@@ -281,8 +280,23 @@ class Orders {
         }
 
         if (isset($_POST['status'])) {
+            $old_status = get_post_meta($post_id, '_status', true);
             $new_status = sanitize_text_field($_POST['status']);
+
             update_post_meta($post_id, '_status', $new_status);
+
+            $samochod_id = get_post_meta($post_id, '_offer_id', true);
+            if ($samochod_id) {
+                // Jeśli zamówienie zostało właśnie zatwierdzone – oznacz auto jako "zamówione"
+                if ($new_status === 'approved' && $old_status !== 'approved') {
+                    update_post_meta($samochod_id, '_order_approved', '1');
+                }
+
+                // Jeśli zamówienie przestało być zatwierdzone (np. zmiana na pending/rejected) – odblokuj auto
+                if ($old_status === 'approved' && $new_status !== 'approved') {
+                    update_post_meta($samochod_id, '_order_approved', '0');
+                }
+            }
         }
     }
 
@@ -323,7 +337,6 @@ class Orders {
                     'pending' => '<span style="color: orange;">⏳ Oczekujące</span>',
                     'approved' => '<span style="color: green;">✅ Zatwierdzone</span>',
                     'rejected' => '<span style="color: red;">❌ Odrzucone</span>',
-                    'completed' => '<span style="color: blue;">🎉 Zrealizowane</span>',
                 ];
                 echo $labels[$status] ?? $labels['pending'];
                 break;

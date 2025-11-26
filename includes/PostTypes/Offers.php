@@ -20,6 +20,13 @@ class Offers {
         add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
 
+        // Filtry w liście samochodów w panelu
+        add_action('restrict_manage_posts', [$this, 'add_admin_filters']);
+        add_filter('parse_query', [$this, 'apply_admin_filters']);
+
+        // Ukryj zbędne akcje w liście (szybka edycja, podgląd)
+        add_filter('post_row_actions', [$this, 'filter_row_actions'], 10, 2);
+
         add_action('wp_ajax_flexmile_generate_price_matrix', [$this, 'ajax_generate_price_matrix']);
         add_action('wp_ajax_flexmile_get_models', [$this, 'ajax_get_models']);
 
@@ -106,6 +113,161 @@ class Offers {
     }
 
     /**
+     * Usuwa zbędne akcje (Szybka edycja, Podgląd) z listy samochodów
+     */
+    public function filter_row_actions($actions, $post) {
+        if ($post->post_type !== self::POST_TYPE) {
+            return $actions;
+        }
+
+        // quick edit
+        if (isset($actions['inline hide-if-no-js'])) {
+            unset($actions['inline hide-if-no-js']);
+        }
+
+        // view
+        if (isset($actions['view'])) {
+            unset($actions['view']);
+        }
+
+        return $actions;
+    }
+
+    /**
+     * Dodaje dropdown z filtrami na liście samochodów w panelu
+     */
+    public function add_admin_filters() {
+        global $typenow;
+
+        if ($typenow !== self::POST_TYPE) {
+            return;
+        }
+
+        $current_filter = isset($_GET['car_availability']) ? sanitize_text_field($_GET['car_availability']) : '';
+        ?>
+        <select name="car_availability" id="car_availability" class="postform">
+            <option value=""><?php esc_html_e('— Dostępność —', 'flexmile'); ?></option>
+            <option value="available" <?php selected($current_filter, 'available'); ?>>Dostępne</option>
+            <option value="reserved" <?php selected($current_filter, 'reserved'); ?>>Zarezerwowane</option>
+            <option value="ordered" <?php selected($current_filter, 'ordered'); ?>>Zamówione</option>
+            <option value="coming_soon" <?php selected($current_filter, 'coming_soon'); ?>>Dostępne wkrótce</option>
+        </select>
+        <?php
+    }
+
+    /**
+     * Nakłada filtry z dropdownu na zapytanie w liście samochodów
+     */
+    public function apply_admin_filters($query) {
+        global $pagenow;
+
+        if (!is_admin() || $pagenow !== 'edit.php') {
+            return;
+        }
+
+        $post_type = isset($_GET['post_type']) ? sanitize_text_field($_GET['post_type']) : '';
+        if ($post_type !== self::POST_TYPE) {
+            return;
+        }
+
+        if (!$query->is_main_query()) {
+            return;
+        }
+
+        $availability = isset($_GET['car_availability']) ? sanitize_text_field($_GET['car_availability']) : '';
+        if (empty($availability)) {
+            return;
+        }
+
+        $meta_query = (array) $query->get('meta_query');
+        $meta_query[] = $this->get_meta_query_for_availability($availability);
+        $query->set('meta_query', $meta_query);
+    }
+
+    /**
+     * Zwraca meta_query dla wybranego filtra dostępności
+     */
+    private function get_meta_query_for_availability($availability) {
+        switch ($availability) {
+            case 'available':
+                // Dostępne = brak aktywnej rezerwacji i brak zatwierdzonego zamówienia
+                return [
+                    'relation' => 'AND',
+                    [
+                        'relation' => 'OR',
+                        [
+                            'key' => '_reservation_active',
+                            'compare' => 'NOT EXISTS',
+                        ],
+                        [
+                            'key' => '_reservation_active',
+                            'value' => '1',
+                            'compare' => '!=',
+                        ],
+                    ],
+                    [
+                        'relation' => 'OR',
+                        [
+                            'key' => '_order_approved',
+                            'compare' => 'NOT EXISTS',
+                        ],
+                        [
+                            'key' => '_order_approved',
+                            'value' => '1',
+                            'compare' => '!=',
+                        ],
+                    ],
+                ];
+
+            case 'reserved':
+                // Zarezerwowane = aktywna rezerwacja, brak zatwierdzonego zamówienia
+                return [
+                    'relation' => 'AND',
+                    [
+                        'key' => '_reservation_active',
+                        'value' => '1',
+                        'compare' => '=',
+                    ],
+                    [
+                        'relation' => 'OR',
+                        [
+                            'key' => '_order_approved',
+                            'compare' => 'NOT EXISTS',
+                        ],
+                        [
+                            'key' => '_order_approved',
+                            'value' => '1',
+                            'compare' => '!=',
+                        ],
+                    ],
+                ];
+
+            case 'ordered':
+                // Zamówione = zatwierdzone zamówienie
+                return [
+                    [
+                        'key' => '_order_approved',
+                        'value' => '1',
+                        'compare' => '=',
+                    ],
+                ];
+
+            case 'coming_soon':
+                // Dostępne wkrótce
+                return [
+                    [
+                        'key' => '_coming_soon',
+                        'value' => '1',
+                        'compare' => '=',
+                    ],
+                ];
+
+            default:
+                return [];
+        }
+    }
+
+    /**
      * Buduje znaczniki statusu na podstawie powiązanych rezerwacji i zamówień
      */
     private function build_status_badges($post_id) {
@@ -113,13 +275,13 @@ class Offers {
 
         $reserved_active = get_post_meta($post_id, '_reservation_active', true) === '1';
         if ($reserved_active) {
-            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#fee2e2;color:#b91c1c;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">🔒 Zarezerwowany</span>';
+            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#fee2e2;color:#b91c1c;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">Zarezerwowany</span>';
         } elseif ($this->has_entry_with_status($post_id, 'reservation', ['pending'])) {
-            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#fef3c7;color:#92400e;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">⏳ Rezerwacja oczekująca</span>';
+            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#fef3c7;color:#92400e;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">Rezerwacja oczekująca</span>';
         }
 
         if ($this->has_entry_with_status($post_id, 'order', ['pending', 'approved'])) {
-            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#dbeafe;color:#1d4ed8;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">🛒 Zamówienie</span>';
+            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#dbeafe;color:#1d4ed8;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">Zamówienie</span>';
         }
 
         return $badges;
@@ -166,17 +328,17 @@ class Offers {
      */
     public function register_post_type() {
         $labels = [
-            'name' => 'Samochody',
-            'singular_name' => 'Samochód',
-            'menu_name' => 'Samochody',
-            'add_new' => 'Dodaj nowy',
-            'add_new_item' => 'Dodaj nowy samochód',
-            'edit_item' => 'Edytuj samochód',
-            'new_item' => 'Nowy samochód',
-            'view_item' => 'Zobacz samochód',
-            'search_items' => 'Szukaj samochodów',
-            'not_found' => 'Nie znaleziono samochodów',
-            'all_items' => 'Wszystkie samochody',
+            'name' => 'Oferty',
+            'singular_name' => 'Oferta',
+            'menu_name' => 'Oferty',
+            'add_new' => 'Dodaj nową',
+            'add_new_item' => 'Dodaj nową ofertę',
+            'edit_item' => 'Edytuj ofertę',
+            'new_item' => 'Nowa oferta',
+            'view_item' => 'Zobacz ofertę',
+            'search_items' => 'Szukaj ofert',
+            'not_found' => 'Nie znaleziono ofert',
+            'all_items' => 'Wszystkie oferty',
         ];
 
         $args = [
@@ -405,11 +567,11 @@ class Offers {
             <input type="hidden" id="flexmile_gallery_ids" name="gallery" value="<?php echo esc_attr($gallery_ids); ?>">
 
             <button type="button" class="button button-primary" id="flexmile_add_gallery_images">
-                📷 Dodaj zdjęcia do galerii
+                Dodaj zdjęcia do galerii
             </button>
 
             <p class="description" style="margin-top: 10px;">
-                💡 Możesz dodać wiele zdjęć. Przeciągnij aby zmienić kolejność.
+                Możesz dodać wiele zdjęć. Przeciągnij aby zmienić kolejność.
             </p>
         </div>
 
@@ -496,16 +658,15 @@ class Offers {
         ?>
         <div class="flexmile-tabs">
             <ul class="flexmile-tab-nav">
-                <li><a href="#tab-podstawowe">📋 Podstawowe</a></li>
-                <li><a href="#tab-silnik">🔧 Silnik i napęd</a></li>
-                <li><a href="#tab-wyglad">🎨 Wygląd i wnętrze</a></li>
+                <li><a href="#tab-podstawowe">Podstawowe</a></li>
+                <li><a href="#tab-silnik">Silnik i napęd</a></li>
+                <li><a href="#tab-wyglad">Wygląd i wnętrze</a></li>
             </ul>
 
             <div id="tab-podstawowe" class="flexmile-tab-content">
                 <div class="flexmile-form-grid">
                     <div class="flexmile-field">
                         <label for="car_brand">
-                            <span class="flexmile-label-icon">🏷️</span>
                             <strong>Marka</strong>
                         </label>
                         <select id="car_brand" name="car_brand_slug" class="flexmile-input" required>
@@ -523,7 +684,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="car_model">
-                            <span class="flexmile-label-icon">🚗</span>
                             <strong>Model</strong>
                         </label>
                         <select id="car_model"
@@ -538,7 +698,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="body_type">
-                            <span class="flexmile-label-icon">🚙</span>
                             <strong>Typ nadwozia</strong>
                         </label>
                         <select id="body_type" name="body_type" class="flexmile-input">
@@ -553,7 +712,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="fuel_type">
-                            <span class="flexmile-label-icon">⛽</span>
                             <strong>Rodzaj paliwa</strong>
                         </label>
                         <select id="fuel_type" name="fuel_type" class="flexmile-input">
@@ -568,7 +726,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="year">
-                            <span class="flexmile-label-icon">📅</span>
                             <strong>Rocznik</strong>
                         </label>
                         <input type="number"
@@ -583,7 +740,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="seats">
-                            <span class="flexmile-label-icon">👥</span>
                             <strong>Liczba miejsc</strong>
                         </label>
                         <select id="seats" name="seats" class="flexmile-input">
@@ -598,7 +754,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="doors">
-                            <span class="flexmile-label-icon">🚪</span>
                             <strong>Liczba drzwi</strong>
                         </label>
                         <select id="doors" name="doors" class="flexmile-input">
@@ -628,7 +783,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="horsepower">
-                            <span class="flexmile-label-icon">💪</span>
                             <strong>Moc (KM)</strong>
                         </label>
                         <input type="number"
@@ -642,7 +796,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="engine_capacity">
-                            <span class="flexmile-label-icon">🔋</span>
                             <strong>Pojemność (cm³)</strong>
                         </label>
                         <input type="number"
@@ -656,7 +809,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="transmission">
-                            <span class="flexmile-label-icon">⚡</span>
                             <strong>Skrzynia biegów</strong>
                         </label>
                         <select id="transmission" name="transmission" class="flexmile-input">
@@ -668,7 +820,6 @@ class Offers {
 
                     <div class="flexmile-field">
                         <label for="drivetrain">
-                            <span class="flexmile-label-icon">🔄</span>
                             <strong>Napęd</strong>
                         </label>
                         <select id="drivetrain" name="drivetrain" class="flexmile-input">
@@ -686,7 +837,6 @@ class Offers {
                 <div class="flexmile-form-grid">
                     <div class="flexmile-field flexmile-field-full">
                         <label for="color">
-                            <span class="flexmile-label-icon">🎨</span>
                             <strong>Kolor lakieru</strong>
                         </label>
                         <input type="text"
@@ -711,14 +861,14 @@ class Offers {
         <div class="flexmile-wyposazenie">
             <div class="wyposazenie-wlasne">
                 <p style="margin-bottom: 15px; color: #64748b; font-size: 14px;">
-                    📝 Wpisz wyposażenie standardowe - każda pozycja w nowej linii
+                    Wpisz wyposażenie standardowe - każda pozycja w nowej linii
                 </p>
                 <textarea name="standard_equipment"
                           rows="10"
                           style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Courier New', monospace; line-height: 1.6;"
                           placeholder="ABS&#10;ESP&#10;Klimatyzacja automatyczna&#10;Nawigacja GPS&#10;Bluetooth&#10;Poduszki powietrzne&#10;Elektryczne szyby&#10;Światła LED"><?php echo esc_textarea($wyposazenie); ?></textarea>
                 <p class="description" style="margin-top: 10px;">
-                    💡 Każda nowa linia to jeden element wyposażenia
+                    Każda nowa linia to jeden element wyposażenia
                 </p>
             </div>
         </div>
@@ -734,14 +884,14 @@ class Offers {
         <div class="flexmile-wyposazenie">
             <div class="wyposazenie-wlasne">
                 <p style="margin-bottom: 15px; color: #64748b; font-size: 14px;">
-                    📝 Wpisz wyposażenie dodatkowe - każda pozycja w nowej linii
+                    Wpisz wyposażenie dodatkowe - każda pozycja w nowej linii
                 </p>
                 <textarea name="additional_equipment"
                           rows="10"
                           style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Courier New', monospace; line-height: 1.6;"
                           placeholder="Skórzana tapicerka&#10;Dach panoramiczny&#10;Kamera 360°&#10;Asystent parkowania&#10;Tempomat adaptacyjny&#10;System audio premium&#10;Felgi aluminiowe 19&#34;&#10;Hak holowniczy"><?php echo esc_textarea($wyposazenie); ?></textarea>
                 <p class="description" style="margin-top: 10px;">
-                    💡 Każda nowa linia to jeden element wyposażenia
+                    Każda nowa linia to jeden element wyposażenia
                 </p>
             </div>
         </div>
@@ -767,17 +917,9 @@ class Offers {
         $cena_najnizsza = get_post_meta($post->ID, '_lowest_price', true);
         ?>
         <div style="padding: 5px;">
-            <?php if ($cena_najnizsza): ?>
-            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; color: white;">
-                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">💰 NAJNIŻSZA CENA</div>
-                <div style="font-size: 28px; font-weight: bold;"><?php echo number_format($cena_najnizsza, 2, ',', ' '); ?> zł/mies.</div>
-                <div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Cena widoczna na liście</div>
-            </div>
-            <?php endif; ?>
-
             <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px;">
                 <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
-                    📅 Dostępne okresy wynajmu (miesiące)
+                    Dostępne okresy wynajmu (miesiące)
                 </label>
                 <input type="text"
                        id="flexmile_rental_periods"
@@ -791,7 +933,7 @@ class Offers {
 
             <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px;">
                 <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
-                    🛣️ Roczne limity kilometrów
+                    Roczne limity kilometrów
                 </label>
                 <input type="text"
                        id="flexmile_mileage_limits"
@@ -807,7 +949,7 @@ class Offers {
                     id="flexmile_generate_price_matrix"
                     class="button button-secondary"
                     style="width: 100%; padding: 10px; margin-bottom: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 600; cursor: pointer;">
-                🔄 Wygeneruj tabelę cen
+                Wygeneruj tabelę cen
             </button>
 
             <div id="flexmile_price_matrix" style="margin-top: 15px;">
@@ -823,7 +965,7 @@ class Offers {
                            value="1"
                            <?php checked($rezerwacja_aktywna, '1'); ?>
                            style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
-                    <span><strong>🔒 Samochód zarezerwowany</strong></span>
+                    <span><strong>Samochód zarezerwowany</strong></span>
                 </label>
             </p>
             <p class="description" style="margin-top: 8px;">
@@ -910,14 +1052,14 @@ class Offers {
                                 $min_key = $key;
                             }
                         ?>
-                        <td style="padding: 8px; border: 1px solid #e2e8f0; <?php echo ($key === $min_key && !empty($cena)) ? 'background: #d1fae5;' : ''; ?>">
+                        <td style="padding: 8px; border: 1px solid #e2e8f0;">
                             <input type="number"
                                    name="price_matrix[<?php echo esc_attr($key); ?>]"
                                    value="<?php echo esc_attr($cena); ?>"
                                    step="0.01"
                                    min="0"
                                    placeholder="0.00"
-                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: right; <?php echo ($key === $min_key && !empty($cena)) ? 'border-color: #10b981; font-weight: 600;' : ''; ?>">
+                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: right; font-weight: 600;">
                         </td>
                         <?php endforeach; ?>
                     </tr>
@@ -927,8 +1069,7 @@ class Offers {
 
             <?php if ($min_price < PHP_FLOAT_MAX): ?>
             <p style="margin-top: 10px; padding: 10px; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 4px; font-size: 13px;">
-                💚 <strong>Najniższa cena:</strong> <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
-                (podświetlona na zielono)
+                <strong>Najniższa cena która będzie widoczna na liście ofert:</strong> <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
             </p>
             <?php endif; ?>
         </div>
@@ -988,7 +1129,7 @@ class Offers {
         <div style="padding: 5px;">
             <div style="margin-bottom: 20px;">
                 <p style="margin-bottom: 12px; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-                    🏷️ Statusy samochodu
+                    Statusy samochodu
                 </p>
 
                 <p style="margin: 0 0 10px 0;">
@@ -997,7 +1138,7 @@ class Offers {
                            onmouseout="this.style.background='transparent'">
                         <input type="checkbox" name="new_car" value="1" <?php checked($nowy, '1'); ?>
                                style="margin-right: 10px; width: 18px; height: 18px; accent-color: #10b981;">
-                        <span style="font-size: 14px;">🆕 Nowy samochód</span>
+                        <span style="font-size: 14px;">Nowy samochód</span>
                     </label>
                 </p>
 
@@ -1007,7 +1148,7 @@ class Offers {
                            onmouseout="this.style.background='transparent'">
                         <input type="checkbox" name="available_immediately" value="1" <?php checked($od_reki, '1'); ?>
                                style="margin-right: 10px; width: 18px; height: 18px; accent-color: #10b981;">
-                        <span style="font-size: 14px;">⚡ Dostępny od ręki</span>
+                        <span style="font-size: 14px;">Dostępny od ręki</span>
                     </label>
                 </p>
 
@@ -1018,7 +1159,7 @@ class Offers {
                            for="<?php echo esc_attr($coming_soon_toggle_id); ?>">
                         <input type="checkbox" id="<?php echo esc_attr($coming_soon_toggle_id); ?>" name="coming_soon" value="1" <?php checked($wkrotce, '1'); ?>
                                style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
-                        <span style="font-size: 14px;">⏳ Dostępny wkrótce</span>
+                        <span style="font-size: 14px;">Dostępny wkrótce</span>
                     </label>
                 </p>
                 <div id="<?php echo esc_attr($coming_soon_wrapper_id); ?>"
@@ -1045,7 +1186,7 @@ class Offers {
                            onmouseout="this.style.background='transparent'">
                         <input type="checkbox" name="most_popular" value="1" <?php checked($najczesciej, '1'); ?>
                                style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
-                        <span style="font-size: 14px;">⭐ Najczęściej wybierany</span>
+                        <span style="font-size: 14px;">Najczęściej wybierany</span>
                     </label>
                 </p>
             </div>

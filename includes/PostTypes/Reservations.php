@@ -153,7 +153,7 @@ class Reservations {
             </tr>
             <tr style="background: #f0f9ff; border-top: 2px solid #0369a1; border-bottom: 2px solid #0369a1;">
                 <th colspan="2" style="padding: 12px; text-align: center; font-size: 16px; color: #0369a1;">
-                    💰 WYBRANA KONFIGURACJA
+                    WYBRANA KONFIGURACJA
                 </th>
             </tr>
             <tr>
@@ -168,7 +168,7 @@ class Reservations {
                 <th><strong>Cena miesięczna:</strong></th>
                 <td><strong style="color: #10b981; font-size: 15px;"><?php echo number_format($cena_miesieczna, 2, ',', ' '); ?> zł/mies.</strong></td>
             </tr>
-            <tr style="background: #d1fae5;">
+            <tr style="background: #d1fae5;display: none;">
                 <th><strong>Cena całkowita:</strong></th>
                 <td><strong style="color: #059669; font-size: 18px;"><?php echo number_format($cena_calkowita, 2, ',', ' '); ?> zł</strong></td>
             </tr>
@@ -196,10 +196,9 @@ class Reservations {
         <p>
             <label for="status"><strong>Status:</strong></label><br>
             <select id="status" name="status" class="widefat">
-                <option value="pending" <?php selected($status, 'pending'); ?>>⏳ Oczekująca</option>
-                <option value="approved" <?php selected($status, 'approved'); ?>>✅ Zatwierdzona</option>
-                <option value="rejected" <?php selected($status, 'rejected'); ?>>❌ Odrzucona</option>
-                <option value="completed" <?php selected($status, 'completed'); ?>>🎉 Zrealizowana</option>
+                <option value="pending" <?php selected($status, 'pending'); ?>>Oczekująca</option>
+                <option value="approved" <?php selected($status, 'approved'); ?>>Zatwierdzona</option>
+                <option value="rejected" <?php selected($status, 'rejected'); ?>>Odrzucona</option>
             </select>
         </p>
         <p class="description">Po zatwierdzeniu rezerwacji, samochód zostanie automatycznie oznaczony jako zarezerwowany.</p>
@@ -223,6 +222,12 @@ class Reservations {
                 }
                 echo '<strong>' . esc_html($samochod->post_title) . '</strong></a></p>';
 
+                // Pobierz id oferty
+                $car_reference_id = get_post_meta($samochod_id, '_car_reference_id', true);
+                if ($car_reference_id) {
+                    echo '<p>ID oferty: <b>' . esc_html($car_reference_id) . '</b></p>';
+                }
+
                 // Pobierz markę z meta pola
                 $brand_slug = get_post_meta($samochod_id, '_car_brand_slug', true);
                 if ($brand_slug) {
@@ -231,6 +236,7 @@ class Reservations {
                         echo '<p>Marka: ' . esc_html($config['brands'][$brand_slug]['name']) . '</p>';
                     }
                 }
+
 
                 // Pobierz model
                 $model = get_post_meta($samochod_id, '_car_model', true);
@@ -341,10 +347,9 @@ class Reservations {
             case 'status':
                 $status = get_post_meta($post_id, '_status', true);
                 $labels = [
-                    'pending' => '<span style="color: orange;">⏳ Oczekująca</span>',
-                    'approved' => '<span style="color: green;">✅ Zatwierdzona</span>',
-                    'rejected' => '<span style="color: red;">❌ Odrzucona</span>',
-                    'completed' => '<span style="color: blue;">🎉 Zrealizowana</span>',
+                    'pending' => '<span style="color: orange;">Oczekująca</span>',
+                    'approved' => '<span style="color: green;">Zatwierdzona</span>',
+                    'rejected' => '<span style="color: red;">Odrzucona</span>',
                 ];
                 echo $labels[$status] ?? $labels['pending'];
                 break;

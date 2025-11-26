@@ -98,6 +98,7 @@ class Offers_Endpoint {
         // FILTR: Tylko dostępne (nie zarezerwowane)
         // ========================================
         if (isset($params['available_only']) && $params['available_only'] === 'true') {
+            // Dostępne = brak aktywnej rezerwacji ORAZ brak zatwierdzonego zamówienia
             $args['meta_query'][] = [
                 'relation' => 'OR',
                 [
@@ -110,17 +111,44 @@ class Offers_Endpoint {
                     'compare' => '!=',
                 ],
             ];
+            $args['meta_query'][] = [
+                'relation' => 'OR',
+                [
+                    'key' => '_order_approved',
+                    'compare' => 'NOT EXISTS',
+                ],
+                [
+                    'key' => '_order_approved',
+                    'value' => '1',
+                    'compare' => '!=',
+                ],
+            ];
         }
         // Alternatywnie: pokaż tylko zarezerwowane
         elseif (isset($params['only_reserved']) && $params['only_reserved'] === 'true') {
+            // Zarezerwowane = aktywna rezerwacja, ale bez zatwierdzonego zamówienia
             $args['meta_query'][] = [
                 'key' => '_reservation_active',
                 'value' => '1',
                 'compare' => '=',
             ];
+            $args['meta_query'][] = [
+                'relation' => 'OR',
+                [
+                    'key' => '_order_approved',
+                    'compare' => 'NOT EXISTS',
+                ],
+                [
+                    'key' => '_order_approved',
+                    'value' => '1',
+                    'compare' => '!=',
+                ],
+            ];
         }
         // Domyślnie: ukryj zarezerwowane (chyba że show_reserved=true)
         elseif (!isset($params['show_reserved']) || $params['show_reserved'] !== 'true') {
+            // Domyślnie pokazuj tylko dostępne:
+            // brak aktywnej rezerwacji ORAZ brak zatwierdzonego zamówienia
             $args['meta_query'][] = [
                 'relation' => 'OR',
                 [
@@ -129,6 +157,18 @@ class Offers_Endpoint {
                 ],
                 [
                     'key' => '_reservation_active',
+                    'value' => '1',
+                    'compare' => '!=',
+                ],
+            ];
+            $args['meta_query'][] = [
+                'relation' => 'OR',
+                [
+                    'key' => '_order_approved',
+                    'compare' => 'NOT EXISTS',
+                ],
+                [
+                    'key' => '_order_approved',
                     'value' => '1',
                     'compare' => '!=',
                 ],
@@ -287,10 +327,23 @@ class Offers_Endpoint {
             'orderby' => 'date',
             'order' => 'DESC',
             'meta_query' => [
+                'relation' => 'AND',
                 [
                     'key' => '_reservation_active',
                     'value' => '1',
                     'compare' => '=',
+                ],
+                [
+                    'relation' => 'OR',
+                    [
+                        'key' => '_order_approved',
+                        'compare' => 'NOT EXISTS',
+                    ],
+                    [
+                        'key' => '_order_approved',
+                        'value' => '1',
+                        'compare' => '!=',
+                    ],
                 ],
             ],
         ];
@@ -442,7 +495,10 @@ class Offers_Endpoint {
         $coming_soon_date = get_post_meta($post->ID, '_coming_soon_date', true);
         $data['coming_soon_date'] = !empty($coming_soon_date) ? $coming_soon_date : null;
 
-        $data['available'] = get_post_meta($post->ID, '_reservation_active', true) !== '1';
+        // Dostępność = brak aktywnej rezerwacji i brak zatwierdzonego zamówienia
+        $reservation_active = get_post_meta($post->ID, '_reservation_active', true) === '1';
+        $order_approved = get_post_meta($post->ID, '_order_approved', true) === '1';
+        $data['available'] = !$reservation_active && !$order_approved;
 
         return $data;
     }
@@ -546,7 +602,10 @@ class Offers_Endpoint {
         $coming_soon_date = get_post_meta($post->ID, '_coming_soon_date', true);
         $data['coming_soon_date'] = !empty($coming_soon_date) ? $coming_soon_date : null;
 
-        $data['available'] = get_post_meta($post->ID, '_reservation_active', true) !== '1';
+        // Dostępność = brak aktywnej rezerwacji i brak zatwierdzonego zamówienia
+        $reservation_active = get_post_meta($post->ID, '_reservation_active', true) === '1';
+        $order_approved = get_post_meta($post->ID, '_order_approved', true) === '1';
+        $data['available'] = !$reservation_active && !$order_approved;
 
         return $data;
     }

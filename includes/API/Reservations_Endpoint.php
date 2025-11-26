@@ -77,6 +77,27 @@ class Reservations_Endpoint {
             return new \WP_Error('invalid_car', 'Nieprawidłowy ID samochodu', ['status' => 400]);
         }
 
+        // Logika dostępności w zależności od coming_soon:
+        // - coming_soon === true  => tylko rezerwacja (reservation), blokada zamówienia (order)
+        // - coming_soon === false => tylko zamówienie (order), blokada rezerwacji (reservation)
+        $coming_soon = get_post_meta($samochod_id, '_coming_soon', true) === '1';
+
+        if ($coming_soon && $entry_type === 'order') {
+            return new \WP_Error(
+                'order_not_allowed_for_coming_soon',
+                'Dla samochodów z kategorią "coming soon" można złożyć tylko rezerwację.',
+                ['status' => 400]
+            );
+        }
+
+        if (!$coming_soon && $entry_type === 'reservation') {
+            return new \WP_Error(
+                'reservation_not_allowed_for_available_now',
+                'Dla samochodów dostępnych od ręki można złożyć tylko zamówienie.',
+                ['status' => 400]
+            );
+        }
+
         $rezerwacja_aktywna = get_post_meta($samochod_id, '_reservation_active', true);
         if ($entry_config['should_lock_vehicle'] && $rezerwacja_aktywna === '1') {
             return new \WP_Error('car_reserved', 'Ten samochód jest już zarezerwowany', ['status' => 400]);
