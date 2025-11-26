@@ -456,7 +456,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_pricing',
-            '💰 Konfiguracja cen',
+            'Konfiguracja cen',
             [$this, 'render_pricing_meta_box'],
             self::POST_TYPE,
             'side',
@@ -481,23 +481,28 @@ class Offers {
 
         if (empty($ref_id)) {
             ?>
-            <div style="padding: 15px; text-align: center; background: #f8fafc; border-radius: 8px;">
-                <p style="margin: 0; color: #64748b; font-size: 13px;">
+            <div style="padding: 14px 16px; text-align: center; background: #f9fafb; border-radius: 10px; border: 1px dashed #e5e7eb;">
+                <p style="margin: 0; color: #6b7280; font-size: 13px;">
                     ID oferty zostanie wygenerowane<br>automatycznie po opublikowaniu oferty.
                 </p>
             </div>
             <?php
         } else {
             ?>
-            <div style="padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; text-align: center;">
-                <div style="font-size: 11px; color: rgba(255,255,255,0.8); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">
-                    ID Oferty
+            <div style="padding: 14px 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: #ffffff;">
+                <div style="font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;">
+                    ID oferty
                 </div>
-                <div style="font-size: 24px; font-weight: bold; color: white; font-family: monospace; letter-spacing: 2px;">
-                    <?php echo esc_html($ref_id); ?>
+                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #f3e8ff;">
+                    <span style="font-size: 11px; text-transform: uppercase; color: #581c87; letter-spacing: 0.12em; font-weight: 600;">
+                        REF
+                    </span>
+                    <span style="font-size: 18px; font-weight: 700; color: #111827; font-family: monospace; letter-spacing: 0.18em;">
+                        <?php echo esc_html($ref_id); ?>
+                    </span>
                 </div>
-                <div style="margin-top: 10px; font-size: 11px; color: rgba(255,255,255,0.7);">
-                    To ID jest unikalne i nie może być zmienione
+                <div style="margin-top: 8px; font-size: 11px; color: #9ca3af;">
+                    To ID jest stałe i służy do powiązań w systemie.
                 </div>
             </div>
             <?php
@@ -769,7 +774,7 @@ class Offers {
                 <div class="flexmile-form-grid">
                     <div class="flexmile-field flexmile-field-full">
                         <label for="engine">
-                            <span class="flexmile-label-icon">⚙️</span>
+
                             <strong>Oznaczenie silnika</strong>
                         </label>
                         <input type="text"
@@ -917,8 +922,8 @@ class Offers {
         $cena_najnizsza = get_post_meta($post->ID, '_lowest_price', true);
         ?>
         <div style="padding: 5px;">
-            <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px;">
-                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
+            <div style="margin-bottom: 16px; background: #f9fafb; padding: 14px 12px; border-radius: 10px; border: 1px solid #e5e7eb;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827; font-size: 13px;">
                     Dostępne okresy wynajmu (miesiące)
                 </label>
                 <input type="text"
@@ -926,13 +931,13 @@ class Offers {
                        name="rental_periods"
                        value="<?php echo esc_attr(implode(',', $config['rental_periods'])); ?>"
                        class="widefat"
-                       style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;"
+                       style="padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;"
                        placeholder="np. 12,24,36,48">
-                <p class="description" style="margin-top: 5px;">Oddziel przecinkami, np: 12,24,36,48</p>
+                <p class="description" style="margin-top: 4px;">Oddziel przecinkami, np: 12,24,36,48</p>
             </div>
 
-            <div style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px;">
-                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
+            <div style="margin-bottom: 16px; background: #f9fafb; padding: 14px 12px; border-radius: 10px; border: 1px solid #e5e7eb;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827; font-size: 13px;">
                     Roczne limity kilometrów
                 </label>
                 <input type="text"
@@ -940,15 +945,15 @@ class Offers {
                        name="mileage_limits"
                        value="<?php echo esc_attr(implode(',', $config['mileage_limits'])); ?>"
                        class="widefat"
-                       style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px;"
+                       style="padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;"
                        placeholder="np. 10000,15000,20000">
-                <p class="description" style="margin-top: 5px;">Oddziel przecinkami, np: 10000,15000,20000</p>
+                <p class="description" style="margin-top: 4px;">Oddziel przecinkami, np: 10000,15000,20000</p>
             </div>
 
             <button type="button"
                     id="flexmile_generate_price_matrix"
-                    class="button button-secondary"
-                    style="width: 100%; padding: 10px; margin-bottom: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-weight: 600; cursor: pointer;">
+                    class="button flexmile-btn-primary"
+                    style="width: 100%; padding: 10px 14px; margin-bottom: 14px; justify-content: center;">
                 Wygeneruj tabelę cen
             </button>
 
@@ -956,9 +961,9 @@ class Offers {
                 <?php $this->render_price_matrix($config); ?>
             </div>
 
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 18px 0;">
 
-            <p style="background: #fef3c7; padding: 12px; border-radius: 6px; border-left: 4px solid #f59e0b;">
+            <p style="background: #f9fafb; padding: 10px 12px; border-radius: 10px; border-left: 4px solid #f59e0b;">
                 <label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
                     <input type="checkbox"
                            name="reservation_active"
@@ -1013,20 +1018,20 @@ class Offers {
      */
     private function render_price_matrix($config) {
         if (empty($config['rental_periods']) || empty($config['mileage_limits'])) {
-            echo '<p style="text-align: center; color: #64748b; padding: 20px;">Uzupełnij okresy i limity, a następnie kliknij "Wygeneruj tabelę cen"</p>';
+            echo '<p style="text-align: center; color: #6b7280; padding: 16px;">Uzupełnij okresy i limity, a następnie kliknij „Wygeneruj tabelę cen”.</p>';
             return;
         }
 
         ?>
         <div style="overflow-x: auto;">
-            <table class="widefat" style="border-collapse: collapse; width: 100%; background: white;">
+            <table class="widefat" style="border-collapse: collapse; width: 100%; background: #ffffff; border-radius: 8px; overflow: hidden;">
                 <thead>
-                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <th style="padding: 12px; text-align: left; color: white; font-weight: 600; border: 1px solid rgba(255,255,255,0.2);">
+                    <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                        <th style="padding: 10px 12px; text-align: left; color: #111827; font-weight: 600; font-size: 13px; border-right: 1px solid #e5e7eb;">
                             Okres / Limit km
                         </th>
                         <?php foreach ($config['mileage_limits'] as $limit): ?>
-                        <th style="padding: 12px; text-align: center; color: white; font-weight: 600; border: 1px solid rgba(255,255,255,0.2);">
+                        <th style="padding: 10px 12px; text-align: center; color: #111827; font-weight: 600; font-size: 13px; border-right: 1px solid #e5e7eb;">
                             <?php echo number_format($limit, 0, '', ' '); ?> km/rok
                         </th>
                         <?php endforeach; ?>
@@ -1040,7 +1045,7 @@ class Offers {
                     foreach ($config['rental_periods'] as $okres):
                     ?>
                     <tr>
-                        <td style="padding: 12px; font-weight: 600; background: #f8fafc; border: 1px solid #e2e8f0;">
+                        <td style="padding: 10px 12px; font-weight: 600; background: #f9fafb; border: 1px solid #e5e7eb; font-size: 13px; color: #374151;">
                             <?php echo $okres; ?> miesięcy
                         </td>
                         <?php foreach ($config['mileage_limits'] as $limit):
@@ -1052,14 +1057,14 @@ class Offers {
                                 $min_key = $key;
                             }
                         ?>
-                        <td style="padding: 8px; border: 1px solid #e2e8f0;">
+                        <td style="padding: 8px; border: 1px solid #e5e7eb;">
                             <input type="number"
                                    name="price_matrix[<?php echo esc_attr($key); ?>]"
                                    value="<?php echo esc_attr($cena); ?>"
                                    step="0.01"
                                    min="0"
                                    placeholder="0.00"
-                                   style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; text-align: right; font-weight: 600;">
+                                   style="width: 100%; padding: 7px 8px; border: 1px solid #d1d5db; border-radius: 6px; text-align: right; font-weight: 600; font-size: 13px;">
                         </td>
                         <?php endforeach; ?>
                     </tr>
@@ -1068,8 +1073,9 @@ class Offers {
             </table>
 
             <?php if ($min_price < PHP_FLOAT_MAX): ?>
-            <p style="margin-top: 10px; padding: 10px; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 4px; font-size: 13px;">
-                <strong>Najniższa cena która będzie widoczna na liście ofert:</strong> <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
+            <p style="margin-top: 10px; padding: 9px 10px; background: #ecfdf3; border-left: 3px solid #22c55e; border-radius: 8px; font-size: 12px; color: #166534;">
+                <strong>Najniższa cena (widoczna na liście ofert):</strong>
+                <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
             </p>
             <?php endif; ?>
         </div>

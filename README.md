@@ -1,52 +1,6 @@
-# FlexMile - Wtyczka WordPress do Zarządzania Komisem Online
+# FlexMile
 
-Wtyczka do headless WordPressa dla systemu komisu samochodowego FlexMile z API dla aplikacji Angular.
-
-## 🚀 Instalacja
-
-1. Wypakuj folder `flexmile` do `/wp-content/plugins/`
-2. Aktywuj wtyczkę w panelu WordPress
-3. Wtyczka automatycznie:
-    - Zablokuje frontend WordPressa (headless mode)
-    - Zarejestruje CPT i taksonomie
-    - Udostępni REST API endpointy
-4. **NOWOŚĆ!** Przejdź do FlexMile Dashboard i kliknij "Importuj przykładowe dane" aby szybko rozpocząć
-
-## 📋 Funkcjonalności
-
-### ✅ Już zrobione:
-
-- **Blokada frontendu** - WordPress działa tylko jako headless CMS
-- **CPT Oferty** z polami:
-    - Rocznik, moc, pojemność silnika
-    - Skrzynia biegów, kolor, liczba miejsc
-    - Macierz cen (cena miesięczna zależna od okresu wynajmu i limitu km)
-    - Status rezerwacji
-- **CPT Rezerwacje** z:
-    - Danymi klienta
-    - Parametrami wynajmu (miesiące + roczny limit km)
-    - Statusami (pending/approved/rejected/completed)
-    - Automatycznym oznaczaniem samochodów jako zarezerwowane
-- **Taksonomie**: Marka, Typ nadwozia, Rodzaj paliwa
-- **REST API** z filtrowaniem i infinite scroll
-- **System maili** (do admina i klienta po rezerwacji)
-- **Dashboard administracyjny** ze statystykami
-- **Import przykładowych danych** - jednym kliknięciem dodajesz 136 marek, 10 typów nadwozia, 7 rodzajów paliwa i 3 przykładowe samochody
-
-## 📦 Import przykładowych danych
-
-Po aktywacji wtyczki w **FlexMile Dashboard** zobaczysz przycisk **"Importuj przykładowe dane"**.
-
-Jeden klik doda:
-- ✅ **136 marek** samochodów (BMW, Audi, Toyota, Mercedes-Benz, Volkswagen...)
-- ✅ **10 typów nadwozia** (SUV, Sedan, Kombi, Hatchback, Coupe...)
-- ✅ **7 rodzajów paliwa** (Benzyna, Diesel, Hybryda, Elektryczny...)
-- ✅ **3 przykładowe samochody** z pełnymi danymi:
-    - BMW X5 3.0d xDrive (2022, SUV, Diesel)
-    - Toyota Corolla 1.8 Hybrid (2023, Sedan, Hybryda)
-    - Volkswagen Golf 1.5 TSI (2021, Hatchback, Benzyna)
-
-Import nie nadpisuje istniejących danych - możesz go uruchomić bezpiecznie w każdej chwili!
+Wtyczka do headless WordPressa dla systemu FlexMile z API dla aplikacji Angular.
 
 ## 🔌 REST API Endpoints
 
@@ -320,43 +274,6 @@ flexmile/
 └── README.md
 ```
 
-## 🚦 Następne kroki
-
-### Frontend (Angular):
-1. Stwórz serwis do komunikacji z API
-2. Lista ofert z infinite scroll
-3. Filtry (marka, rocznik, cena)
-4. Kalkulator ceny (na podstawie miesięcy i limitu km)
-5. Formularz rezerwacji
-
-### Backend (opcjonalnie):
-- [ ] Galeria zdjęć dla samochodów
-- [ ] Więcej statusów rezerwacji
-- [ ] Export rezerwacji do CSV
-- [ ] Powiadomienia email przy zmianie statusu
-- [ ] Historia rezerwacji dla samochodu
-
-## 📞 Support
-
-W razie problemów sprawdź:
-1. Czy wtyczka jest aktywowana
-2. Czy permalinki są zapisane (Ustawienia → Permalinki → Zapisz)
-3. Czy CORS jest poprawnie skonfigurowany
-4. Czy endpointy działają (sprawdź w przeglądarce)
-
-## 🔐 Bezpieczeństwo
-
-- API jest publiczne dla GET (oferty)
-- POST (rezerwacje) ma walidację danych
-- Lista rezerwacji wymaga uprawnień admina
-- Frontend całkowicie zablokowany
-- Wszystkie dane są sanityzowane
-
-## 📝 Licencja
-
-MIT License - użyj jak chcesz!
-
----
 
 **Autor:** FlexMile Team  
 **Wersja:** 2.0.0  
