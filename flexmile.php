@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: FlexMile - Car Rental Management
+ * Plugin Name: FlexMile
  * Plugin URI: https://flexmile.pl
- * Description: Online car rental management system with API for headless WordPress
- * Version: 2.0.0
+ * Description: Headless WordPress API for FlexMile
+ * Version: 1.0.0
  * Author: FlexMile Team
  * Text Domain: flexmile
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constants
-define('FLEXMILE_VERSION', '2.0.0');
+define('FLEXMILE_VERSION', '1.0.0');
 define('FLEXMILE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('FLEXMILE_PLUGIN_URL', plugin_dir_url(__FILE__));
 
