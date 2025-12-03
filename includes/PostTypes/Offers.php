@@ -19,10 +19,16 @@ class Offers {
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+        add_action('post_submitbox_misc_actions', [$this, 'add_duplicate_button']);
+        add_action('admin_action_flexmile_duplicate_offer', [$this, 'handle_duplicate_offer']);
 
         // Filtry w liście samochodów w panelu
         add_action('restrict_manage_posts', [$this, 'add_admin_filters']);
         add_filter('parse_query', [$this, 'apply_admin_filters']);
+        
+        // Rozszerz wyszukiwanie o ca_reference_id
+        add_filter('posts_join', [$this, 'extend_search_join'], 10, 2);
+        add_filter('posts_where', [$this, 'extend_search_where'], 10, 2);
 
         // Ukryj zbędne akcje w liście (szybka edycja, podgląd)
         add_filter('post_row_actions', [$this, 'filter_row_actions'], 10, 2);
@@ -60,6 +66,103 @@ class Offers {
     }
 
     /**
+     * Dodaje przycisk "Powiel ofertę" w boksie publikacji
+     */
+    public function add_duplicate_button() {
+        global $post, $typenow;
+
+        if (!is_admin()) {
+            return;
+        }
+
+        if ($typenow !== self::POST_TYPE || !$post instanceof \WP_Post) {
+            return;
+        }
+
+        if (empty($post->ID) || $post->post_status === 'auto-draft') {
+            return;
+        }
+
+        $url = wp_nonce_url(
+            admin_url('admin.php?action=flexmile_duplicate_offer&post=' . absint($post->ID)),
+            'flexmile_duplicate_offer_' . absint($post->ID)
+        );
+        ?>
+        <div class="misc-pub-section">
+            <a href="<?php echo esc_url($url); ?>" class="button button-secondary">
+                Powiel ofertę
+            </a>
+        </div>
+        <?php
+    }
+
+    /**
+     * Obsługuje duplikowanie oferty z nowym reference ID
+     */
+    public function handle_duplicate_offer() {
+        if (!is_admin()) {
+            wp_die(__('Nieprawidłowe żądanie.', 'flexmile'));
+        }
+
+        if (!current_user_can('edit_posts')) {
+            wp_die(__('Brak uprawnień.', 'flexmile'));
+        }
+
+        $post_id = isset($_GET['post']) ? absint($_GET['post']) : 0;
+
+        if (!$post_id) {
+            wp_die(__('Nieprawidłowe ID oferty.', 'flexmile'));
+        }
+
+        check_admin_referer('flexmile_duplicate_offer_' . $post_id);
+
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== self::POST_TYPE) {
+            wp_die(__('Nie znaleziono oferty.', 'flexmile'));
+        }
+
+        $new_post_data = [
+            'post_type'    => self::POST_TYPE,
+            'post_title'   => $post->post_title,
+            'post_content' => $post->post_content,
+            'post_excerpt' => $post->post_excerpt,
+            'post_status'  => 'draft',
+            'post_author'  => get_current_user_id(),
+        ];
+
+        $new_post_id = wp_insert_post($new_post_data);
+
+        if (is_wp_error($new_post_id) || !$new_post_id) {
+            wp_die(__('Nie udało się powielić oferty.', 'flexmile'));
+        }
+
+        // Skopiuj wszystkie meta dane poza tymi, które muszą być zresetowane
+        $meta = get_post_meta($post_id);
+        if (!empty($meta) && is_array($meta)) {
+            foreach ($meta as $key => $values) {
+                // Nie kopiujemy ID referencyjnego ani pól statusu rezerwacji/zamówienia
+                if (in_array($key, ['_car_reference_id', '_reservation_active', '_order_approved'], true)) {
+                    continue;
+                }
+
+                foreach ($values as $value) {
+                    add_post_meta($new_post_id, $key, maybe_unserialize($value));
+                }
+            }
+        }
+
+        // Upewnij się, że nowa oferta nie jest oznaczona jako zarezerwowana / zamówiona
+        update_post_meta($new_post_id, '_reservation_active', '0');
+        delete_post_meta($new_post_id, '_order_approved');
+
+        // Przekieruj do edycji nowej oferty
+        wp_safe_redirect(
+            admin_url('post.php?action=edit&post=' . $new_post_id)
+        );
+        exit;
+    }
+
+    /**
      * Pobiera następny dostępny reference ID
      */
     private function get_next_reference_id() {
@@ -81,7 +184,7 @@ class Offers {
         foreach ($columns as $key => $value) {
             $new_columns[$key] = $value;
             if ($key === 'title') {
-                $new_columns['car_reference_id'] = '🔖 ID';
+                $new_columns['car_reference_id'] = 'ID oferty';
                 $new_columns['car_status'] = 'Status';
             }
         }
@@ -182,6 +285,62 @@ class Offers {
         $meta_query = (array) $query->get('meta_query');
         $meta_query[] = $this->get_meta_query_for_availability($availability);
         $query->set('meta_query', $meta_query);
+    }
+
+    /**
+     * Rozszerza wyszukiwanie o meta pole _car_reference_id
+     */
+    public function extend_search_join($join, $query) {
+        global $wpdb;
+
+        if (!is_admin() || !$query->is_main_query()) {
+            return $join;
+        }
+
+        $post_type = isset($_GET['post_type']) ? sanitize_text_field($_GET['post_type']) : '';
+        if ($post_type !== self::POST_TYPE) {
+            return $join;
+        }
+
+        $search_term = $query->get('s');
+        if (empty($search_term)) {
+            return $join;
+        }
+
+        // Dołącz tabelę postmeta dla _car_reference_id
+        $join .= " LEFT JOIN {$wpdb->postmeta} AS pm_ref_id ON ({$wpdb->posts}.ID = pm_ref_id.post_id AND pm_ref_id.meta_key = '_car_reference_id')";
+
+        return $join;
+    }
+
+    /**
+     * Rozszerza warunek WHERE o wyszukiwanie w _car_reference_id
+     */
+    public function extend_search_where($where, $query) {
+        global $wpdb;
+
+        if (!is_admin() || !$query->is_main_query()) {
+            return $where;
+        }
+
+        $post_type = isset($_GET['post_type']) ? sanitize_text_field($_GET['post_type']) : '';
+        if ($post_type !== self::POST_TYPE) {
+            return $where;
+        }
+
+        $search_term = $query->get('s');
+        if (empty($search_term)) {
+            return $where;
+        }
+
+        // Dodaj warunek wyszukiwania w meta polu _car_reference_id
+        $search_term_like = '%' . $wpdb->esc_like($search_term) . '%';
+        $where .= $wpdb->prepare(
+            " OR (pm_ref_id.meta_value LIKE %s)",
+            $search_term_like
+        );
+
+        return $where;
     }
 
     /**
@@ -410,6 +569,15 @@ class Offers {
      */
     public function add_meta_boxes() {
         add_meta_box(
+            'flexmile_offer_actions',
+            'Akcje oferty',
+            [$this, 'render_offer_actions_meta_box'],
+            self::POST_TYPE,
+            'side',
+            'high'
+        );
+
+        add_meta_box(
             'flexmile_car_reference',
             'ID oferty',
             [$this, 'render_reference_id_meta_box'],
@@ -471,6 +639,42 @@ class Offers {
             'side',
             'default'
         );
+    }
+
+    /**
+     * Renderuje metabox z akcjami oferty (w tym przycisk "Powiel ofertę")
+     */
+    public function render_offer_actions_meta_box($post) {
+        if (!$post instanceof \WP_Post || $post->post_type !== self::POST_TYPE) {
+            return;
+        }
+
+        if (empty($post->ID) || $post->post_status === 'auto-draft') {
+            ?>
+            <p style="margin: 0; font-size: 13px; color: #6b7280;">
+                Zapisz szkic, aby móc powielić ofertę.
+            </p>
+            <?php
+            return;
+        }
+
+        $url = wp_nonce_url(
+            admin_url('admin.php?action=flexmile_duplicate_offer&post=' . absint($post->ID)),
+            'flexmile_duplicate_offer_' . absint($post->ID)
+        );
+        ?>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <a href="<?php echo esc_url($url); ?>"
+               class="button button-primary"
+               style="width: 100%; text-align: center;">
+                Powiel ofertę
+            </a>
+            <p class="description" style="margin: 0; font-size: 12px; color: #6b7280;">
+                Utworzy nową ofertę jako szkic z tymi samymi danymi,
+                ale z <strong>nowym ID oferty</strong>.
+            </p>
+        </div>
+        <?php
     }
 
     /**
