@@ -567,7 +567,12 @@ class Offers {
     /**
      * Dodaje meta boxy
      */
-    public function add_meta_boxes() {
+    public function add_meta_boxes($post_type) {
+        // Upewnij się, że dodajemy meta boxy tylko dla typu 'offer'
+        if ($post_type !== self::POST_TYPE) {
+            return;
+        }
+
         add_meta_box(
             'flexmile_offer_actions',
             'Akcje oferty',
