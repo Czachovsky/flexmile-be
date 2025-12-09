@@ -102,53 +102,43 @@ class Contact_Endpoint {
 
         $subject = sprintf('[%s] Nowe zapytanie kontaktowe', $site_name);
 
-        $message = "Nowe zapytanie kontaktowe w systemie FlexMile!\n\n";
-        $message .= "=== DANE KONTAKTOWE ===\n";
-        $message .= sprintf("Imię: %s\n", sanitize_text_field($params['first_name']));
-        $message .= sprintf("Nazwisko: %s\n", sanitize_text_field($params['last_name']));
-        $message .= sprintf("Email: %s\n", sanitize_email($params['email']));
-        $message .= sprintf("Telefon: %s\n\n", sanitize_text_field($params['phone']));
+        $message = $this->load_email_template('admin-contact', [
+            'params' => $params,
+        ]);
 
-        // Budżet (opcjonalnie)
-        if (!empty($params['monthly_budget_from']) || !empty($params['monthly_budget_to'])) {
-            $message .= "=== BUDŻET ===\n";
-
-            if (!empty($params['monthly_budget_from']) && !empty($params['monthly_budget_to'])) {
-                $message .= sprintf(
-                    "Przedział: %.2f - %.2f zł/mies.\n\n",
-                    floatval($params['monthly_budget_from']),
-                    floatval($params['monthly_budget_to'])
-                );
-            } elseif (!empty($params['monthly_budget_from'])) {
-                $message .= sprintf("Od: %.2f zł/mies.\n\n", floatval($params['monthly_budget_from']));
-            } else {
-                $message .= sprintf("Do: %.2f zł/mies.\n\n", floatval($params['monthly_budget_to']));
-            }
-        }
-
-        // Wiadomość (opcjonalnie)
-        if (!empty($params['message'])) {
-            $message .= "=== WIADOMOŚĆ ===\n";
-            $message .= sanitize_textarea_field($params['message']) . "\n\n";
-        }
-
-        // Zgody
-        $message .= "=== ZGODY ===\n";
-        $message .= sprintf(
-            "Zgoda na kontakt email: %s\n",
-            $params['consent_email'] ? 'TAK' : 'NIE'
-        );
-        $message .= sprintf(
-            "Zgoda na kontakt telefoniczny: %s\n\n",
-            !empty($params['consent_phone']) ? 'TAK' : 'NIE'
-        );
-
-        $message .= "---\n";
-        $message .= sprintf("Data wysłania: %s\n", date('Y-m-d H:i:s'));
-
-        $headers = ['Content-Type: text/plain; charset=UTF-8'];
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+        ];
 
         return wp_mail($admin_email, $subject, $message, $headers);
+    }
+
+    /**
+     * Ładuje szablon e-maila z pliku
+     * 
+     * @param string $template_name Nazwa szablonu (bez rozszerzenia .php)
+     * @param array $vars Zmienne dostępne w szablonie
+     * @return string Zawartość szablonu
+     */
+    private function load_email_template($template_name, $vars = []) {
+        $template_path = FLEXMILE_PLUGIN_DIR . 'templates/emails/' . $template_name . '.php';
+        
+        if (!file_exists($template_path)) {
+            // Fallback: zwróć podstawowy komunikat błędu
+            return sprintf(
+                'Szablon e-maila "%s" nie został znaleziony. Sprawdź plik: %s',
+                $template_name,
+                $template_path
+            );
+        }
+
+        // Wyodrębnij zmienne do osobnych zmiennych dla łatwego użycia w szablonie
+        extract($vars, EXTR_SKIP);
+
+        // Przechwyć output szablonu
+        ob_start();
+        include $template_path;
+        return ob_get_clean();
     }
 
     /**
