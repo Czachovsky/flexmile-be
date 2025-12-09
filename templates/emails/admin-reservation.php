@@ -97,7 +97,7 @@ $admin_car_link = admin_url('post.php?post=' . $samochod->ID . '&action=edit');
                     <span style="color:#863087;">flex</span><span style="color:#C1D342;">mile</span>
                   </td>
                   <td align="right" style="font-size: 14px;color:#333; font-weight:bold;">
-                    ID: #<?php echo esc_html($rezerwacja_id); ?>
+                    ID: <?php echo esc_html($car_reference_display); ?>
                   </td>
                 </tr>
               </tbody></table>

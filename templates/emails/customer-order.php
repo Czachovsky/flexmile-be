@@ -59,7 +59,7 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
   <title></title>
 </head>
 
-<body style="margin:0; padding:0; background:#f4f4f4; font-family:Arial, sans-serif;">
+<body style="margin:0; padding:0; background:#e0e0e0; font-family:Arial, sans-serif;">
 
   <!-- WRAPPER -->
   <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4" style="padding:20px 0;">

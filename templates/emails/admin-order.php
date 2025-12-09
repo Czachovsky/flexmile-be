@@ -22,148 +22,263 @@ $pickup_labels = [
     'home_delivery' => 'Dostawa pod wskazany adres',
 ];
 $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
+
+// Pobierz car_reference_id
+$car_reference_id = get_post_meta($samochod->ID, '_car_reference_id', true);
+$car_reference_display = $car_reference_id ?: sprintf('ID-%d', $samochod->ID);
+
+// Formatowanie cen
+$formatted_monthly_price = number_format($cena_miesieczna, 2, ',', ' ');
+$formatted_total_price = number_format($cena_calkowita, 2, ',', ' ');
+
+// Data i informacje techniczne
+$current_date = date_i18n('d.m.Y H:i', current_time('timestamp'));
+$user_ip = !empty($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : '—';
+$source_url = !empty($_SERVER['HTTP_REFERER']) ? esc_url_raw($_SERVER['HTTP_REFERER']) : '';
+
+// Linki do panelu admina
+$admin_order_link = admin_url('post.php?post=' . $rezerwacja_id . '&action=edit');
+$admin_car_link = admin_url('post.php?post=' . $samochod->ID . '&action=edit');
 ?>
-<!DOCTYPE html>
-<html lang="pl">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nowe zamówienie - FlexMile</title>
+    <meta charset="UTF-8">
 </head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
-        <tr>
-            <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <tr>
-                        <td style="background-color: #0f172a; padding: 30px; text-align: center;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px;">FlexMile</h1>
-                            <p style="margin: 10px 0 0 0; color: #cbd5f5; font-size: 16px;">Nowe zamówienie w systemie</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 30px;">
-                            <h2 style="color: #0f172a; margin-top: 0; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px;">Szczegóły zamówienia</h2>
-                            <table width="100%" cellpadding="8" cellspacing="0">
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold; width: 40%;">Numer zamówienia:</td>
-                                    <td style="color: #0f172a;"><strong>#<?php echo esc_html($rezerwacja_id); ?></strong></td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Data:</td>
-                                    <td style="color: #0f172a;"><?php echo esc_html(date('Y-m-d H:i:s')); ?></td>
-                                </tr>
-                            </table>
-
-                            <h2 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px;">Samochód</h2>
-                            <table width="100%" cellpadding="8" cellspacing="0">
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold; width: 40%;">Nazwa:</td>
-                                    <td style="color: #0f172a;"><?php echo esc_html($samochod->post_title); ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Link:</td>
-                                    <td style="color: #0ea5e9;">
-                                        <a href="<?php echo esc_url(admin_url('post.php?post=' . $samochod->ID . '&action=edit')); ?>" style="color: #0ea5e9; text-decoration: none;">
-                                            Zobacz w panelu administracyjnym
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <h2 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px;">Klient</h2>
-                            <table width="100%" cellpadding="8" cellspacing="0">
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold; width: 40%;">Nazwa firmy:</td>
-                                    <td style="color: #0f172a;"><?php echo esc_html($params['company_name']); ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">NIP:</td>
-                                    <td style="color: #0f172a;"><?php echo esc_html($params['tax_id']); ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Email:</td>
-                                    <td style="color: #0ea5e9;">
-                                        <a href="mailto:<?php echo esc_attr($params['email']); ?>" style="color: #0ea5e9; text-decoration: none;">
-                                            <?php echo esc_html($params['email']); ?>
-                                        </a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Telefon:</td>
-                                    <td style="color: #0ea5e9;">
-                                        <a href="tel:<?php echo esc_attr($params['phone']); ?>" style="color: #0ea5e9; text-decoration: none;">
-                                            <?php echo esc_html($params['phone']); ?>
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <h2 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px;">Preferencje klienta</h2>
-                            <table width="100%" cellpadding="8" cellspacing="0">
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold; width: 40%;">Zgoda na e-mail:</td>
-                                    <td style="color: #0f172a;"><?php echo $consent_email ? 'Tak' : 'Nie'; ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Zgoda na telefon:</td>
-                                    <td style="color: #0f172a;"><?php echo $consent_phone ? 'Tak' : 'Nie'; ?></td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Miejsce wydania:</td>
-                                    <td style="color: #0f172a;"><?php echo esc_html($pickup_text); ?></td>
-                                </tr>
-                            </table>
-
-                            <h2 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px;">Parametry zamówienia</h2>
-                            <table width="100%" cellpadding="8" cellspacing="0">
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold; width: 40%;">Okres:</td>
-                                    <td style="color: #0f172a;"><?php echo esc_html($params['rental_months']); ?> miesięcy</td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Roczny limit km:</td>
-                                    <td style="color: #0f172a;"><?php echo esc_html(number_format($params['annual_mileage_limit'], 0, ',', ' ')); ?> km</td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Cena miesięczna:</td>
-                                    <td style="color: #0d9488; font-size: 18px; font-weight: bold;">
-                                        <?php echo number_format($cena_miesieczna, 2, ',', ' '); ?> zł
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #475569; font-weight: bold;">Cena całkowita:</td>
-                                    <td style="color: #0d9488; font-size: 20px; font-weight: bold;">
-                                        <?php echo number_format($cena_calkowita, 2, ',', ' '); ?> zł
-                                    </td>
-                                </tr>
-                            </table>
-
+<body style="margin:0; padding:0; background:#e0e0e0; font-family:Arial, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4" style="padding:20px 0">
+        <tbody>
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:6px">
+                        <tbody>
+                            <tr>
+                                <td style="padding: 30px 20px 20px 20px">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tbody>
+                                            <tr>
+                                                <td align="left" style="font-size: 44px;font-weight:bold">
+                                                    <span style="color:#863087">flex</span><span style="color:#C1D342">mile</span>
+                                                </td>
+                                                <td align="right" style="font-size: 12px;color:#333">
+                                                    <?php echo esc_html($current_date); ?>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 46px 24px 24px 24px">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-bottom:10px">
+                                        <tbody>
+                                            <tr>
+                                                <td style="font-size: 18px;font-weight: bold;color: #000;padding-bottom: 12px;border-bottom: 1px solid #eeeeee">
+                                                    Nowe zamówienie w systemie FlexMile!
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tbody>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Numer zamówienia
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php echo esc_html($car_reference_display); ?>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Samochód
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <a href="<?php echo esc_url($admin_car_link); ?>" style="color:#863087;text-decoration:none;font-weight:bold">
+                                                        <?php echo esc_html($samochod->post_title); ?>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Nazwa firmy
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php echo esc_html($params['company_name']); ?>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    NIP
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php echo esc_html($params['tax_id']); ?>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Email
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <a href="mailto:<?php echo esc_attr($params['email']); ?>" style="color:#863087;text-decoration:none;font-weight:bold">
+                                                        <?php echo esc_html($params['email']); ?>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Telefon
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <a href="tel:<?php echo esc_attr($params['phone']); ?>" style="color:#333;text-decoration:none">
+                                                        <?php echo esc_html($params['phone']); ?>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Okres wynajmu
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php echo esc_html($params['rental_months']); ?> miesięcy
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Roczny limit km
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php echo esc_html(number_format($params['annual_mileage_limit'], 0, ',', ' ')); ?> km
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Cena miesięczna
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#863087;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php echo esc_html($formatted_monthly_price); ?> zł
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Cena całkowita
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:18px;color:#863087;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php echo esc_html($formatted_total_price); ?> zł
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Miejsce wydania
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php echo esc_html($pickup_text); ?>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Zgoda na kontakt email:
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <span style="color:<?php echo $consent_email ? '#0d9488' : '#999'; ?>">
+                                                        <?php echo $consent_email ? 'TAK' : 'NIE'; ?>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333">
+                                                    Zgoda na kontakt telefoniczny:
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#333;font-weight: bold">
+                                                    <span style="color:<?php echo $consent_phone ? '#0d9488' : '#999'; ?>">
+                                                        <?php echo $consent_phone ? 'TAK' : 'NIE'; ?>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
                             <?php if (!empty($params['message'])): ?>
-                            <h2 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px;">Wiadomość od klienta</h2>
-                            <div style="background-color: #e2e8f0; padding: 15px; border-radius: 4px; border-left: 4px solid #0ea5e9; color: #0f172a; white-space: pre-wrap;">
-                                <?php echo esc_html($params['message']); ?>
-                            </div>
+                            <tr>
+                                <td style="padding:20px">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f2f2f2;border-radius:12px">
+                                        <tbody>
+                                            <tr>
+                                                <td style="padding: 32px 40px">
+                                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                                        <tbody>
+                                                            <tr>
+                                                                <td style="font-size:12px;color:#555;padding-bottom: 18px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px">
+                                                                    Wiadomość od klienta
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="font-size:15px;color:#333;line-height:1.6;">
+                                                                    <?php echo nl2br(esc_html($params['message'])); ?>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
                             <?php endif; ?>
-
-                            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">
-                                <a href="<?php echo esc_url(admin_url('post.php?post=' . $rezerwacja_id . '&action=edit')); ?>"
-                                   style="display: inline-block; background-color: #0ea5e9; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                                    Zarządzaj zamówieniem
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="background-color: #e2e8f0; padding: 20px; text-align: center; color: #475569; font-size: 12px;">
-                            <p style="margin: 0;">FlexMile - System zarządzania wynajmem samochodów</p>
-                            <p style="margin: 5px 0 0 0;">© <?php echo date('Y'); ?> <?php echo esc_html(get_option('blogname')); ?></p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+                            <tr>
+                                <td style="padding:20px 24px;text-align:center">
+                                    <a href="<?php echo esc_url($admin_order_link); ?>" style="display:inline-block;background-color:#863087;color:#ffffff;padding:12px 30px;text-decoration:none;border-radius:4px;font-weight:bold;font-size:14px">
+                                        Zarządzaj zamówieniem
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:20px 24px">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f9f9f9;border-radius:8px;border: 1px dashed #cccccc">
+                                        <tbody>
+                                            <tr>
+                                                <td style="padding: 20px 24px">
+                                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                                        <tbody>
+                                                            <tr>
+                                                                <td colspan="2" style="font-size:11px;color:#666;padding-bottom: 12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px">
+                                                                    Dane techniczne zgłoszenia
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="font-size:11px;color:#777;padding:4px 0">Data otrzymania:</td>
+                                                                <td align="right" style="font-size:11px;color:#333;font-family:monospace;padding:4px 0"><?php echo esc_html($current_date); ?></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="font-size:11px;color:#777;padding:4px 0">Adres IP:</td>
+                                                                <td align="right" style="font-size:11px;color:#333;font-family:monospace;padding:4px 0"><?php echo esc_html($user_ip); ?></td>
+                                                            </tr>
+                                                            <?php if (!empty($source_url)): ?>
+                                                            <tr>
+                                                                <td style="font-size:11px;color:#777;padding:4px 0">Źródło (Referer):</td>
+                                                                <td align="right" style="font-size:11px;color:#333;font-family:monospace;padding:4px 0;word-break:break-all"><?php echo esc_html($source_url); ?></td>
+                                                            </tr>
+                                                            <?php endif; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:20px;font-size:12px;color:#999;text-align:center">
+                                    © <?php echo date('Y'); ?> Flexmile. Wszystkie prawa zastrzeżone.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
     </table>
 </body>
 </html>
-

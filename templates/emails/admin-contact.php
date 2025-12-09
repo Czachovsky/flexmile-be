@@ -40,7 +40,7 @@ $source_url = !empty($_SERVER['HTTP_REFERER']) ? esc_url_raw($_SERVER['HTTP_REFE
     <title>Nowe zapytanie kontaktowe - FlexMile</title>
     <meta charset="UTF-8">
 </head>
-<body>
+<body style="margin:0; padding:0; background:#e0e0e0; font-family:Arial, sans-serif;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4" style="padding:20px 0">
         <tbody>
             <tr>
