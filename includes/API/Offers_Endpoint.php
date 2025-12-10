@@ -450,11 +450,22 @@ class Offers_Endpoint {
             'id' => $post->ID,
         ];
 
-        $data['image'] = [
-            'thumbnail' => get_the_post_thumbnail_url($post->ID, 'thumbnail'),
-            'medium' => get_the_post_thumbnail_url($post->ID, 'medium'),
-            'large' => get_the_post_thumbnail_url($post->ID, 'large'),
-        ];
+        $gallery_ids = get_post_meta($post->ID, '_gallery', true);
+        $image_url = false;
+        
+        if ($gallery_ids) {
+            $gallery_array = explode(',', $gallery_ids);
+            $first_image_id = trim($gallery_array[0]);
+            if ($first_image_id) {
+                $image_url = wp_get_attachment_image_url((int) $first_image_id, 'large');
+            }
+        }
+
+        if (!$image_url) {
+            $image_url = get_the_post_thumbnail_url($post->ID, 'large');
+        }
+
+        $data['image'] = $image_url ? $image_url : null;
 
         $data['engine'] = get_post_meta($post->ID, '_engine', true) ?: 'Brak danych';
         $data['horsepower'] = (int) get_post_meta($post->ID, '_horsepower', true);
