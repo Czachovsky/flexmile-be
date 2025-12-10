@@ -13,6 +13,11 @@ class Sample_Data_Importer {
 
     public function __construct() {
         add_action('admin_post_flexmile_import_sample_data', [$this, 'import_sample_data']);
+        
+        // CSV Import - tylko jeśli włączony
+        if (defined('FLEXMILE_CSV_IMPORT_ENABLED') && FLEXMILE_CSV_IMPORT_ENABLED === true) {
+            add_action('admin_post_flexmile_import_csv', [$this, 'import_csv']);
+        }
     }
 
     /**
@@ -313,5 +318,306 @@ class Sample_Data_Importer {
     public static function has_sample_data() {
         $offers = wp_count_posts('offer');
         return ($offers && $offers->publish > 0);
+    }
+
+    /**
+     * Importuje oferty z pliku CSV
+     */
+    public function import_csv() {
+        // Sprawdź czy funkcjonalność jest włączona
+        if (!defined('FLEXMILE_CSV_IMPORT_ENABLED') || FLEXMILE_CSV_IMPORT_ENABLED !== true) {
+            wp_die('Import CSV jest wyłączony. Skontaktuj się z administratorem.');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_die('Brak uprawnień');
+        }
+
+        check_admin_referer('flexmile_import_csv', 'flexmile_csv_nonce');
+
+        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            wp_redirect(add_query_arg([
+                'page' => 'flexmile',
+                'import' => 'error',
+                'message' => urlencode('Błąd podczas przesyłania pliku. Upewnij się, że wybrałeś plik CSV.')
+            ], admin_url('admin.php')));
+            exit;
+        }
+
+        $file = $_FILES['csv_file'];
+        
+        // Sprawdź typ pliku
+        $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($file_ext !== 'csv') {
+            wp_redirect(add_query_arg([
+                'page' => 'flexmile',
+                'import' => 'error',
+                'message' => urlencode('Plik musi mieć rozszerzenie .csv')
+            ], admin_url('admin.php')));
+            exit;
+        }
+
+        // Otwórz plik
+        $handle = fopen($file['tmp_name'], 'r');
+        if ($handle === false) {
+            wp_redirect(add_query_arg([
+                'page' => 'flexmile',
+                'import' => 'error',
+                'message' => urlencode('Nie można otworzyć pliku CSV')
+            ], admin_url('admin.php')));
+            exit;
+        }
+
+        // Wczytaj nagłówki
+        $headers = fgetcsv($handle, 0, ',');
+        if ($headers === false) {
+            fclose($handle);
+            wp_redirect(add_query_arg([
+                'page' => 'flexmile',
+                'import' => 'error',
+                'message' => urlencode('Nie można odczytać nagłówków z pliku CSV')
+            ], admin_url('admin.php')));
+            exit;
+        }
+
+        // Normalizuj nagłówki (usuń BOM, spacje, małe litery)
+        $headers = array_map(function($header) {
+            $header = trim($header);
+            // Usuń BOM jeśli istnieje
+            $header = preg_replace('/^\xEF\xBB\xBF/', '', $header);
+            return strtolower($header);
+        }, $headers);
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Wczytaj dane
+        $line_number = 1;
+        while (($row = fgetcsv($handle, 0, ',')) !== false) {
+            $line_number++;
+            
+            if (count($row) !== count($headers)) {
+                $errors[] = "Linia {$line_number}: Nieprawidłowa liczba kolumn";
+                $skipped++;
+                continue;
+            }
+
+            // Stwórz tablicę asocjacyjną
+            $data = array_combine($headers, $row);
+            
+            // Waliduj wymagane pola
+            if (empty($data['title']) || empty($data['car_brand_slug']) || empty($data['car_model'])) {
+                $errors[] = "Linia {$line_number}: Brakuje wymaganych pól (title, car_brand_slug, car_model)";
+                $skipped++;
+                continue;
+            }
+
+            // Sprawdź czy oferta już istnieje
+            $existing = get_posts([
+                'post_type' => 'offer',
+                'title' => sanitize_text_field($data['title']),
+                'posts_per_page' => 1,
+            ]);
+
+            if (!empty($existing)) {
+                $skipped++;
+                continue;
+            }
+
+            // Utwórz post
+            $post_id = wp_insert_post([
+                'post_type' => 'offer',
+                'post_title' => sanitize_text_field($data['title']),
+                'post_content' => isset($data['description']) ? sanitize_textarea_field($data['description']) : '',
+                'post_status' => 'publish',
+            ]);
+
+            if ($post_id && !is_wp_error($post_id)) {
+                // Zapisz podstawowe pola
+                update_post_meta($post_id, '_car_brand_slug', sanitize_text_field($data['car_brand_slug']));
+                update_post_meta($post_id, '_car_model', sanitize_text_field($data['car_model']));
+                
+                if (isset($data['body_type'])) {
+                    update_post_meta($post_id, '_body_type', sanitize_text_field($data['body_type']));
+                }
+                
+                if (isset($data['fuel_type'])) {
+                    update_post_meta($post_id, '_fuel_type', sanitize_text_field($data['fuel_type']));
+                }
+
+                // Zapisz pola numeryczne
+                if (isset($data['year'])) {
+                    update_post_meta($post_id, '_year', intval($data['year']));
+                }
+                
+                if (isset($data['horsepower'])) {
+                    update_post_meta($post_id, '_horsepower', intval($data['horsepower']));
+                }
+                
+                if (isset($data['engine_capacity'])) {
+                    update_post_meta($post_id, '_engine_capacity', intval($data['engine_capacity']));
+                }
+                
+                if (isset($data['seats'])) {
+                    update_post_meta($post_id, '_seats', intval($data['seats']));
+                }
+
+                // Zapisz pola tekstowe
+                if (isset($data['engine'])) {
+                    update_post_meta($post_id, '_engine', sanitize_text_field($data['engine']));
+                }
+                
+                if (isset($data['transmission'])) {
+                    update_post_meta($post_id, '_transmission', sanitize_text_field($data['transmission']));
+                }
+                
+                if (isset($data['drivetrain'])) {
+                    update_post_meta($post_id, '_drivetrain', sanitize_text_field($data['drivetrain']));
+                }
+                
+                if (isset($data['color'])) {
+                    update_post_meta($post_id, '_color', sanitize_text_field($data['color']));
+                }
+                
+                if (isset($data['doors'])) {
+                    update_post_meta($post_id, '_doors', sanitize_text_field($data['doors']));
+                }
+
+                // Konfiguracja cen
+                $pricing_config = [
+                    'rental_periods' => [12, 24, 36, 48],
+                    'mileage_limits' => [10000, 15000, 20000],
+                    'prices' => []
+                ];
+
+                // Jeśli podano okresy i limity
+                if (isset($data['rental_periods'])) {
+                    $periods = array_map('intval', array_filter(explode(',', $data['rental_periods'])));
+                    if (!empty($periods)) {
+                        $pricing_config['rental_periods'] = $periods;
+                    }
+                }
+
+                if (isset($data['mileage_limits'])) {
+                    $limits = array_map('intval', array_filter(explode(',', $data['mileage_limits'])));
+                    if (!empty($limits)) {
+                        $pricing_config['mileage_limits'] = $limits;
+                    }
+                }
+
+                // Sprawdź czy są podane poszczególne ceny w kolumnach (format: price_PERIOD_LIMIT)
+                $has_individual_prices = false;
+                foreach ($data as $key => $value) {
+                    if (preg_match('/^price_(\d+)_(\d+)$/i', $key, $matches)) {
+                        $period = intval($matches[1]);
+                        $limit = intval($matches[2]);
+                        $price_key = $period . '_' . $limit;
+                        $price_value = floatval($value);
+                        
+                        if ($price_value > 0) {
+                            $pricing_config['prices'][$price_key] = $price_value;
+                            $has_individual_prices = true;
+                            
+                            // Dodaj okres i limit do listy jeśli jeszcze ich nie ma
+                            if (!in_array($period, $pricing_config['rental_periods'])) {
+                                $pricing_config['rental_periods'][] = $period;
+                            }
+                            if (!in_array($limit, $pricing_config['mileage_limits'])) {
+                                $pricing_config['mileage_limits'][] = $limit;
+                            }
+                        }
+                    }
+                }
+                
+                // Sortuj okresy i limity
+                sort($pricing_config['rental_periods']);
+                sort($pricing_config['mileage_limits']);
+
+                // Jeśli podano macierz cen (JSON) i nie ma indywidualnych cen
+                if (!$has_individual_prices && isset($data['price_matrix']) && !empty($data['price_matrix'])) {
+                    $price_matrix = json_decode($data['price_matrix'], true);
+                    if (is_array($price_matrix)) {
+                        $pricing_config['prices'] = $price_matrix;
+                    }
+                } elseif (!$has_individual_prices) {
+                    // Generuj ceny na podstawie lowest_price jeśli podano
+                    if (isset($data['lowest_price']) && !empty($data['lowest_price'])) {
+                        $base_price = floatval($data['lowest_price']);
+                        foreach ($pricing_config['rental_periods'] as $period) {
+                            foreach ($pricing_config['mileage_limits'] as $mileage_limit) {
+                                $price_key = $period . '_' . $mileage_limit;
+                                if (!isset($pricing_config['prices'][$price_key])) {
+                                    $price = $base_price - ($period / 12 * 200) + ($mileage_limit / 10000 * 100);
+                                    $pricing_config['prices'][$price_key] = round($price, 2);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                update_post_meta($post_id, '_pricing_config', $pricing_config);
+
+                // Najniższa cena
+                if (isset($data['lowest_price'])) {
+                    update_post_meta($post_id, '_lowest_price', floatval($data['lowest_price']));
+                } else {
+                    $min_price = !empty($pricing_config['prices']) ? min($pricing_config['prices']) : 0;
+                    update_post_meta($post_id, '_lowest_price', $min_price);
+                }
+
+                // Flagi
+                update_post_meta($post_id, '_reservation_active', '0');
+                update_post_meta($post_id, '_new_car', isset($data['new_car']) && ($data['new_car'] === '1' || strtolower($data['new_car']) === 'true') ? '1' : '0');
+                update_post_meta($post_id, '_available_immediately', isset($data['available_immediately']) && ($data['available_immediately'] === '1' || strtolower($data['available_immediately']) === 'true') ? '1' : '0');
+                update_post_meta($post_id, '_most_popular', isset($data['most_popular']) && ($data['most_popular'] === '1' || strtolower($data['most_popular']) === 'true') ? '1' : '0');
+                
+                if (isset($data['coming_soon']) && ($data['coming_soon'] === '1' || strtolower($data['coming_soon']) === 'true')) {
+                    update_post_meta($post_id, '_coming_soon', '1');
+                    if (isset($data['coming_soon_date'])) {
+                        update_post_meta($post_id, '_coming_soon_date', sanitize_text_field($data['coming_soon_date']));
+                    }
+                } else {
+                    update_post_meta($post_id, '_coming_soon', '0');
+                    delete_post_meta($post_id, '_coming_soon_date');
+                }
+
+                // Wyposażenie
+                if (isset($data['standard_equipment'])) {
+                    update_post_meta($post_id, '_standard_equipment', sanitize_textarea_field($data['standard_equipment']));
+                }
+                
+                if (isset($data['additional_equipment'])) {
+                    update_post_meta($post_id, '_additional_equipment', sanitize_textarea_field($data['additional_equipment']));
+                }
+
+                $imported++;
+            } else {
+                $errors[] = "Linia {$line_number}: Nie można utworzyć oferty";
+                $skipped++;
+            }
+        }
+
+        fclose($handle);
+
+        // Przygotuj komunikat
+        $message = sprintf(
+            'Zaimportowano: %d ofert. Pominięto: %d.',
+            $imported,
+            $skipped
+        );
+
+        if (!empty($errors) && count($errors) <= 10) {
+            $message .= ' Błędy: ' . implode('; ', array_slice($errors, 0, 10));
+        } elseif (!empty($errors)) {
+            $message .= ' Wystąpiło ' . count($errors) . ' błędów.';
+        }
+
+        wp_redirect(add_query_arg([
+            'page' => 'flexmile',
+            'import' => $imported > 0 ? 'success' : 'error',
+            'message' => urlencode($message)
+        ], admin_url('admin.php')));
+        exit;
     }
 }

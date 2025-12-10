@@ -71,7 +71,22 @@ class Admin_Menu {
                 : __('Operacja zakończyła się powodzeniem.', 'flexmile');
             ?>
             <div class="notice notice-success is-dismissible">
-                <p><strong>✅ Success!</strong> <?php echo esc_html($notice_message); ?></p>
+                <p><strong>Success!</strong> <?php echo esc_html($notice_message); ?></p>
+            </div>
+            <?php
+        }
+
+        // Komunikat błędu po imporcie
+        if (isset($_GET['import']) && $_GET['import'] === 'error') {
+            $notice_message = isset($_GET['message'])
+                ? sanitize_text_field(wp_unslash($_GET['message']))
+                : '';
+            $notice_message = $notice_message !== ''
+                ? $notice_message
+                : __('Wystąpił błąd podczas importu.', 'flexmile');
+            ?>
+            <div class="notice notice-error is-dismissible">
+                <p><strong>❌ Błąd!</strong> <?php echo esc_html($notice_message); ?></p>
             </div>
             <?php
         }
@@ -112,31 +127,6 @@ class Admin_Menu {
             <h1>FlexMile Dashboard</h1>
 
             <div class="flexmile-dashboard">
-                <div class="flexmile-stats">
-                    <div class="stat-box">
-                        <h3>🚗 Oferty</h3>
-                        <p class="stat-number"><?php echo $total_offers->publish; ?></p>
-                        <a href="<?php echo admin_url('edit.php?post_type=offer'); ?>">Zobacz wszystkie</a>
-                    </div>
-
-                    <div class="stat-box">
-                        <h3>⏳ Oczekujące rezerwacje</h3>
-                        <p class="stat-number"><?php echo $pending_count; ?></p>
-                        <a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">Zarządzaj</a>
-                    </div>
-
-                    <div class="stat-box">
-                        <h3>✅ Zatwierdzone</h3>
-                        <p class="stat-number"><?php echo $approved_count; ?></p>
-                    </div>
-
-                    <div class="stat-box">
-                        <h3>📋 Wszystkie rezerwacje</h3>
-                        <p class="stat-number"><?php echo $total_reservations->publish; ?></p>
-                        <a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">Zobacz wszystkie</a>
-                    </div>
-                </div>
-
                 <div class="flexmile-info">
                     <?php if (!$has_sample_data): ?>
                     <div class="flexmile-import-box">
@@ -152,34 +142,77 @@ class Admin_Menu {
                             <input type="hidden" name="action" value="flexmile_import_sample_data">
                             <?php wp_nonce_field('flexmile_import_sample_data', 'flexmile_nonce'); ?>
                             <button type="submit" class="button button-primary button-hero" style="background: #00a32a; border-color: #00a32a;">
-                                📦 Importuj przykładowe dane
+                                Importuj przykładowe dane
                             </button>
                         </form>
                         <p style="color: rgba(255,255,255,0.8); font-size: 12px; margin-top: 10px;">
-                            ℹ️ Import nie nadpisze istniejących danych. Możesz go uruchomić bezpiecznie.
+                            Import nie nadpisze istniejących danych. Możesz go uruchomić bezpiecznie.
                         </p>
                     </div>
                     <hr style="margin: 30px 0;">
                     <?php endif; ?>
 
-                    <h2>🎯 Szybki start</h2>
+                    <h2>Szybki start</h2>
                     <ul>
-                        <li><a href="<?php echo admin_url('post-new.php?post_type=offer'); ?>">➕ Dodaj nową ofertę</a></li>
-                        <li><a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">📋 Zarządzaj rezerwacjami</a></li>
-                        <li><a href="<?php echo admin_url('admin.php?page=flexmile-api'); ?>">⚙️ Ustawienia API</a></li>
+                        <li><a href="<?php echo admin_url('post-new.php?post_type=offer'); ?>">Dodaj nową ofertę</a></li>
+                        <li><a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>">Zarządzaj rezerwacjami</a></li>
+                        <li><a href="<?php echo admin_url('admin.php?page=flexmile-api'); ?>">Ustawienia API</a></li>
                     </ul>
 
+                    <?php if (defined('FLEXMILE_CSV_IMPORT_ENABLED') && FLEXMILE_CSV_IMPORT_ENABLED === true): ?>
+                    <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #2271b1; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Import ofert z pliku CSV</h3>
+
+                        <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" enctype="multipart/form-data" style="margin-top: 15px;">
+                            <input type="hidden" name="action" value="flexmile_import_csv">
+                            <?php wp_nonce_field('flexmile_import_csv', 'flexmile_csv_nonce'); ?>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="file" name="csv_file" accept=".csv" required style="flex: 1; padding: 8px;">
+                                <button type="submit" class="button button-primary">
+                                    Importuj CSV
+                                </button>
+                            </div>
+                            <p class="description" style="margin-top: 10px; font-size: 12px; color: #666;">
+                                Format CSV: pierwsza linia to nagłówki kolumn. Wymagane kolumny: <code>title</code>, <code>car_brand_slug</code>, <code>car_model</code>.<br>
+                                <a href="#" onclick="event.preventDefault(); document.getElementById('csv-help').style.display = document.getElementById('csv-help').style.display === 'none' ? 'block' : 'none'; return false;">Zobacz pełną listę dostępnych kolumn</a>
+                            </p>
+                            <div id="csv-help" style="display: none; margin-top: 15px; padding: 15px; background: white; border-radius: 5px; font-size: 12px;">
+                                <strong>Dostępne kolumny w CSV:</strong>
+                                <ul style="margin: 10px 0; padding-left: 20px;">
+                                    <li><strong>Wymagane:</strong> title, car_brand_slug, car_model</li>
+                                    <li><strong>Opcjonalne:</strong> body_type, fuel_type, year, horsepower, engine_capacity, engine, transmission, drivetrain, color, seats, doors</li>
+                                    <li><strong>Ceny (3 sposoby):</strong>
+                                        <ul style="margin-top: 5px;">
+                                            <li><strong>Zalecane:</strong> Indywidualne kolumny <code>price_PERIOD_LIMIT</code> (np. price_12_10000, price_24_15000)</li>
+                                            <li>Macierz cen: <code>price_matrix</code> (JSON)</li>
+                                            <li>Auto-generowanie: <code>lowest_price</code> + <code>rental_periods</code> + <code>mileage_limits</code></li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Flagi:</strong> new_car (1/0), available_immediately (1/0), most_popular (1/0), coming_soon (1/0), coming_soon_date (YYYY-MM-DD)</li>
+                                    <li><strong>Inne:</strong> description, standard_equipment, additional_equipment</li>
+                                </ul>
+                                <p style="margin-top: 10px;"><strong>Przykład z indywidualnymi cenami (ZALECANE):</strong></p>
+                                <pre style="background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 11px;">title,car_brand_slug,car_model,body_type,fuel_type,year,horsepower,transmission,price_12_10000,price_12_15000,price_24_10000,price_24_15000
+BMW X5 3.0d,bmw,X5,SUV,diesel,2022,286,automatic,2200,2250,2100,2150</pre>
+                                <p style="margin-top: 10px;"><strong>Przykład z auto-generowaniem cen:</strong></p>
+                                <pre style="background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 11px;">title,car_brand_slug,car_model,body_type,fuel_type,year,horsepower,transmission,lowest_price,rental_periods,mileage_limits
+BMW X5 3.0d,bmw,X5,SUV,diesel,2022,286,automatic,2200,"12,24,36,48","10000,15000,20000"</pre>
+                            </div>
+                        </form>
+                    </div>
+                    <?php endif; ?>
+
                     <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 20px 0;">
-                        <h3 style="margin-top: 0;">📝 Zarządzanie markami i modelami</h3>
+                        <h3 style="margin-top: 0;">Zarządzanie markami i modelami</h3>
                         <p>Marki i modele są teraz przechowywane w pliku <code>config.json</code> w katalogu wtyczki.</p>
                         <p>Aby dodać/edytować marki lub modele, edytuj plik:</p>
                         <code><?php echo FLEXMILE_PLUGIN_DIR; ?>config.json</code>
                         <p style="margin-top: 10px; font-size: 13px; color: #856404;">
-                            💡 Po edycji pliku, zmiany będą natychmiast widoczne w panelu admina i w API.
+                            Po edycji pliku, zmiany będą natychmiast widoczne w panelu admina i w API.
                         </p>
                     </div>
 
-                    <h3>📡 REST API Endpoints</h3>
+                    <h3>REST API Endpoints</h3>
                     <p>Twoja aplikacja Angular powinna używać następujących endpointów:</p>
                     <ul class="api-endpoints">
                         <li>
@@ -307,9 +340,7 @@ class Admin_Menu {
             <h1>Ustawienia FlexMile API</h1>
 
             <div class="flexmile-api-info">
-                <h2>🔌 Konfiguracja CORS</h2>
-                <p>Aby Twoja aplikacja Angular mogła komunikować się z WordPress API, musisz skonfigurować CORS.</p>
-
+                <h2>Konfiguracja CORS</h2>
                 <h3>Dodaj do pliku <code>wp-config.php</code> lub <code>functions.php</code>:</h3>
                 <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;"><code>// Enable CORS for headless WordPress
 add_action('init', function() {
@@ -322,39 +353,7 @@ add_action('init', function() {
     }
 });</code></pre>
 
-                <h2>🚗 Nowy system marek i modeli</h2>
-                <div style="background: #e7f3ff; padding: 15px; border-left: 4px solid #2271b1; border-radius: 4px; margin: 20px 0;">
-                    <p><strong>Marki i modele są teraz w pliku JSON!</strong></p>
-                    <p>Zamiast używać taksonomii WordPress, marki i modele są przechowywane w pliku <code>config.json</code>. To oznacza:</p>
-                    <ul style="margin-left: 20px;">
-                        <li>✅ Brak śmieci w bazie danych</li>
-                        <li>✅ Łatwiejsza aktualizacja (wystarczy edytować jeden plik)</li>
-                        <li>✅ Szybsze zapytania do API</li>
-                        <li>✅ Automatyczne dependency dropdown (najpierw marka, potem modele)</li>
-                    </ul>
-                </div>
-
-                <h3>📋 Nowe endpointy API:</h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th>Endpoint</th>
-                            <th>Opis</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>GET /wp-json/flexmile/v1/offers/brands</code></td>
-                            <td>Zwraca listę wszystkich dostępnych marek z liczbą modeli</td>
-                        </tr>
-                        <tr>
-                            <td><code>GET /wp-json/flexmile/v1/offers/brands/{slug}/models</code></td>
-                            <td>Zwraca modele dla wybranej marki (np. <code>/offers/brands/bmw/models</code>)</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-<h3>📋 Wszystkie dostępne filtry:</h3>
+<h3>Wszystkie dostępne filtry:</h3>
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
@@ -366,7 +365,7 @@ add_action('init', function() {
             <tbody>
                 <!-- MARKA I MODEL -->
                 <tr style="background: #f0f9ff;">
-                    <td colspan="3"><strong>🚗 Marka i model</strong></td>
+                    <td colspan="3"><strong>Marka i model</strong></td>
                 </tr>
                 <tr>
                     <td><code>car_brand</code></td>
@@ -381,7 +380,7 @@ add_action('init', function() {
 
                 <!-- PARAMETRY TECHNICZNE -->
                 <tr style="background: #f0f9ff;">
-                    <td colspan="3"><strong>⚙️ Parametry techniczne</strong></td>
+                    <td colspan="3"><strong>Parametry techniczne</strong></td>
                 </tr>
                 <tr>
                     <td><code>body_type</code></td>
@@ -396,12 +395,12 @@ add_action('init', function() {
                 <tr>
                     <td><code>transmission</code></td>
                     <td>enum</td>
-                    <td><strong>🆕 NOWOŚĆ!</strong> Typ skrzyni: "manual" lub "automatic"</td>
+                    <td> Typ skrzyni: "manual" lub "automatic"</td>
                 </tr>
 
                 <!-- ZAKRES WARTOŚCI -->
                 <tr style="background: #f0f9ff;">
-                    <td colspan="3"><strong>📊 Zakresy wartości</strong></td>
+                    <td colspan="3"><strong>Zakresy wartości</strong></td>
                 </tr>
                 <tr>
                     <td><code>year_from</code></td>
@@ -426,12 +425,12 @@ add_action('init', function() {
 
                 <!-- DOSTĘPNOŚĆ -->
                 <tr style="background: #f0f9ff;">
-                    <td colspan="3"><strong>✅ Dostępność</strong></td>
+                    <td colspan="3"><strong>Dostępność</strong></td>
                 </tr>
                 <tr>
                     <td><code>available_only</code></td>
                     <td>boolean</td>
-                    <td><strong>🆕 NOWOŚĆ!</strong> Tylko dostępne (nie zarezerwowane): "true" lub "false"</td>
+                    <td>Tylko dostępne (nie zarezerwowane): "true" lub "false"</td>
                 </tr>
                 <tr>
                     <td><code>show_reserved</code></td>
@@ -446,7 +445,7 @@ add_action('init', function() {
 
                 <!-- PAGINACJA -->
                 <tr style="background: #f0f9ff;">
-                    <td colspan="3"><strong>📄 Paginacja i sortowanie</strong></td>
+                    <td colspan="3"><strong>Paginacja i sortowanie</strong></td>
                 </tr>
                 <tr>
                     <td><code>page</code></td>
@@ -471,7 +470,7 @@ add_action('init', function() {
             </tbody>
         </table>
 
-        <h3>💡 Przykładowe zapytania:</h3>
+        <h3>Przykładowe zapytania:</h3>
         <ul class="api-examples">
             <li>
                 <strong>Wszystkie dostępne oferty:</strong><br>
@@ -516,9 +515,7 @@ add_action('init', function() {
         </ul>
 
         <div style="background: #d1fae5; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0;">
-            <h4 style="margin-top: 0; color: #065f46;">💡 Porady dotyczące filtrów:</h4>
             <ul style="margin-bottom: 0;">
-                <li><strong>Zalecane:</strong> Zawsze używaj <code>available_only=true</code> aby ukryć zarezerwowane samochody</li>
                 <li><strong>Case-sensitivity:</strong>
                     <ul>
                         <li><code>car_brand</code>: małe litery (bmw, toyota)</li>
@@ -528,8 +525,6 @@ add_action('init', function() {
                         <li><code>transmission</code>: małe litery (manual, automatic)</li>
                     </ul>
                 </li>
-                <li><strong>Kombinacje:</strong> Możesz łączyć dowolną liczbę filtrów jednocześnie</li>
-                <li><strong>Performance:</strong> Im więcej filtrów użyjesz, tym szybsze będzie zapytanie (mniej danych do przetworzenia)</li>
             </ul>
         </div>
 
@@ -605,7 +600,7 @@ add_action('init', function() {
         }
         ?>
         <div class="wrap">
-            <h1>🎯 Zarządzanie Bannerami</h1>
+            <h1>Zarządzanie Bannerami</h1>
             <p>Możesz dodać maksymalnie 3 bannery. Każdy banner składa się z nagłówka (label) i opisu (description).</p>
 
             <form method="post" action="">
@@ -653,12 +648,12 @@ add_action('init', function() {
                 </div>
 
                 <p class="submit">
-                    <input type="submit" name="flexmile_save_banners" class="button button-primary" value="💾 Zapisz bannery" />
+                    <input type="submit" name="flexmile_save_banners" class="button button-primary" value="Zapisz bannery" />
                 </p>
             </form>
 
             <div class="flexmile-banners-info">
-                <h2>📡 Endpoint API</h2>
+                <h2>Endpoint API</h2>
                 <p>Bannery są dostępne przez endpoint:</p>
                 <code><?php echo rest_url('flexmile/v1/banners'); ?></code>
                 <p class="description">Endpoint zwraca tablicę maksymalnie 3 bannerów w formacie:</p>
