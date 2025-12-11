@@ -22,6 +22,13 @@ class Offers {
         add_action('post_submitbox_misc_actions', [$this, 'add_duplicate_button']);
         add_action('admin_action_flexmile_duplicate_offer', [$this, 'handle_duplicate_offer']);
 
+        // Wyłącz Gutenberga dla typu postu 'offer'
+        add_filter('use_block_editor_for_post_type', [$this, 'disable_gutenberg'], 10, 2);
+        add_filter('gutenberg_can_edit_post_type', [$this, 'disable_gutenberg'], 10, 2);
+
+        // Ukryj niepotrzebne meta boxy
+        add_action('admin_head', [$this, 'hide_unnecessary_meta_boxes']);
+
         // Filtry w liście samochodów w panelu
         add_action('restrict_manage_posts', [$this, 'add_admin_filters']);
         add_filter('parse_query', [$this, 'apply_admin_filters']);
@@ -504,7 +511,7 @@ class Offers {
             'labels' => $labels,
             'public' => true,
             'has_archive' => false,
-            'show_in_rest' => true,
+            'show_in_rest' => false, // Wyłącz Gutenberga - używamy klasycznego edytora
             'rest_base' => 'offers',
             'menu_icon' => 'dashicons-car',
             'supports' => ['title', 'editor', 'thumbnail', 'custom-fields'],
@@ -515,6 +522,35 @@ class Offers {
         ];
 
         register_post_type(self::POST_TYPE, $args);
+    }
+
+    /**
+     * Wyłącza Gutenberga (block editor) dla typu postu 'offer'
+     */
+    public function disable_gutenberg($use_block_editor, $post) {
+        if (isset($post->post_type) && $post->post_type === self::POST_TYPE) {
+            return false;
+        }
+        return $use_block_editor;
+    }
+
+    /**
+     * Ukrywa niepotrzebne meta boxy (Custom Fields, Slug)
+     */
+    public function hide_unnecessary_meta_boxes() {
+        global $post_type;
+        
+        if ($post_type === self::POST_TYPE) {
+            // Ukryj meta box Custom Fields
+            remove_meta_box('postcustom', self::POST_TYPE, 'normal');
+            
+            // Ukryj meta box Slug (w sidebarze)
+            remove_meta_box('slugdiv', self::POST_TYPE, 'normal');
+            
+            // Ukryj również w innych kontekstach
+            remove_meta_box('postcustom', self::POST_TYPE, 'side');
+            remove_meta_box('slugdiv', self::POST_TYPE, 'side');
+        }
     }
 
     /**
@@ -546,6 +582,25 @@ class Offers {
                 'nonce' => wp_create_nonce('flexmile_dropdown')
             ]);
 
+            wp_enqueue_script(
+                'flexmile-form-validation',
+                plugins_url('../../assets/admin-form-validation.js', __FILE__),
+                ['jquery'],
+                '1.0',
+                true
+            );
+
+            // Dodaj informację o automatycznym generowaniu tytułu (klasyczny edytor)
+            wp_add_inline_script('flexmile-dropdown', '
+                jQuery(document).ready(function($) {
+                    var titleInput = $("#title, input[name=\"post_title\"]").first();
+                    if (titleInput.length) {
+                        var hint = $("<p class=\"description\" style=\"margin-top: 6px; padding: 8px 12px; background: #f0f9ff; border-left: 3px solid #0ea5e9; border-radius: 4px; color: #0c4a6e; font-size: 12px;\"><span style=\"font-weight: 600;\">💡 Podpowiedź:</span> Tytuł jest automatycznie generowany na podstawie wybranej marki i modelu. Możesz go zmienić ręcznie, jeśli chcesz.</p>");
+                        titleInput.after(hint);
+                    }
+                });
+            ');
+
             wp_enqueue_style(
                 'flexmile-admin-styles',
                 plugins_url('../../assets/admin-styles.css', __FILE__),
@@ -573,6 +628,9 @@ class Offers {
             return;
         }
 
+        // Wskaźnik postępu na górze
+        add_action('edit_form_after_title', [$this, 'render_progress_indicator']);
+
         add_meta_box(
             'flexmile_offer_actions',
             'Akcje oferty',
@@ -593,7 +651,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_gallery',
-            'Galeria zdjęć',
+            '📷 Galeria zdjęć',
             [$this, 'render_gallery_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -602,7 +660,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_details',
-            'Szczegóły samochodu',
+            '🚗 Szczegóły samochodu',
             [$this, 'render_details_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -611,7 +669,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_wyposazenie',
-            'Wyposażenie standardowe',
+            '⚙️ Wyposażenie standardowe',
             [$this, 'render_wyposazenie_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -620,7 +678,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_wyposazenie_dodatkowe',
-            'Wyposażenie dodatkowe',
+            '✨ Wyposażenie dodatkowe',
             [$this, 'render_wyposazenie_dodatkowe_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -629,7 +687,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_pricing',
-            'Konfiguracja cen',
+            '💰 Konfiguracja cen',
             [$this, 'render_pricing_meta_box'],
             self::POST_TYPE,
             'side',
@@ -638,12 +696,124 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_flags',
-            'Statusy i wyróżnienie',
+            '🏷️ Statusy i wyróżnienie',
             [$this, 'render_flags_meta_box'],
             self::POST_TYPE,
             'side',
             'default'
         );
+    }
+
+    /**
+     * Renderuje wskaźnik postępu na górze formularza
+     */
+    public function render_progress_indicator() {
+        global $post;
+        
+        if (!$post || $post->post_type !== self::POST_TYPE) {
+            return;
+        }
+
+        $sections = [
+            'gallery' => ['icon' => '📷', 'label' => 'Galeria', 'id' => 'flexmile_samochod_gallery'],
+            'details' => ['icon' => '🚗', 'label' => 'Szczegóły', 'id' => 'flexmile_samochod_details'],
+            'equipment' => ['icon' => '⚙️', 'label' => 'Wyposażenie', 'id' => 'flexmile_samochod_wyposazenie'],
+            'pricing' => ['icon' => '💰', 'label' => 'Ceny', 'id' => 'flexmile_samochod_pricing'],
+            'flags' => ['icon' => '🏷️', 'label' => 'Statusy', 'id' => 'flexmile_samochod_flags'],
+        ];
+
+        // Sprawdź które sekcje są wypełnione
+        $gallery = get_post_meta($post->ID, '_gallery', true);
+        $brand = get_post_meta($post->ID, '_car_brand_slug', true);
+        $model = get_post_meta($post->ID, '_car_model', true);
+        $pricing = get_post_meta($post->ID, '_pricing_config', true);
+        $equipment = get_post_meta($post->ID, '_standard_equipment', true);
+
+        $completed = [
+            'gallery' => !empty($gallery),
+            'details' => !empty($brand) && !empty($model),
+            'equipment' => !empty($equipment),
+            'pricing' => !empty($pricing) && !empty($pricing['prices']),
+            'flags' => true, // Zawsze dostępne
+        ];
+
+        $total = count($sections);
+        $completed_count = count(array_filter($completed));
+        $percentage = $total > 0 ? round(($completed_count / $total) * 100) : 0;
+
+        ?>
+        <div id="flexmile-progress-indicator" style="margin: 20px 0; padding: 20px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1e293b;">
+                    Postęp wypełniania oferty
+                </h3>
+                <span class="progress-percentage" style="font-size: 18px; font-weight: 700; color: #712971;">
+                    <?php echo $percentage; ?>%
+                </span>
+            </div>
+            
+            <div style="background: #e2e8f0; border-radius: 999px; height: 8px; overflow: hidden; margin-bottom: 20px;">
+                <div class="progress-bar" style="background: linear-gradient(90deg, #712971 0%, #9333ea 100%); height: 100%; width: <?php echo $percentage; ?>%; transition: width 0.3s ease; border-radius: 999px;"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+                <?php foreach ($sections as $key => $section): ?>
+                <div class="flexmile-progress-section" 
+                     data-section="<?php echo esc_attr($section['id']); ?>"
+                     style="padding: 12px; background: <?php echo $completed[$key] ? '#ecfdf3' : '#ffffff'; ?>; border: 2px solid <?php echo $completed[$key] ? '#22c55e' : '#e2e8f0'; ?>; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;"
+                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'"
+                     onmouseout="this.style.transform=''; this.style.boxShadow=''">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 20px;"><?php echo $section['icon']; ?></span>
+                        <div style="flex: 1;">
+                            <div style="font-size: 13px; font-weight: 600; color: #1e293b;">
+                                <?php echo $section['label']; ?>
+                            </div>
+                            <div style="font-size: 11px; color: <?php echo $completed[$key] ? '#16a34a' : '#64748b'; ?>; margin-top: 2px;">
+                                <?php echo $completed[$key] ? '✓ Uzupełnione' : 'Do wypełnienia'; ?>
+                            </div>
+                        </div>
+                        <span class="flexmile-section-checkmark" style="color: #22c55e; font-size: 18px; display: <?php echo $completed[$key] ? 'inline' : 'none'; ?>;">✓</span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            $('.flexmile-progress-section').on('click', function() {
+                var sectionId = $(this).data('section');
+                var $section = $('#' + sectionId);
+                
+                if ($section.length) {
+                    // Rozwiń sekcję jeśli jest zwinięta
+                    if ($section.hasClass('closed')) {
+                        $section.find('.handlediv').click();
+                    }
+                    
+                    // Przewiń do sekcji
+                    $('html, body').animate({
+                        scrollTop: $section.offset().top - 100
+                    }, 500);
+                    
+                    // Podświetl sekcję
+                    $section.css({
+                        'box-shadow': '0 0 0 3px rgba(113, 41, 113, 0.2)',
+                        'border-color': '#712971'
+                    });
+                    
+                    setTimeout(function() {
+                        $section.css({
+                            'box-shadow': '',
+                            'border-color': ''
+                        });
+                    }, 2000);
+                }
+            });
+        });
+        </script>
+        <?php
     }
 
     /**
@@ -879,7 +1049,7 @@ class Offers {
 
             <div id="tab-podstawowe" class="flexmile-tab-content">
                 <div class="flexmile-form-grid">
-                    <div class="flexmile-field">
+                    <div class="flexmile-field flexmile-field-required">
                         <label for="car_brand">
                             <strong>Marka</strong>
                         </label>
@@ -896,7 +1066,7 @@ class Offers {
                         <p class="description">Wybierz markę z listy</p>
                     </div>
 
-                    <div class="flexmile-field">
+                    <div class="flexmile-field flexmile-field-required">
                         <label for="car_model">
                             <strong>Model</strong>
                         </label>
@@ -1130,76 +1300,76 @@ class Offers {
 
         $cena_najnizsza = get_post_meta($post->ID, '_lowest_price', true);
         ?>
-        <div style="padding: 5px;">
-            <div style="margin-bottom: 16px; background: #f9fafb; padding: 14px 12px; border-radius: 10px; border: 1px solid #e5e7eb;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827; font-size: 13px;">
-                    Dostępne okresy wynajmu (miesiące)
+        <div style="padding: 0;">
+            <div class="flexmile-pricing-input-group">
+                <label for="flexmile_rental_periods">
+                    <span>📅</span>
+                    <span>Dostępne okresy wynajmu (miesiące)</span>
                 </label>
                 <input type="text"
                        id="flexmile_rental_periods"
                        name="rental_periods"
                        value="<?php echo esc_attr(implode(',', $config['rental_periods'])); ?>"
-                       class="widefat"
-                       style="padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;"
                        placeholder="np. 12,24,36,48">
-                <p class="description" style="margin-top: 4px;">Oddziel przecinkami, np: 12,24,36,48</p>
+                <p class="description" style="margin-top: 8px; margin-bottom: 0; color: #64748b; font-size: 12px;">
+                    Oddziel przecinkami, np: 12,24,36,48
+                </p>
             </div>
 
-            <div style="margin-bottom: 16px; background: #f9fafb; padding: 14px 12px; border-radius: 10px; border: 1px solid #e5e7eb;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827; font-size: 13px;">
-                    Roczne limity kilometrów
+            <div class="flexmile-pricing-input-group">
+                <label for="flexmile_mileage_limits">
+                    <span>🛣️</span>
+                    <span>Roczne limity kilometrów</span>
                 </label>
                 <input type="text"
                        id="flexmile_mileage_limits"
                        name="mileage_limits"
                        value="<?php echo esc_attr(implode(',', $config['mileage_limits'])); ?>"
-                       class="widefat"
-                       style="padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;"
                        placeholder="np. 10000,15000,20000">
-                <p class="description" style="margin-top: 4px;">Oddziel przecinkami, np: 10000,15000,20000</p>
+                <p class="description" style="margin-top: 8px; margin-bottom: 0; color: #64748b; font-size: 12px;">
+                    Oddziel przecinkami, np: 10000,15000,20000
+                </p>
             </div>
 
             <button type="button"
                     id="flexmile_generate_price_matrix"
                     class="button flexmile-btn-primary"
-                    style="width: 100%; padding: 10px 14px; margin-bottom: 14px; justify-content: center;">
-                Wygeneruj tabelę cen
+                    style="width: 100%; padding: 12px 18px; margin-bottom: 20px; justify-content: center; font-size: 14px;">
+                🔄 Wygeneruj tabelę cen
             </button>
 
-            <div id="flexmile_price_matrix" style="margin-top: 15px;">
+            <div id="flexmile_price_matrix">
                 <?php $this->render_price_matrix($config); ?>
             </div>
 
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 18px 0;">
+            <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 24px 0;">
 
-            <p style="background: #f9fafb; padding: 10px 12px; border-radius: 10px; border-left: 4px solid #f59e0b;">
-                <label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
-                    <input type="checkbox"
-                           name="reservation_active"
-                           value="1"
-                           <?php checked($rezerwacja_aktywna, '1'); ?>
-                           style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
+            <div class="flexmile-flag-item">
+                <input type="checkbox"
+                       id="reservation_active"
+                       name="reservation_active"
+                       value="1"
+                       <?php checked($rezerwacja_aktywna, '1'); ?>>
+                <label for="reservation_active" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                    <span>🔒</span>
                     <span><strong>Samochód zarezerwowany</strong></span>
                 </label>
-            </p>
-            <p class="description" style="margin-top: 8px;">
-                Zaznacz jeśli samochód jest aktualnie zarezerwowany.
+            </div>
+            <p class="description" style="margin-top: 8px; margin-bottom: 0; color: #64748b; font-size: 12px;">
+                Zaznacz jeśli samochód jest aktualnie zarezerwowany i niedostępny do wynajmu.
             </p>
         </div>
 
         <script>
         jQuery(document).ready(function($) {
-            $('#flexmile_generate_price_matrix').on('click', function() {
-                var button = $(this);
+            var generateMatrix = function() {
                 var okresy = $('#flexmile_rental_periods').val();
                 var limity = $('#flexmile_mileage_limits').val();
 
                 if (!okresy || !limity) {
-                    alert('Uzupełnij okresy i limity kilometrów!');
+                    $('#flexmile_price_matrix').html('<p style="text-align: center; color: #6b7280; padding: 16px;">Uzupełnij okresy i limity kilometrów, aby wygenerować tabelę cen.</p>');
                     return;
                 }
-
-                button.prop('disabled', true).text('⏳ Generowanie...');
 
                 $.post(ajaxurl, {
                     action: 'flexmile_generate_price_matrix',
@@ -1210,6 +1380,53 @@ class Offers {
                 }, function(response) {
                     if (response.success) {
                         $('#flexmile_price_matrix').html(response.data.html);
+                        // Zaktualizuj wskaźnik postępu
+                        if (typeof updateProgressIndicator === 'function') {
+                            updateProgressIndicator();
+                        }
+                    } else {
+                        $('#flexmile_price_matrix').html('<p style="text-align: center; color: #ef4444; padding: 16px;">Błąd: ' + response.data.message + '</p>');
+                    }
+                });
+            };
+
+            // Automatyczne generowanie przy zmianie okresów lub limitów
+            $('#flexmile_rental_periods, #flexmile_mileage_limits').on('blur', function() {
+                var okresy = $('#flexmile_rental_periods').val();
+                var limity = $('#flexmile_mileage_limits').val();
+                
+                if (okresy && limity) {
+                    // Opóźnienie aby użytkownik mógł dokończyć wpisywanie
+                    setTimeout(generateMatrix, 500);
+                }
+            });
+
+            // Ręczne generowanie przyciskiem
+            $('#flexmile_generate_price_matrix').on('click', function() {
+                var button = $(this);
+                var okresy = $('#flexmile_rental_periods').val();
+                var limity = $('#flexmile_mileage_limits').val();
+
+                if (!okresy || !limity) {
+                    alert('Uzupełnij okresy i limity kilometrów!');
+                    return;
+                }
+
+                button.prop('disabled', true).html('⏳ Generowanie...');
+
+                $.post(ajaxurl, {
+                    action: 'flexmile_generate_price_matrix',
+                    post_id: <?php echo $post->ID; ?>,
+                    okresy: okresy,
+                    limity: limity,
+                    nonce: '<?php echo wp_create_nonce('flexmile_price_matrix'); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        $('#flexmile_price_matrix').html(response.data.html);
+                        // Zaktualizuj wskaźnik postępu
+                        if (typeof updateProgressIndicator === 'function') {
+                            updateProgressIndicator();
+                        }
                     } else {
                         alert('Błąd: ' + response.data.message);
                     }
@@ -1217,6 +1434,9 @@ class Offers {
                     button.prop('disabled', false).html('🔄 Wygeneruj tabelę cen');
                 });
             });
+
+            // Inicjalizacja przy załadowaniu strony
+            generateMatrix();
         });
         </script>
         <?php
@@ -1227,20 +1447,23 @@ class Offers {
      */
     private function render_price_matrix($config) {
         if (empty($config['rental_periods']) || empty($config['mileage_limits'])) {
-            echo '<p style="text-align: center; color: #6b7280; padding: 16px;">Uzupełnij okresy i limity, a następnie kliknij „Wygeneruj tabelę cen”.</p>';
+            echo '<div style="text-align: center; padding: 40px 20px; background: #f9fafb; border-radius: 10px; border: 2px dashed #e5e7eb;">';
+            echo '<div style="font-size: 48px; margin-bottom: 12px;">💰</div>';
+            echo '<p style="margin: 0; color: #6b7280; font-size: 14px; font-weight: 500;">Uzupełnij okresy i limity kilometrów powyżej,<br>a tabela cen wygeneruje się automatycznie.</p>';
+            echo '</div>';
             return;
         }
 
         ?>
-        <div style="overflow-x: auto;">
-            <table class="widefat" style="border-collapse: collapse; width: 100%; background: #ffffff; border-radius: 8px; overflow: hidden;">
+        <div style="overflow-x: auto; margin-top: 0;">
+            <table class="widefat" style="border-collapse: collapse; width: 100%; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
                 <thead>
-                    <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                        <th style="padding: 10px 12px; text-align: left; color: #111827; font-weight: 600; font-size: 13px; border-right: 1px solid #e5e7eb;">
+                    <tr>
+                        <th style="padding: 14px 16px; text-align: left; color: #ffffff; font-weight: 600; font-size: 13px; border-right: 1px solid rgba(255,255,255,0.2);">
                             Okres / Limit km
                         </th>
                         <?php foreach ($config['mileage_limits'] as $limit): ?>
-                        <th style="padding: 10px 12px; text-align: center; color: #111827; font-weight: 600; font-size: 13px; border-right: 1px solid #e5e7eb;">
+                        <th style="padding: 14px 16px; text-align: center; color: #ffffff; font-weight: 600; font-size: 13px; border-right: 1px solid rgba(255,255,255,0.2);">
                             <?php echo number_format($limit, 0, '', ' '); ?> km/rok
                         </th>
                         <?php endforeach; ?>
@@ -1253,9 +1476,12 @@ class Offers {
 
                     foreach ($config['rental_periods'] as $okres):
                     ?>
-                    <tr>
-                        <td style="padding: 10px 12px; font-weight: 600; background: #f9fafb; border: 1px solid #e5e7eb; font-size: 13px; color: #374151;">
-                            <?php echo $okres; ?> miesięcy
+                    <tr style="transition: background 0.2s ease;">
+                        <td style="padding: 14px 16px; font-weight: 600; background: #f9fafb; border: 1px solid #e5e7eb; font-size: 13px; color: #374151;">
+                            <span style="display: inline-flex; align-items: center; gap: 6px;">
+                                <span>📅</span>
+                                <span><?php echo $okres; ?> miesięcy</span>
+                            </span>
                         </td>
                         <?php foreach ($config['mileage_limits'] as $limit):
                             $key = $okres . '_' . $limit;
@@ -1266,14 +1492,14 @@ class Offers {
                                 $min_key = $key;
                             }
                         ?>
-                        <td style="padding: 8px; border: 1px solid #e5e7eb;">
+                        <td style="padding: 12px; border: 1px solid #e5e7eb; background: #ffffff;">
                             <input type="number"
                                    name="price_matrix[<?php echo esc_attr($key); ?>]"
                                    value="<?php echo esc_attr($cena); ?>"
                                    step="0.01"
                                    min="0"
                                    placeholder="0.00"
-                                   style="width: 100%; padding: 7px 8px; border: 1px solid #d1d5db; border-radius: 6px; text-align: right; font-weight: 600; font-size: 13px;">
+                                   style="width: 100%; padding: 10px 12px; border: 2px solid #d1d5db; border-radius: 6px; text-align: right; font-weight: 600; font-size: 13px; transition: all 0.2s ease;">
                         </td>
                         <?php endforeach; ?>
                     </tr>
@@ -1282,10 +1508,24 @@ class Offers {
             </table>
 
             <?php if ($min_price < PHP_FLOAT_MAX): ?>
-            <p style="margin-top: 10px; padding: 9px 10px; background: #ecfdf3; border-left: 3px solid #22c55e; border-radius: 8px; font-size: 12px; color: #166534;">
-                <strong>Najniższa cena (widoczna na liście ofert):</strong>
-                <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
-            </p>
+            <div style="margin-top: 16px; padding: 14px 16px; background: linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%); border-left: 4px solid #22c55e; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 24px;">✅</span>
+                <div style="flex: 1;">
+                    <div style="font-size: 12px; font-weight: 600; color: #166534; margin-bottom: 2px;">
+                        Najniższa cena (widoczna na liście ofert)
+                    </div>
+                    <div style="font-size: 18px; font-weight: 700; color: #15803d;">
+                        <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
+                    </div>
+                </div>
+            </div>
+            <?php else: ?>
+            <div style="margin-top: 16px; padding: 14px 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 24px;">⚠️</span>
+                <div style="flex: 1; font-size: 13px; color: #92400e;">
+                    <strong>Uwaga:</strong> Wypełnij ceny w tabeli powyżej, aby wyświetlić najniższą cenę.
+                </div>
+            </div>
             <?php endif; ?>
         </div>
         <?php
@@ -1341,71 +1581,64 @@ class Offers {
         $coming_soon_wrapper_id = 'coming-soon-wrapper-' . absint($post->ID);
         $coming_soon_input_id = 'coming-soon-date-' . absint($post->ID);
         ?>
-        <div style="padding: 5px;">
-            <div style="margin-bottom: 20px;">
-                <p style="margin-bottom: 12px; font-weight: 600; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-                    Statusy samochodu
-                </p>
-
-                <p style="margin: 0 0 10px 0;">
-                    <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
-                           onmouseover="this.style.background='#f8fafc'"
-                           onmouseout="this.style.background='transparent'">
-                        <input type="checkbox" name="new_car" value="1" <?php checked($nowy, '1'); ?>
-                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #10b981;">
-                        <span style="font-size: 14px;">Nowy samochód</span>
-                    </label>
-                </p>
-
-                <p style="margin: 0 0 10px 0;">
-                    <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
-                           onmouseover="this.style.background='#f8fafc'"
-                           onmouseout="this.style.background='transparent'">
-                        <input type="checkbox" name="available_immediately" value="1" <?php checked($od_reki, '1'); ?>
-                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #10b981;">
-                        <span style="font-size: 14px;">Dostępny od ręki</span>
-                    </label>
-                </p>
-
-                <p style="margin: 0 0 10px 0;">
-                    <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
-                           onmouseover="this.style.background='#f8fafc'"
-                           onmouseout="this.style.background='transparent'"
-                           for="<?php echo esc_attr($coming_soon_toggle_id); ?>">
-                        <input type="checkbox" id="<?php echo esc_attr($coming_soon_toggle_id); ?>" name="coming_soon" value="1" <?php checked($wkrotce, '1'); ?>
-                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
-                        <span style="font-size: 14px;">Dostępny wkrótce</span>
-                    </label>
-                </p>
-                <div id="<?php echo esc_attr($coming_soon_wrapper_id); ?>"
-                     style="margin-left: 34px; margin-top: -6px; margin-bottom: 12px; <?php echo $wkrotce === '1' ? '' : 'display: none;'; ?>">
-                    <label for="<?php echo esc_attr($coming_soon_input_id); ?>"
-                           style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
-                        Planowana dostępność (miesiąc i rok)
-                    </label>
-                    <input type="text"
-                           id="<?php echo esc_attr($coming_soon_input_id); ?>"
-                           name="coming_soon_date"
-                           value="<?php echo esc_attr($wkrotce_data); ?>"
-                           placeholder="Np. Listopad 2025"
-                           autocomplete="off"
-                           style="width: 100%; max-width: 240px; border: 1px solid #cbd5f5; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #0f172a;">
-                    <span class="description" style="display: block; font-size: 12px; color: #64748b; margin-top: 4px;">
-                        Możesz wpisać miesiąc i rok w formacie „Listopad 2025”.
-                    </span>
-                </div>
-
-                <p style="margin: 0;">
-                    <label style="display: flex; align-items: center; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"
-                           onmouseover="this.style.background='#f8fafc'"
-                           onmouseout="this.style.background='transparent'">
-                        <input type="checkbox" name="most_popular" value="1" <?php checked($najczesciej, '1'); ?>
-                               style="margin-right: 10px; width: 18px; height: 18px; accent-color: #f59e0b;">
-                        <span style="font-size: 14px;">Najczęściej wybierany</span>
-                    </label>
-                </p>
+        <div style="padding: 0;">
+            <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+                <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                    <span>🏷️</span>
+                    <span>Statusy samochodu</span>
+                </h4>
             </div>
 
+            <div class="flexmile-flag-item">
+                <input type="checkbox" id="new_car" name="new_car" value="1" <?php checked($nowy, '1'); ?>>
+                <label for="new_car" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                    <span>🆕</span>
+                    <span>Nowy samochód</span>
+                </label>
+            </div>
+
+            <div class="flexmile-flag-item">
+                <input type="checkbox" id="available_immediately" name="available_immediately" value="1" <?php checked($od_reki, '1'); ?>>
+                <label for="available_immediately" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                    <span>⚡</span>
+                    <span>Dostępny od ręki</span>
+                </label>
+            </div>
+
+            <div class="flexmile-flag-item">
+                <input type="checkbox" id="<?php echo esc_attr($coming_soon_toggle_id); ?>" name="coming_soon" value="1" <?php checked($wkrotce, '1'); ?>>
+                <label for="<?php echo esc_attr($coming_soon_toggle_id); ?>" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                    <span>📅</span>
+                    <span>Dostępny wkrótce</span>
+                </label>
+            </div>
+            
+            <div id="<?php echo esc_attr($coming_soon_wrapper_id); ?>"
+                 style="margin-left: 12px; margin-top: 8px; margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; <?php echo $wkrotce === '1' ? '' : 'display: none;'; ?>">
+                <label for="<?php echo esc_attr($coming_soon_input_id); ?>"
+                       style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 8px;">
+                    Planowana dostępność (miesiąc i rok)
+                </label>
+                <input type="text"
+                       id="<?php echo esc_attr($coming_soon_input_id); ?>"
+                       name="coming_soon_date"
+                       value="<?php echo esc_attr($wkrotce_data); ?>"
+                       placeholder="Np. Listopad 2025"
+                       autocomplete="off"
+                       class="flexmile-input"
+                       style="width: 100%; max-width: 100%; margin-bottom: 6px;">
+                <span class="description" style="display: block; font-size: 11px; color: #64748b; margin: 0;">
+                    Możesz wpisać miesiąc i rok w formacie „Listopad 2025”.
+                </span>
+            </div>
+
+            <div class="flexmile-flag-item">
+                <input type="checkbox" id="most_popular" name="most_popular" value="1" <?php checked($najczesciej, '1'); ?>>
+                <label for="most_popular" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                    <span>⭐</span>
+                    <span>Najczęściej wybierany</span>
+                </label>
+            </div>
         </div>
         <script>
             (function() {
