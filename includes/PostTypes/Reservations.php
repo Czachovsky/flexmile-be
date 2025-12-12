@@ -17,6 +17,7 @@ class Reservations {
         add_action('init', [$this, 'register_post_type']);
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
+        add_action('before_delete_post', [$this, 'handle_reservation_deletion'], 10, 1);
         add_filter('manage_' . self::POST_TYPE . '_posts_columns', [$this, 'custom_columns']);
         add_action('manage_' . self::POST_TYPE . '_posts_custom_column', [$this, 'custom_column_content'], 10, 2);
     }
@@ -275,6 +276,56 @@ class Reservations {
     }
 
     /**
+     * Obsługuje usunięcie rezerwacji - aktualizuje status oferty
+     */
+    public function handle_reservation_deletion($post_id) {
+        $post = get_post($post_id);
+        
+        // Sprawdź czy to rezerwacja
+        if (!$post || $post->post_type !== self::POST_TYPE) {
+            return;
+        }
+
+        // Sprawdź czy rezerwacja była zatwierdzona
+        $status = get_post_meta($post_id, '_status', true);
+        if ($status !== 'approved') {
+            return;
+        }
+
+        // Pobierz ID oferty
+        $samochod_id = get_post_meta($post_id, '_offer_id', true);
+        if (!$samochod_id) {
+            return;
+        }
+
+        // Sprawdź czy są jeszcze inne aktywne rezerwacje dla tej oferty
+        $other_reservations = get_posts([
+            'post_type' => self::POST_TYPE,
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'post__not_in' => [$post_id],
+            'meta_query' => [
+                'relation' => 'AND',
+                [
+                    'key' => '_offer_id',
+                    'value' => $samochod_id,
+                    'compare' => '=',
+                ],
+                [
+                    'key' => '_status',
+                    'value' => 'approved',
+                    'compare' => '=',
+                ],
+            ],
+        ]);
+
+        // Jeśli nie ma innych aktywnych rezerwacji, ustaw ofertę jako dostępną
+        if (empty($other_reservations)) {
+            update_post_meta($samochod_id, '_reservation_active', '0');
+        }
+    }
+
+    /**
      * Zapisuje meta dane
      */
     public function save_meta($post_id, $post) {
@@ -307,7 +358,31 @@ class Reservations {
             if ($old_status === 'approved' && $new_status !== 'approved') {
                 $samochod_id = get_post_meta($post_id, '_offer_id', true);
                 if ($samochod_id) {
-                    update_post_meta($samochod_id, '_reservation_active', '0');
+                    // Sprawdź czy są jeszcze inne aktywne rezerwacje dla tej oferty
+                    $other_reservations = get_posts([
+                        'post_type' => self::POST_TYPE,
+                        'post_status' => 'publish',
+                        'posts_per_page' => -1,
+                        'post__not_in' => [$post_id],
+                        'meta_query' => [
+                            'relation' => 'AND',
+                            [
+                                'key' => '_offer_id',
+                                'value' => $samochod_id,
+                                'compare' => '=',
+                            ],
+                            [
+                                'key' => '_status',
+                                'value' => 'approved',
+                                'compare' => '=',
+                            ],
+                        ],
+                    ]);
+
+                    // Jeśli nie ma innych aktywnych rezerwacji, ustaw ofertę jako dostępną
+                    if (empty($other_reservations)) {
+                        update_post_meta($samochod_id, '_reservation_active', '0');
+                    }
                 }
             }
         }

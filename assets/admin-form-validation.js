@@ -214,3 +214,4 @@ jQuery(document).ready(function($) {
         $(this).data('tooltip-added', false);
     });
 });
+

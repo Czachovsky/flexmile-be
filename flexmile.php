@@ -68,6 +68,13 @@ class FlexMile_Plugin {
     }
 
     private function load_components() {
+        // Upewnij się, że REST API jest włączone
+        add_filter('rest_enabled', '__return_true', 999);
+        add_filter('rest_jsonp_enabled', '__return_true', 999);
+        
+        // REST API Fix (musi być pierwsze, aby naprawić permalinki)
+        new FlexMile\Core\REST_API_Fix();
+
         // Frontend blocker (headless mode)
         new FlexMile\Core\Frontend_Blocker();
 
@@ -92,12 +99,22 @@ class FlexMile_Plugin {
     }
 
     public function activate() {
+        // Ensure permalinks are enabled
+        $permalink_structure = get_option('permalink_structure');
+        if (empty($permalink_structure)) {
+            update_option('permalink_structure', '/%postname%/');
+        }
+
         // Register CPT before flush
         new FlexMile\PostTypes\Offers();
         new FlexMile\PostTypes\Reservations();
         new FlexMile\PostTypes\Orders();
 
+        // Flush rewrite rules
         flush_rewrite_rules();
+        
+        // Clear any transients
+        delete_transient('flexmile_rewrite_flushed');
     }
 
     public function deactivate() {
