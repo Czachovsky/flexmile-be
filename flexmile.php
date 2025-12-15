@@ -93,6 +93,7 @@ class FlexMile_Plugin {
         new FlexMile\Admin\Admin_Menu();
         new FlexMile\Admin\Sample_Data_Importer();
         new FlexMile\Admin\Dashboard_Widgets();
+        new FlexMile\Admin\Email_Tester();
     }
 
     public function load_textdomain() {
