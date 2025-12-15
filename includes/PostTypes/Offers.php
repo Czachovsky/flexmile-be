@@ -595,7 +595,7 @@ class Offers {
                 jQuery(document).ready(function($) {
                     var titleInput = $("#title, input[name=\"post_title\"]").first();
                     if (titleInput.length) {
-                        var hint = $("<p class=\"description\" style=\"margin-top: 6px; padding: 8px 12px; background: #f0f9ff; border-left: 3px solid #0ea5e9; border-radius: 4px; color: #0c4a6e; font-size: 12px;\"><span style=\"font-weight: 600;\">💡 Podpowiedź:</span> Tytuł jest automatycznie generowany na podstawie wybranej marki i modelu. Możesz go zmienić ręcznie, jeśli chcesz.</p>");
+                        var hint = $("<p class=\"description\" style=\"margin-top: 6px; padding: 8px 12px; background: #f0f9ff; border-left: 3px solid #0ea5e9; border-radius: 4px; color: #0c4a6e; font-size: 12px;\"><span style=\"font-weight: 600;\">Podpowiedź:</span> Tytuł jest automatycznie generowany na podstawie wybranej marki i modelu. Możesz go zmienić ręcznie, jeśli chcesz.</p>");
                         titleInput.after(hint);
                     }
                 });
@@ -1303,7 +1303,6 @@ class Offers {
         <div style="padding: 0;">
             <div class="flexmile-pricing-input-group">
                 <label for="flexmile_rental_periods">
-                    <span>📅</span>
                     <span>Dostępne okresy wynajmu (miesiące)</span>
                 </label>
                 <input type="text"
@@ -1318,7 +1317,6 @@ class Offers {
 
             <div class="flexmile-pricing-input-group">
                 <label for="flexmile_mileage_limits">
-                    <span>🛣️</span>
                     <span>Roczne limity kilometrów</span>
                 </label>
                 <input type="text"
@@ -1335,7 +1333,7 @@ class Offers {
                     id="flexmile_generate_price_matrix"
                     class="button flexmile-btn-primary"
                     style="width: 100%; padding: 12px 18px; margin-bottom: 20px; justify-content: center; font-size: 14px;">
-                🔄 Wygeneruj tabelę cen
+                Wygeneruj tabelę cen
             </button>
 
             <div id="flexmile_price_matrix">
@@ -1351,7 +1349,6 @@ class Offers {
                        value="1"
                        <?php checked($rezerwacja_aktywna, '1'); ?>>
                 <label for="reservation_active" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                    <span>🔒</span>
                     <span><strong>Samochód zarezerwowany</strong></span>
                 </label>
             </div>
@@ -1479,7 +1476,6 @@ class Offers {
                     <tr style="transition: background 0.2s ease;">
                         <td style="padding: 14px 16px; font-weight: 600; background: #f9fafb; border: 1px solid #e5e7eb; font-size: 13px; color: #374151;">
                             <span style="display: inline-flex; align-items: center; gap: 6px;">
-                                <span>📅</span>
                                 <span><?php echo $okres; ?> miesięcy</span>
                             </span>
                         </td>
@@ -1509,7 +1505,7 @@ class Offers {
 
             <?php if ($min_price < PHP_FLOAT_MAX): ?>
             <div style="margin-top: 16px; padding: 14px 16px; background: linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%); border-left: 4px solid #22c55e; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 24px;">✅</span>
+
                 <div style="flex: 1;">
                     <div style="font-size: 12px; font-weight: 600; color: #166534; margin-bottom: 2px;">
                         Najniższa cena (widoczna na liście ofert)
@@ -1521,7 +1517,6 @@ class Offers {
             </div>
             <?php else: ?>
             <div style="margin-top: 16px; padding: 14px 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 24px;">⚠️</span>
                 <div style="flex: 1; font-size: 13px; color: #92400e;">
                     <strong>Uwaga:</strong> Wypełnij ceny w tabeli powyżej, aby wyświetlić najniższą cenę.
                 </div>
@@ -1584,7 +1579,6 @@ class Offers {
         <div style="padding: 0;">
             <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
                 <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-                    <span>🏷️</span>
                     <span>Statusy samochodu</span>
                 </h4>
             </div>
@@ -1592,15 +1586,13 @@ class Offers {
             <div class="flexmile-flag-item">
                 <input type="checkbox" id="new_car" name="new_car" value="1" <?php checked($nowy, '1'); ?>>
                 <label for="new_car" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                    <span>🆕</span>
-                    <span>Nowy samochód</span>
+                    <span>Nowa oferta</span>
                 </label>
             </div>
 
             <div class="flexmile-flag-item">
                 <input type="checkbox" id="available_immediately" name="available_immediately" value="1" <?php checked($od_reki, '1'); ?>>
                 <label for="available_immediately" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                    <span>⚡</span>
                     <span>Dostępny od ręki</span>
                 </label>
             </div>
@@ -1608,7 +1600,6 @@ class Offers {
             <div class="flexmile-flag-item">
                 <input type="checkbox" id="<?php echo esc_attr($coming_soon_toggle_id); ?>" name="coming_soon" value="1" <?php checked($wkrotce, '1'); ?>>
                 <label for="<?php echo esc_attr($coming_soon_toggle_id); ?>" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                    <span>📅</span>
                     <span>Dostępny wkrótce</span>
                 </label>
             </div>
@@ -1635,7 +1626,6 @@ class Offers {
             <div class="flexmile-flag-item">
                 <input type="checkbox" id="most_popular" name="most_popular" value="1" <?php checked($najczesciej, '1'); ?>>
                 <label for="most_popular" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                    <span>⭐</span>
                     <span>Najczęściej wybierany</span>
                 </label>
             </div>
