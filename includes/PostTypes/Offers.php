@@ -49,6 +49,10 @@ class Offers {
         // Dodaj kolumnę z reference ID w liście postów
         add_filter('manage_' . self::POST_TYPE . '_posts_columns', [$this, 'add_reference_id_column']);
         add_action('manage_' . self::POST_TYPE . '_posts_custom_column', [$this, 'render_custom_columns'], 10, 2);
+        
+        // Dodaj sortowanie po ID oferty
+        add_filter('manage_edit-' . self::POST_TYPE . '_sortable_columns', [$this, 'make_reference_id_sortable']);
+        add_action('pre_get_posts', [$this, 'handle_reference_id_sorting']);
     }
 
     /**
@@ -219,6 +223,30 @@ class Offers {
             } else {
                 echo '<span style="color: #94a3b8;">Brak</span>';
             }
+        }
+    }
+
+    /**
+     * Umożliwia sortowanie po ID oferty
+     */
+    public function make_reference_id_sortable($columns) {
+        $columns['car_reference_id'] = 'car_reference_id';
+        return $columns;
+    }
+
+    /**
+     * Obsługuje sortowanie po ID oferty (meta pole _car_reference_id)
+     */
+    public function handle_reference_id_sorting($query) {
+        if (!is_admin() || !$query->is_main_query()) {
+            return;
+        }
+
+        $orderby = $query->get('orderby');
+
+        if ($orderby === 'car_reference_id') {
+            $query->set('meta_key', '_car_reference_id');
+            $query->set('orderby', 'meta_value');
         }
     }
 
@@ -767,11 +795,11 @@ class Offers {
         }
 
         $sections = [
-            'gallery' => ['icon' => '📷', 'label' => 'Galeria', 'id' => 'flexmile_samochod_gallery'],
-            'details' => ['icon' => '🚗', 'label' => 'Szczegóły', 'id' => 'flexmile_samochod_details'],
-            'equipment' => ['icon' => '⚙️', 'label' => 'Wyposażenie', 'id' => 'flexmile_samochod_wyposazenie'],
-            'pricing' => ['icon' => '💰', 'label' => 'Ceny', 'id' => 'flexmile_samochod_pricing'],
-            'flags' => ['icon' => '🏷️', 'label' => 'Statusy', 'id' => 'flexmile_samochod_flags'],
+            'gallery' => ['label' => 'Galeria', 'id' => 'flexmile_samochod_gallery'],
+            'details' => ['label' => 'Szczegóły', 'id' => 'flexmile_samochod_details'],
+            'equipment' => ['label' => 'Wyposażenie', 'id' => 'flexmile_samochod_wyposazenie'],
+            'pricing' => ['label' => 'Ceny', 'id' => 'flexmile_samochod_pricing'],
+            'flags' => ['label' => 'Statusy', 'id' => 'flexmile_samochod_flags'],
         ];
 
         // Sprawdź które sekcje są wypełnione
@@ -816,16 +844,17 @@ class Offers {
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'"
                      onmouseout="this.style.transform=''; this.style.boxShadow=''">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 20px;"><?php echo $section['icon']; ?></span>
                         <div style="flex: 1;">
                             <div style="font-size: 13px; font-weight: 600; color: #1e293b;">
                                 <?php echo $section['label']; ?>
                             </div>
                             <div style="font-size: 11px; color: <?php echo $completed[$key] ? '#16a34a' : '#64748b'; ?>; margin-top: 2px;">
-                                <?php echo $completed[$key] ? '✓ Uzupełnione' : 'Do wypełnienia'; ?>
+                                <?php echo $completed[$key] ? 'Uzupełnione' : 'Do wypełnienia'; ?>
                             </div>
                         </div>
-                        <span class="flexmile-section-checkmark" style="color: #22c55e; font-size: 18px; display: <?php echo $completed[$key] ? 'inline' : 'none'; ?>;">✓</span>
+                        <?php if ($completed[$key]): ?>
+                        <span class="flexmile-section-checkmark" style="color: #22c55e; font-size: 18px; font-weight: bold;">✓</span>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -1531,7 +1560,6 @@ class Offers {
     private function render_price_matrix($config) {
         if (empty($config['rental_periods']) || empty($config['mileage_limits'])) {
             echo '<div style="text-align: center; padding: 40px 20px; background: #f9fafb; border-radius: 10px; border: 2px dashed #e5e7eb;">';
-            echo '<div style="font-size: 48px; margin-bottom: 12px;">💰</div>';
             echo '<p style="margin: 0; color: #6b7280; font-size: 14px; font-weight: 500;">Uzupełnij okresy i limity kilometrów powyżej,<br>a tabela cen wygeneruje się automatycznie.</p>';
             echo '</div>';
             return;
