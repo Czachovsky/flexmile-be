@@ -12,6 +12,8 @@ class Admin_Menu {
 
     public function __construct() {
         add_action('admin_menu', [$this, 'add_admin_menu']);
+        // Sprzątanie domyślnego menu WordPress po dodaniu własnego
+        add_action('admin_menu', [$this, 'cleanup_admin_menu'], 999);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
     }
 
@@ -55,6 +57,20 @@ class Admin_Menu {
             'flexmile-banners',
             [$this, 'render_banners']
         );
+    }
+
+    /**
+     * Usuwa wybrane domyślne pozycje z menu WP
+     */
+    public function cleanup_admin_menu() {
+        // Posty (Posts)
+        remove_menu_page('edit.php');
+        // Strony (Pages)
+        remove_menu_page('edit.php?post_type=page');
+        // Komentarze (Comments)
+        remove_menu_page('edit-comments.php');
+        // Wygląd (Appearance)
+        remove_menu_page('themes.php');
     }
 
     /**

@@ -590,6 +590,67 @@ class Offers {
                 true
             );
 
+            // Przyklej box Publish tak, aby przycisk "Update" był zawsze widoczny
+            wp_add_inline_script('flexmile-form-validation', '
+                jQuery(document).ready(function($) {
+                    var $box = $("#submitdiv");
+                    if (!$box.length) {
+                        return;
+                    }
+
+                    var originalStyle = $box.attr("style") || "";
+                    var $placeholder = $("<div class=\"flexmile-submit-placeholder\"></div>").insertBefore($box).hide();
+
+                    function getTopOffset() {
+                        var adminBarHeight = $("#wpadminbar").length ? $("#wpadminbar").outerHeight() : 0;
+                        return adminBarHeight + 12; // mały margines od paska admina
+                    }
+
+                    function updateSticky() {
+                        var scrollTop = $(window).scrollTop();
+                        var postBodyOffset = $("#poststuff").offset() ? $("#poststuff").offset().top : 0;
+                        var footerTop = $("#wpfooter").offset() ? $("#wpfooter").offset().top : Number.MAX_VALUE;
+                        var boxHeight = $box.outerHeight();
+                        var topOffset = getTopOffset();
+                        var containerOffset = $placeholder.is(":visible") ? $placeholder.offset() : $box.offset();
+                        var containerLeft = containerOffset ? containerOffset.left : $box.offset().left;
+                        var containerWidth = $placeholder.is(":visible") ? $placeholder.outerWidth() : $box.outerWidth();
+
+                        // Aktywuj sticky gdy przewiniemy poniżej nagłówka formularza
+                        if (scrollTop + topOffset > containerOffset.top && scrollTop + boxHeight + topOffset < footerTop) {
+                            if (!$box.hasClass("flexmile-sticky-submit")) {
+                                $placeholder.height(boxHeight).show();
+                                $box
+                                    .addClass("flexmile-sticky-submit")
+                                    .css({
+                                        position: "fixed",
+                                        top: topOffset + "px",
+                                        left: containerLeft + "px",
+                                        width: containerWidth + "px",
+                                        zIndex: 1000
+                                    });
+                            } else {
+                                // Aktualizuj szerokość/lewą przy zmianie rozmiaru
+                                $box.css({
+                                    left: containerLeft + "px",
+                                    width: containerWidth + "px"
+                                });
+                            }
+                        } else {
+                            if ($box.hasClass("flexmile-sticky-submit")) {
+                                $box
+                                    .removeClass("flexmile-sticky-submit")
+                                    .attr("style", originalStyle);
+                                $placeholder.hide();
+                            }
+                        }
+                    }
+
+                    $(window).on("scroll.flexmileSticky resize.flexmileSticky", updateSticky);
+                    updateSticky();
+                });
+            ');
+
             // Dodaj informację o automatycznym generowaniu tytułu (klasyczny edytor)
             wp_add_inline_script('flexmile-dropdown', '
                 jQuery(document).ready(function($) {
@@ -632,17 +693,8 @@ class Offers {
         add_action('edit_form_after_title', [$this, 'render_progress_indicator']);
 
         add_meta_box(
-            'flexmile_offer_actions',
-            'Akcje oferty',
-            [$this, 'render_offer_actions_meta_box'],
-            self::POST_TYPE,
-            'side',
-            'high'
-        );
-
-        add_meta_box(
             'flexmile_car_reference',
-            'ID oferty',
+            'Informacje o ofercie',
             [$this, 'render_reference_id_meta_box'],
             self::POST_TYPE,
             'side',
@@ -858,34 +910,68 @@ class Offers {
     public function render_reference_id_meta_box($post) {
         $ref_id = get_post_meta($post->ID, '_car_reference_id', true);
 
-        if (empty($ref_id)) {
-            ?>
-            <div style="padding: 14px 16px; text-align: center; background: #f9fafb; border-radius: 10px; border: 1px dashed #e5e7eb;">
-                <p style="margin: 0; color: #6b7280; font-size: 13px;">
-                    ID oferty zostanie wygenerowane<br>automatycznie po opublikowaniu oferty.
-                </p>
-            </div>
-            <?php
-        } else {
-            ?>
-            <div style="padding: 14px 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: #ffffff;">
+        ?>
+        <div style="padding: 14px 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: #ffffff; display: flex; flex-direction: column; gap: 14px;">
+            <div>
                 <div style="font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;">
                     ID oferty
                 </div>
-                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #f3e8ff;">
-                    <span style="font-size: 11px; text-transform: uppercase; color: #581c87; letter-spacing: 0.12em; font-weight: 600;">
-                        REF
-                    </span>
-                    <span style="font-size: 18px; font-weight: 700; color: #111827; font-family: monospace; letter-spacing: 0.18em;">
-                        <?php echo esc_html($ref_id); ?>
-                    </span>
-                </div>
-                <div style="margin-top: 8px; font-size: 11px; color: #9ca3af;">
-                    To ID jest stałe i służy do powiązań w systemie.
-                </div>
+                <?php if (empty($ref_id)): ?>
+                    <div style="padding: 10px 12px; border-radius: 8px; background: #f9fafb; border: 1px dashed #e5e7eb; text-align: left;">
+                        <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.5;">
+                            ID oferty zostanie wygenerowane automatycznie<br>po pierwszym opublikowaniu oferty.
+                        </p>
+                    </div>
+                <?php else: ?>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #f3e8ff;">
+                        <span style="font-size: 11px; text-transform: uppercase; color: #581c87; letter-spacing: 0.12em; font-weight: 600;">
+                            REF
+                        </span>
+                        <span style="font-size: 16px; font-weight: 700; color: #111827; font-family: monospace; letter-spacing: 0.16em;">
+                            <?php echo esc_html($ref_id); ?>
+                        </span>
+                    </div>
+
+                <?php endif; ?>
             </div>
-            <?php
-        }
+
+            <div style="margin-top: 4px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                <div style="font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;">
+                    Akcje oferty
+                </div>
+                <?php
+                if (
+                    !$post instanceof \WP_Post ||
+                    $post->post_type !== self::POST_TYPE ||
+                    empty($post->ID) ||
+                    $post->post_status === 'auto-draft'
+                ) :
+                    ?>
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">
+                        Zapisz szkic, aby skorzystać z dodatkowych akcji oferty.
+                    </p>
+                <?php
+                else :
+                    $url = wp_nonce_url(
+                        admin_url('admin.php?action=flexmile_duplicate_offer&post=' . absint($post->ID)),
+                        'flexmile_duplicate_offer_' . absint($post->ID)
+                    );
+                    ?>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <a href="<?php echo esc_url($url); ?>"
+                           class="button button-primary"
+                           style="width: 100%; text-align: center;">
+                            Powiel ofertę
+                        </a>
+                        <p class="description" style="margin: 0; font-size: 11px; color: #6b7280; line-height: 1.5;">
+                            Utworzy nową ofertę jako szkic z tymi samymi danymi,
+                            ale z <strong>nowym ID oferty</strong>.
+                        </p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
     }
 
     /**
@@ -1634,6 +1720,8 @@ class Offers {
             (function() {
                 const toggle = document.getElementById('<?php echo esc_js($coming_soon_toggle_id); ?>');
                 const wrapper = document.getElementById('<?php echo esc_js($coming_soon_wrapper_id); ?>');
+                const availableImmediately = document.getElementById('available_immediately');
+
                 if (!toggle || !wrapper) {
                     return;
                 }
@@ -1642,7 +1730,36 @@ class Offers {
                     wrapper.style.display = toggle.checked ? 'block' : 'none';
                 };
 
-                toggle.addEventListener('change', refreshVisibility);
+                // Wzajemne wykluczanie: "Dostępny od ręki" vs "Dostępny wkrótce"
+                const syncExclusiveFlags = () => {
+                    if (toggle.checked && availableImmediately && availableImmediately.checked) {
+                        // Jeśli zaznaczono "Dostępny wkrótce", odznacz "Dostępny od ręki"
+                        availableImmediately.checked = false;
+                    }
+                    if (availableImmediately && availableImmediately.checked && toggle.checked) {
+                        // Jeśli zaznaczono "Dostępny od ręki", odznacz "Dostępny wkrótce"
+                        toggle.checked = false;
+                        refreshVisibility();
+                    }
+                };
+
+                toggle.addEventListener('change', function() {
+                    refreshVisibility();
+                    syncExclusiveFlags();
+                });
+
+                if (availableImmediately) {
+                    availableImmediately.addEventListener('change', function() {
+                        if (availableImmediately.checked) {
+                            // Odznacz "Dostępny wkrótce" przy zaznaczeniu "Dostępny od ręki"
+                            toggle.checked = false;
+                            refreshVisibility();
+                        }
+                    });
+                }
+
+                // Startowy stan po załadowaniu edytora
+                syncExclusiveFlags();
                 refreshVisibility();
             })();
         </script>

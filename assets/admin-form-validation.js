@@ -175,7 +175,6 @@ jQuery(document).ready(function($) {
     }
 
     // Inicjalizacja
-    addFieldHints();
     updateProgressIndicator();
 
     // Aktualizuj wskaźnik postępu przy zapisie
@@ -214,5 +213,6 @@ jQuery(document).ready(function($) {
         $(this).data('tooltip-added', false);
     });
 });
+
 
 

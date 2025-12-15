@@ -52,11 +52,19 @@ jQuery(document).ready(function($) {
                     if (selectModel) {
                         setTimeout(function() {
                             updatePostTitle();
+                            // Po załadowaniu i zaznaczeniu modelu zaktualizuj też wskaźnik postępu
+                            if (typeof window.updateProgressIndicator === 'function') {
+                                window.updateProgressIndicator();
+                            }
                         }, 200);
                     } else {
                         // Nawet jeśli model nie był wybrany, zaktualizuj tytuł z samą marką
                         setTimeout(function() {
                             updatePostTitle();
+                            // Zaktualizuj wskaźnik postępu także po samym wyborze marki
+                            if (typeof window.updateProgressIndicator === 'function') {
+                                window.updateProgressIndicator();
+                            }
                         }, 100);
                     }
                 } else {

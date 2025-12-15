@@ -643,6 +643,23 @@
 }
 
 /* ========================================
+   STICKY PUBLISH BOX (UPDATE BUTTON)
+   ======================================== */
+
+/* Przyklejamy sam box z publikacją, żeby przycisk Update był zawsze widoczny */
+#submitdiv {
+    position: sticky;
+    top: 32px;
+    z-index: 101;
+}
+
+@media (max-width: 960px) {
+    #submitdiv {
+        position: static;
+    }
+}
+
+/* ========================================
    IMPROVED PRICING FORM
    ======================================== */
 
@@ -827,4 +844,19 @@
 
 html {
     scroll-behavior: smooth;
+}
+
+/* ========================================
+   HIDE UNUSED ELEMENTS FOR OFFERS
+   ======================================== */
+
+/* Ukryj klasyczny edytor treści i box Featured image dla ofert */
+body.post-type-offer #wp-content-wrap,
+body.post-type-offer #postimagediv {
+    display: none !important;
+}
+
+/* Ukryj przycisk Preview w boksie Publish dla ofert */
+body.post-type-offer #preview-action {
+    display: none !important;
 }

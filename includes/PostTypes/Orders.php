@@ -18,6 +18,11 @@ class Orders {
         add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
         add_filter('manage_' . self::POST_TYPE . '_posts_columns', [$this, 'custom_columns']);
         add_action('manage_' . self::POST_TYPE . '_posts_custom_column', [$this, 'custom_column_content'], 10, 2);
+
+        // Przy usunięciu / przeniesieniu zamówienia do kosza odblokuj auto,
+        // jeśli nie ma innych zatwierdzonych zamówień dla tej oferty
+        add_action('wp_trash_post', [$this, 'maybe_unlock_car_on_order_delete']);
+        add_action('before_delete_post', [$this, 'maybe_unlock_car_on_order_delete']);
     }
 
     /**
@@ -195,9 +200,9 @@ class Orders {
         <p>
             <label for="status"><strong>Status:</strong></label><br>
             <select id="status" name="status" class="widefat">
-                <option value="pending" <?php selected($status, 'pending'); ?>>⏳ Oczekujące</option>
-                <option value="approved" <?php selected($status, 'approved'); ?>>✅ Zatwierdzone</option>
-                <option value="rejected" <?php selected($status, 'rejected'); ?>>❌ Odrzucone</option>
+                <option value="pending" <?php selected($status, 'pending'); ?>>Oczekujące</option>
+                <option value="approved" <?php selected($status, 'approved'); ?>>Zatwierdzone</option>
+                <option value="rejected" <?php selected($status, 'rejected'); ?>>Odrzucone</option>
             </select>
         </p>
         <p class="description">Po zatwierdzeniu zamówienia, samochód zostanie ukryty z listy dostępnych aut.</p>
@@ -297,6 +302,57 @@ class Orders {
                     update_post_meta($samochod_id, '_order_approved', '0');
                 }
             }
+        }
+    }
+
+    /**
+     * Przy usunięciu lub przeniesieniu zamówienia do kosza
+     * sprawdza, czy są inne zatwierdzone zamówienia dla tego samego auta.
+     * Jeśli nie ma – odblokowuje auto (ustawia _order_approved na "0").
+     *
+     * Dzięki temu po anulowaniu/usunięciu ostatniego zatwierdzonego zamówienia
+     * samochód ponownie pojawia się w wynikach wyszukiwania.
+     *
+     * @param int $post_id
+     */
+    public function maybe_unlock_car_on_order_delete($post_id) {
+        $post = get_post($post_id);
+
+        // Działa tylko dla CPT "order"
+        if (!$post || $post->post_type !== self::POST_TYPE) {
+            return;
+        }
+
+        $samochod_id = get_post_meta($post_id, '_offer_id', true);
+        if (!$samochod_id) {
+            return;
+        }
+
+        // Sprawdź, czy istnieją INNE (poza aktualnie usuwanym) zamówienia
+        // w statusie "approved" dla tego samego samochodu
+        $other_approved = new \WP_Query([
+            'post_type'      => self::POST_TYPE,
+            'post_status'    => 'publish',
+            'posts_per_page' => 1,
+            'no_found_rows'  => true,
+            'fields'         => 'ids',
+            'post__not_in'   => [$post_id],
+            'meta_query'     => [
+                [
+                    'key'   => '_offer_id',
+                    'value' => $samochod_id,
+                ],
+                [
+                    'key'     => '_status',
+                    'value'   => 'approved',
+                    'compare' => '=',
+                ],
+            ],
+        ]);
+
+        // Jeśli brak innych zatwierdzonych zamówień – zdejmij blokadę z auta
+        if (empty($other_approved->posts)) {
+            update_post_meta($samochod_id, '_order_approved', '0');
         }
     }
 
