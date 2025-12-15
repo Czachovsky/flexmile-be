@@ -651,7 +651,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_gallery',
-            '📷 Galeria zdjęć',
+            'Galeria zdjęć',
             [$this, 'render_gallery_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -660,7 +660,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_details',
-            '🚗 Szczegóły samochodu',
+            'Szczegóły samochodu',
             [$this, 'render_details_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -669,7 +669,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_wyposazenie',
-            '⚙️ Wyposażenie standardowe',
+            'Wyposażenie standardowe',
             [$this, 'render_wyposazenie_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -678,7 +678,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_wyposazenie_dodatkowe',
-            '✨ Wyposażenie dodatkowe',
+            'Wyposażenie dodatkowe',
             [$this, 'render_wyposazenie_dodatkowe_meta_box'],
             self::POST_TYPE,
             'normal',
@@ -687,7 +687,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_pricing',
-            '💰 Konfiguracja cen',
+            'Konfiguracja cen',
             [$this, 'render_pricing_meta_box'],
             self::POST_TYPE,
             'side',
@@ -696,7 +696,7 @@ class Offers {
 
         add_meta_box(
             'flexmile_samochod_flags',
-            '🏷️ Statusy i wyróżnienie',
+            'Statusy i wyróżnienie',
             [$this, 'render_flags_meta_box'],
             self::POST_TYPE,
             'side',

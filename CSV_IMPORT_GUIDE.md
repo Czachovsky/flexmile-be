@@ -140,3 +140,5 @@ title,car_brand_slug,car_model,body_type,fuel_type,year,horsepower,transmission,
 BMW X5 3.0d xDrive,bmw,X5,SUV,diesel,2022,286,automatic,2200,"12,24,36,48","10000,15000,20000",0,1
 Toyota Corolla 1.8 Hybrid,toyota,Corolla,Sedan,hybrid,2023,122,automatic,1500,"12,24,36","10000,15000",1,1
 ```
+
+

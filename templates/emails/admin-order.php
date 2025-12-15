@@ -31,6 +31,9 @@ $car_reference_display = $car_reference_id ?: sprintf('ID-%d', $samochod->ID);
 $formatted_monthly_price = number_format($cena_miesieczna, 2, ',', ' ');
 $formatted_total_price = number_format($cena_calkowita, 2, ',', ' ');
 
+// Numer zamówienia
+$order_number = sprintf('#%d', $rezerwacja_id);
+
 // Data i informacje techniczne
 $current_date = date_i18n('d.m.Y H:i', current_time('timestamp'));
 $user_ip = !empty($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : '—';
@@ -86,16 +89,16 @@ $admin_car_link = admin_url('post.php?post=' . $samochod->ID . '&action=edit');
                                                     Numer zamówienia
                                                 </td>
                                                 <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
-                                                    <?php echo esc_html($car_reference_display); ?>
+                                                    <?php echo esc_html($order_number); ?>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
-                                                    Samochód
+                                                    Oferta
                                                 </td>
                                                 <td align="right" style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold">
                                                     <a href="<?php echo esc_url($admin_car_link); ?>" style="color:#863087;text-decoration:none;font-weight:bold">
-                                                        <?php echo esc_html($samochod->post_title); ?>
+                                                        <?php echo esc_html($samochod->post_title); ?> (<?php echo esc_html($car_reference_display); ?>)
                                                     </a>
                                                 </td>
                                             </tr>
@@ -153,18 +156,10 @@ $admin_car_link = admin_url('post.php?post=' . $samochod->ID . '&action=edit');
                                             </tr>
                                             <tr>
                                                 <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
-                                                    Cena miesięczna
+                                                    Rata miesięczna
                                                 </td>
                                                 <td align="right" style="padding:12px 0;font-size:15px;color:#863087;border-bottom: 1px solid #eeeeee;font-weight: bold">
                                                     <?php echo esc_html($formatted_monthly_price); ?> zł
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
-                                                    Cena całkowita
-                                                </td>
-                                                <td align="right" style="padding:12px 0;font-size:18px;color:#863087;border-bottom: 1px solid #eeeeee;font-weight: bold">
-                                                    <?php echo esc_html($formatted_total_price); ?> zł
                                                 </td>
                                             </tr>
                                             <tr>
