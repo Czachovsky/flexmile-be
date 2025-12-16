@@ -379,7 +379,6 @@ class Reservations_Endpoint {
 
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_option('blogname') . ' <' . get_option('admin_email') . '>',
         ];
 
         wp_mail($to, $subject, $message, $headers);

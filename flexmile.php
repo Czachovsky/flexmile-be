@@ -75,6 +75,9 @@ class FlexMile_Plugin {
         // REST API Fix (musi być pierwsze, aby naprawić permalinki)
         new FlexMile\Core\REST_API_Fix();
 
+        // Email configuration (musi być przed innymi komponentami wysyłającymi emaile)
+        new FlexMile\Core\Email_Config();
+
         // Frontend blocker (headless mode)
         new FlexMile\Core\Frontend_Blocker();
 

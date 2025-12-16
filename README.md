@@ -137,12 +137,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 ### Konfiguracja emaili
 
-Wtyczka używa standardowej funkcji WordPress `wp_mail()`. Aby zapewnić poprawne działanie:
+Wtyczka używa standardowej funkcji WordPress `wp_mail()` z automatyczną konfiguracją nagłówków dla lepszej dostarczalności.
 
-1. **Sprawdź konfigurację PHP** - funkcja `mail()` musi być dostępna
-2. **Lub zainstaluj plugin SMTP**:
+#### Automatyczna konfiguracja nagłówków
+
+Wtyczka automatycznie:
+- Ustawia adres **From** na podstawie domeny strony (np. `noreply@flexmile.pl`)
+- Dodaje nagłówek **Reply-To** z adresem administratora
+- Konfiguruje właściwe nagłówki Content-Type i X-Mailer
+
+**WAŻNE**: Aby uniknąć trafiania emaili do spamu, musisz skonfigurować rekordy DNS:
+
+1. **SPF Record** - Dodaj do DNS:
+   ```
+   TXT @ "v=spf1 include:_spf.hosting.ovh.net ~all"
+   ```
+   (Dostosuj do swojego hostingu)
+
+2. **DKIM** - Skonfiguruj w panelu hostingu (OVH automatycznie konfiguruje DKIM)
+
+3. **DMARC** (opcjonalne, ale zalecane):
+   ```
+   TXT _dmarc "v=DMARC1; p=quarantine; rua=mailto:admin@flexmile.pl"
+   ```
+
+#### Konfiguracja SMTP (opcjonalne, ale zalecane)
+
+Dla jeszcze lepszej dostarczalności zalecamy użycie wtyczki SMTP:
+
+1. **WP Mail SMTP** (zalecane):
    - [WP Mail SMTP](https://wordpress.org/plugins/wp-mail-smtp/)
+   - Konfiguruj z ustawieniami hostingu OVH
+
+2. **Easy WP SMTP**:
    - [Easy WP SMTP](https://wordpress.org/plugins/easy-wp-smtp/)
+
+#### Testowanie emaili
+
+W panelu administracyjnym WordPress:
+- Przejdź do **FlexMile → Test Emaili**
+- Wyślij testowy email do siebie
+- Sprawdź nagłówki emaila - powinny pokazywać właściwą domenę w polu "From"
 
 ### Import przykładowych danych
 

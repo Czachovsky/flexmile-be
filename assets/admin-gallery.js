@@ -13,16 +13,32 @@ jQuery(document).ready(function($) {
     /**
      * Inicjalizacja sortowania (drag & drop)
      */
-    if (galleryContainer.length && typeof $.fn.sortable !== 'undefined') {
-        galleryContainer.sortable({
-            items: '.gallery-item',
-            cursor: 'move',
-            placeholder: 'gallery-item-placeholder',
-            update: function() {
-                updateGalleryIds();
+    function initSortable() {
+        if (galleryContainer.length && typeof $.fn.sortable !== 'undefined') {
+            // Jeśli sortable już istnieje, odśwież listę elementów
+            if (galleryContainer.hasClass('ui-sortable')) {
+                galleryContainer.sortable('refresh');
+                return;
             }
-        });
+            
+            // Inicjalizuj sortable
+            galleryContainer.sortable({
+                items: '.gallery-item',
+                cursor: 'move',
+                tolerance: 'pointer',
+                placeholder: 'gallery-item-placeholder',
+                opacity: 0.8,
+                revert: 100,
+                forcePlaceholderSize: true,
+                update: function() {
+                    updateGalleryIds();
+                }
+            });
+        }
     }
+
+    // Inicjalizuj sortowanie przy załadowaniu
+    initSortable();
 
     /**
      * Dodawanie zdjęć do galerii
@@ -65,6 +81,9 @@ jQuery(document).ready(function($) {
 
             // Aktualizuj ukryte pole
             updateGalleryInput(ids);
+            
+            // Zamknij okno mediów po dodaniu zdjęć
+            frame.close();
         });
 
         // Otwórz media frame
@@ -101,6 +120,9 @@ jQuery(document).ready(function($) {
             '</div>';
 
         galleryContainer.append(html);
+        
+        // Reinicjalizuj sortowanie po dodaniu nowego elementu
+        initSortable();
     }
 
     /**

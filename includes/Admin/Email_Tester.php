@@ -211,7 +211,6 @@ class Email_Tester {
         
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_option('blogname') . ' <' . get_option('admin_email') . '>',
         ];
 
         return wp_mail($to_email, $subject, $message, $headers);

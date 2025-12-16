@@ -589,11 +589,14 @@ class Offers {
 
         if (('post.php' === $hook || 'post-new.php' === $hook) && self::POST_TYPE === $post_type) {
             wp_enqueue_media();
+            
+            // Załaduj jQuery UI sortable przed skryptem galerii
+            wp_enqueue_script('jquery-ui-sortable');
 
             wp_enqueue_script(
                 'flexmile-gallery',
                 plugins_url('../../assets/admin-gallery.js', __FILE__),
-                ['jquery'],
+                ['jquery', 'jquery-ui-sortable'],
                 '1.0',
                 true
             );
@@ -1073,59 +1076,6 @@ class Offers {
                 Możesz dodać wiele zdjęć. Przeciągnij aby zmienić kolejność.
             </p>
         </div>
-
-        <script>
-        jQuery(document).ready(function($) {
-            var frame;
-
-            $('#flexmile_add_gallery_images').on('click', function(e) {
-                e.preventDefault();
-
-                if (frame) {
-                    frame.open();
-                    return;
-                }
-
-                frame = wp.media({
-                    title: 'Wybierz zdjęcia do galerii',
-                    button: { text: 'Dodaj do galerii' },
-                    multiple: true
-                });
-
-                frame.on('select', function() {
-                    var selection = frame.state().get('selection');
-                    var ids = $('#flexmile_gallery_ids').val().split(',').filter(Boolean);
-
-                    selection.map(function(attachment) {
-                        attachment = attachment.toJSON();
-                        ids.push(attachment.id);
-
-                        $('.flexmile-gallery-images').append(
-                            '<div class="gallery-item" data-id="' + attachment.id + '">' +
-                                '<img src="' + attachment.sizes.thumbnail.url + '">' +
-                                '<button type="button" class="remove-gallery-image">&times;</button>' +
-                            '</div>'
-                        );
-                    });
-
-                    $('#flexmile_gallery_ids').val(ids.join(','));
-                });
-
-                frame.open();
-            });
-
-            $(document).on('click', '.remove-gallery-image', function() {
-                var item = $(this).closest('.gallery-item');
-                var id = item.data('id');
-                var ids = $('#flexmile_gallery_ids').val().split(',').filter(function(i) {
-                    return i != id;
-                });
-
-                $('#flexmile_gallery_ids').val(ids.join(','));
-                item.remove();
-            });
-        });
-        </script>
         <?php
     }
 
