@@ -1100,6 +1100,10 @@ class Offers {
         $liczba_drzwi = get_post_meta($post->ID, '_doors', true);
         $naped = get_post_meta($post->ID, '_drivetrain', true);
         $silnik = get_post_meta($post->ID, '_engine', true);
+        $kolor_wnetrza = get_post_meta($post->ID, '_interior_color', true);
+        $emisja_co2 = get_post_meta($post->ID, '_co2_emission', true);
+        $stan = get_post_meta($post->ID, '_car_condition', true);
+        $przebieg = get_post_meta($post->ID, '_mileage', true);
 
         // Pobierz typy nadwozia i paliwa z config.json
         $body_types = $config['body_types'] ?? [];
@@ -1211,6 +1215,31 @@ class Offers {
                             <option value="4" <?php selected($liczba_drzwi, '4'); ?>>4/5 drzwi</option>
                         </select>
                     </div>
+
+                    <div class="flexmile-field">
+                        <label for="car_condition">
+                            <strong>Stan</strong>
+                        </label>
+                        <select id="car_condition" name="car_condition" class="flexmile-input">
+                            <option value="">-- Wybierz --</option>
+                            <option value="new" <?php selected($stan, 'new'); ?>>Nowy</option>
+                            <option value="demo" <?php selected($stan, 'demo'); ?>>Demo</option>
+                            <option value="used" <?php selected($stan, 'used'); ?>>Używany</option>
+                        </select>
+                    </div>
+
+                    <div class="flexmile-field" id="mileage-field-wrapper" style="<?php echo in_array($stan, ['demo', 'used']) ? '' : 'display: none;'; ?>">
+                        <label for="mileage">
+                            <strong>Przebieg (km)</strong>
+                        </label>
+                        <input type="number"
+                               id="mileage"
+                               name="mileage"
+                               value="<?php echo esc_attr($przebieg); ?>"
+                               class="flexmile-input"
+                               min="0"
+                               placeholder="np. 15000">
+                    </div>
                 </div>
             </div>
 
@@ -1279,6 +1308,19 @@ class Offers {
                             <option value="4WD" <?php selected($naped, '4WD'); ?>>4WD (4x4 dołączany)</option>
                         </select>
                     </div>
+
+                    <div class="flexmile-field">
+                        <label for="co2_emission">
+                            <strong>Emisja CO2 (g/km)</strong>
+                        </label>
+                        <input type="number"
+                               id="co2_emission"
+                               name="co2_emission"
+                               value="<?php echo esc_attr($emisja_co2); ?>"
+                               class="flexmile-input"
+                               min="0"
+                               placeholder="np. 120">
+                    </div>
                 </div>
             </div>
 
@@ -1295,9 +1337,38 @@ class Offers {
                                class="flexmile-input"
                                placeholder="np. Czarny metalik, Srebrny perła">
                     </div>
+                    <div class="flexmile-field flexmile-field-full">
+                        <label for="interior_color">
+                            <strong>Kolor wnętrza</strong>
+                        </label>
+                        <input type="text"
+                               id="interior_color"
+                               name="interior_color"
+                               value="<?php echo esc_attr($kolor_wnetrza); ?>"
+                               class="flexmile-input"
+                               placeholder="np. Czarny, Szary, Beżowy">
+                    </div>
                 </div>
             </div>
         </div>
+        <script>
+        jQuery(document).ready(function($) {
+            var $carCondition = $('#car_condition');
+            var $mileageWrapper = $('#mileage-field-wrapper');
+            
+            function toggleMileageField() {
+                var condition = $carCondition.val();
+                if (condition === 'demo' || condition === 'used') {
+                    $mileageWrapper.slideDown();
+                } else {
+                    $mileageWrapper.slideUp();
+                }
+            }
+            
+            $carCondition.on('change', toggleMileageField);
+            toggleMileageField(); // Uruchom przy załadowaniu strony
+        });
+        </script>
         <?php
     }
 
@@ -1794,12 +1865,41 @@ class Offers {
             '_color' => 'sanitize_text_field',
             '_seats' => 'intval',
             '_doors' => 'sanitize_text_field',
+            '_interior_color' => 'sanitize_text_field',
+            '_co2_emission' => 'intval',
+            '_car_condition' => 'sanitize_text_field',
+            // _mileage jest obsługiwane osobno poniżej
         ];
 
         foreach ($fields as $field => $sanitize) {
             $key = ltrim($field, '_');
             if (isset($_POST[$key])) {
                 update_post_meta($post_id, $field, $sanitize($_POST[$key]));
+            }
+        }
+
+        // Obsługa stanu i przebiegu
+        if (isset($_POST['car_condition'])) {
+            $car_condition = sanitize_text_field($_POST['car_condition']);
+            
+            if ($car_condition === 'new') {
+                // Wyczyść przebieg dla nowych samochodów
+                delete_post_meta($post_id, '_mileage');
+            } elseif (in_array($car_condition, ['demo', 'used'])) {
+                // Zapisz przebieg tylko dla demo i używanych
+                if (isset($_POST['mileage']) && !empty($_POST['mileage'])) {
+                    $mileage = intval($_POST['mileage']);
+                    if ($mileage > 0) {
+                        update_post_meta($post_id, '_mileage', $mileage);
+                    } else {
+                        delete_post_meta($post_id, '_mileage');
+                    }
+                } else {
+                    delete_post_meta($post_id, '_mileage');
+                }
+            } else {
+                // Jeśli stan nie jest ustawiony lub jest pusty, wyczyść przebieg
+                delete_post_meta($post_id, '_mileage');
             }
         }
 

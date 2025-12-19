@@ -545,6 +545,9 @@ class Offers_Endpoint {
             }
         }
 
+        $mileage = (int) get_post_meta($post->ID, '_mileage', true);
+        $co2_emission = (int) get_post_meta($post->ID, '_co2_emission', true);
+        
         $data['specs'] = [
             'year' => (int) get_post_meta($post->ID, '_year', true),
             'engine' => get_post_meta($post->ID, '_engine', true),
@@ -553,6 +556,10 @@ class Offers_Endpoint {
             'transmission' => get_post_meta($post->ID, '_transmission', true),
             'drivetrain' => get_post_meta($post->ID, '_drivetrain', true),
             'color' => get_post_meta($post->ID, '_color', true),
+            'interior_color' => get_post_meta($post->ID, '_interior_color', true),
+            'co2_emission' => $co2_emission > 0 ? $co2_emission : null,
+            'condition' => get_post_meta($post->ID, '_car_condition', true),
+            'mileage' => $mileage > 0 ? $mileage : null,
             'seats' => (int) get_post_meta($post->ID, '_seats', true),
             'doors' => (int) get_post_meta($post->ID, '_doors', true),
         ];
