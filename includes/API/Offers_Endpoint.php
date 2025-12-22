@@ -521,7 +521,6 @@ class Offers_Endpoint {
         $data = [
             'id' => $post->ID,
             'car_reference_id' => get_post_meta($post->ID, '_car_reference_id', true) ?: null,
-            'title' => $post->post_title,
             'description' => $post->post_content,
             'slug' => $post->post_name,
         ];
@@ -624,6 +623,29 @@ class Offers_Endpoint {
         $reservation_active = get_post_meta($post->ID, '_reservation_active', true) === '1';
         $order_approved = get_post_meta($post->ID, '_order_approved', true) === '1';
         $data['available'] = !$reservation_active && !$order_approved;
+
+        // Dodatkowe usługi (tylko w szczegółach oferty)
+        $data['additional_services'] = [
+            'financing' => get_post_meta($post->ID, '_financing', true) === '1',
+            'vehicle_service' => get_post_meta($post->ID, '_vehicle_service', true) === '1',
+            'insurance_oc_ac_nnw' => get_post_meta($post->ID, '_insurance_oc_ac_nnw', true) === '1',
+            'assistance_24h' => get_post_meta($post->ID, '_assistance_24h', true) === '1',
+            'summer_winter_tires' => get_post_meta($post->ID, '_summer_winter_tires', true) === '1',
+        ];
+
+        // Customowe dodatkowe dane (tylko w szczegółach oferty)
+        $custom_data = get_post_meta($post->ID, '_custom_additional_data', true);
+        if (empty($custom_data) || !is_array($custom_data)) {
+            $data['custom_additional_data'] = [];
+        } else {
+            // Upewnij się, że dane są w odpowiednim formacie
+            $data['custom_additional_data'] = array_map(function($item) {
+                return [
+                    'title' => isset($item['title']) ? $item['title'] : '',
+                    'description' => isset($item['description']) ? $item['description'] : '',
+                ];
+            }, $custom_data);
+        }
 
         return $data;
     }

@@ -108,6 +108,29 @@ jQuery(document).ready(function($) {
         // Klasyczny edytor WordPress
         var titleInput = $('#title, input[name="post_title"]').first();
         if (titleInput.length) {
+            var currentTitle = titleInput.val().trim();
+            
+            // Sprawdź czy tytuł już zawiera nawiasy kwadratowe (użytkownik mógł wpisać kod)
+            var hasBrackets = /\[.*\]/.test(currentTitle);
+            
+            if (hasBrackets) {
+                // Jeśli tytuł ma już nawiasy, zachowaj je i zaktualizuj tylko część przed nawiasami
+                var bracketIndex = currentTitle.indexOf('[');
+                var titleBeforeBrackets = currentTitle.substring(0, bracketIndex).trim();
+                var bracketsPart = currentTitle.substring(bracketIndex);
+                
+                // Zaktualizuj tylko jeśli część przed nawiasami się zmieniła
+                if (titleBeforeBrackets !== newTitle) {
+                    newTitle = newTitle + ' ' + bracketsPart;
+                } else {
+                    // Nie zmieniaj tytułu jeśli użytkownik już wpisał kod
+                    return;
+                }
+            } else {
+                // Jeśli nie ma nawiasów, dodaj puste nawiasy
+                newTitle = newTitle + ' []';
+            }
+            
             titleInput.val(newTitle);
             titleInput.trigger('input').trigger('change');
             
@@ -172,6 +195,12 @@ jQuery(document).ready(function($) {
             var titlePrompt = $('#title-prompt-text');
             if (titlePrompt.length) {
                 titlePrompt.show();
+            }
+        } else {
+            // Jeśli tytuł istnieje ale nie ma nawiasów, dodaj je
+            var currentTitle = titleInput.val().trim();
+            if (currentTitle && !/\[.*\]/.test(currentTitle)) {
+                titleInput.val(currentTitle + ' []');
             }
         }
     }

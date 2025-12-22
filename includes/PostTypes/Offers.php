@@ -785,6 +785,15 @@ class Offers {
             'side',
             'default'
         );
+
+        add_meta_box(
+            'flexmile_samochod_additional_services',
+            'Dodatkowe usługi i informacje',
+            [$this, 'render_additional_services_meta_box'],
+            self::POST_TYPE,
+            'normal',
+            'default'
+        );
     }
 
     /**
@@ -1816,6 +1825,211 @@ class Offers {
     }
 
     /**
+     * Renderuje meta box z dodatkowymi usługami i informacjami
+     */
+    public function render_additional_services_meta_box($post) {
+        $finansowanie = get_post_meta($post->ID, '_financing', true) === '1';
+        $serwis_pojazdu = get_post_meta($post->ID, '_vehicle_service', true) === '1';
+        $ubezpieczenie = get_post_meta($post->ID, '_insurance_oc_ac_nnw', true) === '1';
+        $assistance_24h = get_post_meta($post->ID, '_assistance_24h', true) === '1';
+        $opony = get_post_meta($post->ID, '_summer_winter_tires', true) === '1';
+
+        $custom_data = get_post_meta($post->ID, '_custom_additional_data', true);
+        if (empty($custom_data) || !is_array($custom_data)) {
+            $custom_data = [];
+        }
+        ?>
+        <div style="padding: 0;">
+            <div style="margin-bottom: 24px;">
+                <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #1e293b;">
+                    Dodatkowe usługi
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
+                    <div class="flexmile-flag-item">
+                        <input type="checkbox" id="financing" name="financing" value="1" <?php checked($finansowanie); ?>>
+                        <label for="financing" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                            <span>Finansowanie</span>
+                        </label>
+                    </div>
+
+                    <div class="flexmile-flag-item">
+                        <input type="checkbox" id="vehicle_service" name="vehicle_service" value="1" <?php checked($serwis_pojazdu); ?>>
+                        <label for="vehicle_service" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                            <span>Serwis pojazdu</span>
+                        </label>
+                    </div>
+
+                    <div class="flexmile-flag-item">
+                        <input type="checkbox" id="insurance_oc_ac_nnw" name="insurance_oc_ac_nnw" value="1" <?php checked($ubezpieczenie); ?>>
+                        <label for="insurance_oc_ac_nnw" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                            <span>Ubezpieczenie OC/AC/NNW</span>
+                        </label>
+                    </div>
+
+                    <div class="flexmile-flag-item">
+                        <input type="checkbox" id="assistance_24h" name="assistance_24h" value="1" <?php checked($assistance_24h); ?>>
+                        <label for="assistance_24h" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                            <span>Assistance 24h</span>
+                        </label>
+                    </div>
+
+                    <div class="flexmile-flag-item">
+                        <input type="checkbox" id="summer_winter_tires" name="summer_winter_tires" value="1" <?php checked($opony); ?>>
+                        <label for="summer_winter_tires" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                            <span>Opony letnie i zimowe</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 24px 0;">
+
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b;">
+                        Dodatkowe informacje
+                    </h4>
+                    <button type="button" 
+                            id="flexmile-add-custom-data" 
+                            class="button button-secondary"
+                            style="display: <?php echo count($custom_data) < 5 ? 'inline-block' : 'none'; ?>;">
+                        <span style="font-size: 16px; line-height: 1; margin-right: 4px;">+</span> Dodaj
+                    </button>
+                </div>
+                <p class="description" style="margin: 0; color: #64748b; font-size: 13px;">
+                    Możesz dodać maksymalnie 5 dodatkowych elementów informacyjnych. Każdy element składa się z tytułu i opisu.
+                </p>
+            </div>
+
+            <div id="flexmile-custom-additional-data-container" style="display: flex; flex-direction: column; gap: 16px;">
+                <?php
+                $item_index = 0;
+                foreach ($custom_data as $index => $item):
+                    if (empty($item['title']) && empty($item['description'])) {
+                        continue;
+                    }
+                ?>
+                <div class="flexmile-custom-data-item" data-index="<?php echo $item_index; ?>" style="position: relative; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <button type="button" 
+                            class="flexmile-remove-custom-data" 
+                            style="position: absolute; top: 12px; right: 12px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 1; padding: 0; transition: background 0.2s;"
+                            title="Usuń">
+                        ×
+                    </button>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 12px; padding-right: 32px;">
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+                                Tytuł
+                            </label>
+                            <input type="text"
+                                   name="custom_additional_data[<?php echo $item_index; ?>][title]"
+                                   value="<?php echo esc_attr($item['title']); ?>"
+                                   placeholder="np. Gwarancja producenta"
+                                   class="flexmile-input"
+                                   style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+                                Opis
+                            </label>
+                            <textarea name="custom_additional_data[<?php echo $item_index; ?>][description]"
+                                      rows="3"
+                                      placeholder="np. Pełna gwarancja producenta na okres 3 lat lub 100 000 km"
+                                      class="flexmile-input"
+                                      style="width: 100%; resize: vertical;"><?php echo esc_textarea($item['description']); ?></textarea>
+                        </div>
+                    </div>
+                </div>
+                <?php
+                    $item_index++;
+                endforeach;
+                ?>
+            </div>
+
+            <script>
+            jQuery(document).ready(function($) {
+                var maxItems = 5;
+                var currentIndex = <?php echo $item_index; ?>;
+                var container = $('#flexmile-custom-additional-data-container');
+                var addButton = $('#flexmile-add-custom-data');
+
+                // Szablon nowego pola
+                function getNewItemTemplate(index) {
+                    return '<div class="flexmile-custom-data-item" data-index="' + index + '" style="position: relative; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; animation: slideDown 0.3s ease;">' +
+                        '<button type="button" class="flexmile-remove-custom-data" style="position: absolute; top: 12px; right: 12px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 1; padding: 0; transition: background 0.2s;" title="Usuń">×</button>' +
+                        '<div style="display: grid; grid-template-columns: 1fr; gap: 12px; padding-right: 32px;">' +
+                        '<div>' +
+                        '<label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">Tytuł</label>' +
+                        '<input type="text" name="custom_additional_data[' + index + '][title]" value="" placeholder="np. Gwarancja producenta" class="flexmile-input" style="width: 100%;">' +
+                        '</div>' +
+                        '<div>' +
+                        '<label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">Opis</label>' +
+                        '<textarea name="custom_additional_data[' + index + '][description]" rows="3" placeholder="np. Pełna gwarancja producenta na okres 3 lat lub 100 000 km" class="flexmile-input" style="width: 100%; resize: vertical;"></textarea>' +
+                        '</div>' +
+                        '</div>' +
+                        '</div>';
+                }
+
+                // Dodaj nowe pole
+                addButton.on('click', function() {
+                    if (container.find('.flexmile-custom-data-item').length >= maxItems) {
+                        alert('Możesz dodać maksymalnie ' + maxItems + ' elementów.');
+                        return;
+                    }
+
+                    var newItem = $(getNewItemTemplate(currentIndex));
+                    container.append(newItem);
+                    currentIndex++;
+
+                    // Przewiń do nowego pola
+                    $('html, body').animate({
+                        scrollTop: newItem.offset().top - 100
+                    }, 300);
+
+                    // Ukryj przycisk jeśli osiągnięto limit
+                    if (container.find('.flexmile-custom-data-item').length >= maxItems) {
+                        addButton.hide();
+                    }
+                });
+
+                // Usuń pole
+                container.on('click', '.flexmile-remove-custom-data', function() {
+                    var item = $(this).closest('.flexmile-custom-data-item');
+                    item.fadeOut(300, function() {
+                        $(this).remove();
+                        // Pokaż przycisk jeśli jest miejsce
+                        if (container.find('.flexmile-custom-data-item').length < maxItems) {
+                            addButton.show();
+                        }
+                    });
+                });
+
+                // Aktualizuj widoczność przycisku przy załadowaniu
+                if (container.find('.flexmile-custom-data-item').length >= maxItems) {
+                    addButton.hide();
+                }
+            });
+            </script>
+            <style>
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .flexmile-remove-custom-data:hover {
+                background: #dc2626 !important;
+            }
+            </style>
+        </div>
+        <?php
+    }
+
+    /**
      * Zapisuje meta dane
      * UPDATED: body_type i fuel_type są teraz zapisywane jako meta pola
      */
@@ -1959,6 +2173,50 @@ class Offers {
 
         if (isset($_POST['additional_equipment'])) {
             update_post_meta($post_id, '_additional_equipment', sanitize_textarea_field($_POST['additional_equipment']));
+        }
+
+        // Zapisz dodatkowe usługi (5 pól boolean)
+        $additional_services = [
+            '_financing' => 'financing',
+            '_vehicle_service' => 'vehicle_service',
+            '_insurance_oc_ac_nnw' => 'insurance_oc_ac_nnw',
+            '_assistance_24h' => 'assistance_24h',
+            '_summer_winter_tires' => 'summer_winter_tires',
+        ];
+
+        foreach ($additional_services as $meta_key => $post_key) {
+            $value = isset($_POST[$post_key]) ? '1' : '0';
+            update_post_meta($post_id, $meta_key, $value);
+        }
+
+        // Zapisz customowe dodatkowe dane (max 5 elementów)
+        if (isset($_POST['custom_additional_data']) && is_array($_POST['custom_additional_data'])) {
+            $custom_data = [];
+            foreach ($_POST['custom_additional_data'] as $item) {
+                if (isset($item['title']) && isset($item['description'])) {
+                    $title = sanitize_text_field($item['title']);
+                    $description = sanitize_textarea_field($item['description']);
+                    
+                    // Dodaj tylko jeśli przynajmniej tytuł jest wypełniony
+                    if (!empty($title)) {
+                        $custom_data[] = [
+                            'title' => $title,
+                            'description' => $description,
+                        ];
+                    }
+                }
+            }
+            
+            // Ogranicz do maksymalnie 5 elementów
+            $custom_data = array_slice($custom_data, 0, 5);
+            
+            if (!empty($custom_data)) {
+                update_post_meta($post_id, '_custom_additional_data', $custom_data);
+            } else {
+                delete_post_meta($post_id, '_custom_additional_data');
+            }
+        } else {
+            delete_post_meta($post_id, '_custom_additional_data');
         }
     }
 }
