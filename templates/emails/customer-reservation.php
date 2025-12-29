@@ -74,6 +74,20 @@ $pickup_labels = [
     'home_delivery' => 'Dostawa pod wskazany adres',
 ];
 $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
+
+// Pobierz zdjęcie samochodu - najpierw z galerii, potem featured image
+$car_image_url = false;
+$gallery_ids = get_post_meta($samochod->ID, '_gallery', true);
+if ($gallery_ids) {
+    $gallery_array = explode(',', $gallery_ids);
+    $first_image_id = trim($gallery_array[0]);
+    if ($first_image_id) {
+        $car_image_url = wp_get_attachment_image_url((int) $first_image_id, 'medium');
+    }
+}
+if (!$car_image_url) {
+    $car_image_url = get_the_post_thumbnail_url($samochod->ID, 'medium');
+}
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -118,8 +132,7 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
 
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f2f2f2;border-radius:12px;">
                 <tbody><tr>
-                  <td style="padding: 32px 40px;">
-
+                  <td style="padding: 32px 40px;vertical-align:top;">
                     <table width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tbody><tr>
                         <td style="font-size:12px;color:#555;padding-bottom: 18px;">
@@ -155,8 +168,12 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
                       </tr>
                       <?php endif; ?>
                     </tbody></table>
-
                   </td>
+                  <?php if ($car_image_url): ?>
+                  <td style="padding: 32px 40px 32px 0;vertical-align:top;width:120px;">
+                    <img src="<?php echo esc_url($car_image_url); ?>" alt="<?php echo esc_attr($car_title); ?>" style="width:120px;height:auto;border-radius:8px;display:block;" />
+                  </td>
+                  <?php endif; ?>
                 </tr>
               </tbody></table>
 
@@ -273,8 +290,25 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
           </tr>
           <!-- FOOTER -->
           <tr>
-            <td style="padding:20px; font-size:12px; color:#999; text-align:center;">
-              © <?php echo date('Y'); ?> Flexmile. Wszystkie prawa zastrzeżone.
+            <td style="padding:20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tbody>
+                  <tr>
+                    <td width="25%" style="font-size:10px;color:#999;text-align:center;">
+                      +48 539-799-000
+                    </td>
+                    <td width="25%" style="font-size:10px;color:#999;text-align:center;">
+                      <a href="mailto:biuro@flexmile.pl" style="color:#999;text-decoration:none;">biuro@flexmile.pl</a>
+                    </td>
+                    <td width="25%" style="font-size:10px;color:#999;text-align:center;">
+                      Al. Jana Pawła II 27 00-867 Warszawa
+                    </td>
+                    <td width="25%" style="font-size:10px;color:#999;text-align:center;">
+                      <a href="https://flexmile.pl" style="color:#999;text-decoration:none;">flexmile.pl</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </td>
           </tr>
 

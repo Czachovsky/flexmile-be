@@ -275,8 +275,25 @@ $admin_car_link = admin_url('post.php?post=' . $samochod->ID . '&action=edit');
                                 </td>
                             </tr>
                             <tr>
-                                <td style="padding:20px;font-size:12px;color:#999;text-align:center">
-                                    © <?php echo date('Y'); ?> Flexmile. Wszystkie prawa zastrzeżone.
+                                <td style="padding:20px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tbody>
+                                            <tr>
+                                                <td width="25%" style="font-size:10px;color:#999;text-align:center;">
+                                                    +48 539-799-000
+                                                </td>
+                                                <td width="25%" style="font-size:10px;color:#999;text-align:center;">
+                                                    <a href="mailto:biuro@flexmile.pl" style="color:#999;text-decoration:none;">biuro@flexmile.pl</a>
+                                                </td>
+                                                <td width="25%" style="font-size:10px;color:#999;text-align:center;">
+                                                    Al. Jana Pawła II 27 00-867 Warszawa
+                                                </td>
+                                                <td width="25%" style="font-size:10px;color:#999;text-align:center;">
+                                                    <a href="https://flexmile.pl" style="color:#999;text-decoration:none;">flexmile.pl</a>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </td>
                             </tr>
                         </tbody>
