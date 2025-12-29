@@ -122,6 +122,7 @@ class Reservations_Endpoint {
 
         $ilosc_miesiecy = intval($params['rental_months']);
         $limit_km_rocznie = intval($params['annual_mileage_limit']);
+        $oplata_poczatkowa = isset($params['initial_payment']) ? intval($params['initial_payment']) : 0;
 
         if (!in_array($ilosc_miesiecy, $config['rental_periods'])) {
             return new \WP_Error(
@@ -139,7 +140,29 @@ class Reservations_Endpoint {
             );
         }
 
-        $cena_key = $ilosc_miesiecy . '_' . $limit_km_rocznie;
+        // Sprawdź czy opłata początkowa jest dostępna
+        $initial_payments = isset($config['initial_payments']) && !empty($config['initial_payments']) 
+            ? $config['initial_payments'] 
+            : [0];
+        
+        if (!in_array($oplata_poczatkowa, $initial_payments)) {
+            return new \WP_Error(
+                'invalid_initial_payment',
+                'Wybrana opłata początkowa nie jest dostępna dla tego samochodu',
+                ['status' => 400]
+            );
+        }
+
+        // Nowy format klucza: okres_limit_initial_payment
+        $cena_key = $ilosc_miesiecy . '_' . $limit_km_rocznie . '_' . $oplata_poczatkowa;
+        
+        // Wsteczna kompatybilność: jeśli nie ma ceny w nowym formacie, sprawdź stary format (tylko dla opłaty 0)
+        if (!isset($config['prices'][$cena_key]) && $oplata_poczatkowa == 0) {
+            $old_key = $ilosc_miesiecy . '_' . $limit_km_rocznie;
+            if (isset($config['prices'][$old_key])) {
+                $cena_key = $old_key;
+            }
+        }
 
         if (!isset($config['prices'][$cena_key])) {
             return new \WP_Error(
@@ -180,10 +203,20 @@ class Reservations_Endpoint {
         update_post_meta($rezerwacja_id, '_phone', sanitize_text_field($params['phone']));
         update_post_meta($rezerwacja_id, '_rental_months', $ilosc_miesiecy);
         update_post_meta($rezerwacja_id, '_annual_mileage_limit', $limit_km_rocznie);
+        update_post_meta($rezerwacja_id, '_initial_payment', $oplata_poczatkowa);
         update_post_meta($rezerwacja_id, '_monthly_price', $cena_miesieczna);
         update_post_meta($rezerwacja_id, '_total_price', $cena_calkowita);
-        update_post_meta($rezerwacja_id, '_status', 'pending');
+        update_post_meta($rezerwacja_id, '_status', 'approved');
         update_post_meta($rezerwacja_id, '_entry_type', $entry_type);
+
+        // Ustaw flagi na ofercie od razu
+        if ($entry_type === 'reservation') {
+            // Dla rezerwacji: oznacz ofertę jako zarezerwowaną
+            update_post_meta($samochod_id, '_reservation_active', '1');
+        } elseif ($entry_type === 'order') {
+            // Dla zamówień: oznacz ofertę jako zamówioną
+            update_post_meta($samochod_id, '_order_approved', '1');
+        }
 
         if (!empty($params['first_name'])) {
             update_post_meta($rezerwacja_id, '_first_name', sanitize_text_field($params['first_name']));
@@ -210,6 +243,7 @@ class Reservations_Endpoint {
         $params['consent_email'] = $consent_email;
         $params['consent_phone'] = $consent_phone;
         $params['pickup_location'] = $pickup_location;
+        $params['initial_payment'] = $oplata_poczatkowa;
 
         $this->send_admin_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita, $entry_config);
         $this->send_customer_email($rezerwacja_id, $samochod, $params, $cena_miesieczna, $cena_calkowita, $entry_config);
@@ -272,6 +306,7 @@ class Reservations_Endpoint {
             'details' => [
                 'rental_months' => (int) get_post_meta($post->ID, '_rental_months', true),
                 'annual_mileage_limit' => (int) get_post_meta($post->ID, '_annual_mileage_limit', true),
+                'initial_payment' => (int) get_post_meta($post->ID, '_initial_payment', true) ?: 0,
                 'monthly_price' => (float) get_post_meta($post->ID, '_monthly_price', true),
                 'total_price' => (float) get_post_meta($post->ID, '_total_price', true),
             ],
@@ -470,6 +505,13 @@ class Reservations_Endpoint {
                 'type' => 'integer',
                 'minimum' => 0,
                 'description' => 'Wybrany roczny limit kilometrów (np. 10000, 15000)',
+            ],
+            'initial_payment' => [
+                'required' => false,
+                'type' => 'integer',
+                'minimum' => 0,
+                'default' => 0,
+                'description' => 'Wybrana opłata początkowa w zł (np. 0, 5000, 10000). Domyślnie 0.',
             ],
             'message' => [
                 'required' => false,

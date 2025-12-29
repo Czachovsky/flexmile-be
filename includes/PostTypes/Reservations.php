@@ -18,6 +18,7 @@ class Reservations {
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
         add_action('before_delete_post', [$this, 'handle_reservation_deletion'], 10, 1);
+        add_action('wp_trash_post', [$this, 'handle_reservation_deletion'], 10, 1);
         add_filter('manage_' . self::POST_TYPE . '_posts_columns', [$this, 'custom_columns']);
         add_action('manage_' . self::POST_TYPE . '_posts_custom_column', [$this, 'custom_column_content'], 10, 2);
     }
@@ -103,6 +104,7 @@ class Reservations {
         $telefon = get_post_meta($post->ID, '_phone', true);
         $ilosc_miesiecy = get_post_meta($post->ID, '_rental_months', true);
         $limit_km_rocznie = get_post_meta($post->ID, '_annual_mileage_limit', true);
+        $oplata_poczatkowa = get_post_meta($post->ID, '_initial_payment', true) ?: 0;
         $cena_miesieczna = get_post_meta($post->ID, '_monthly_price', true);
         $cena_calkowita = get_post_meta($post->ID, '_total_price', true);
         $wiadomosc = get_post_meta($post->ID, '_message', true);
@@ -166,6 +168,10 @@ class Reservations {
                 <td><?php echo number_format($limit_km_rocznie, 0, ',', ' '); ?> km</td>
             </tr>
             <tr>
+                <th><strong>Opłata początkowa:</strong></th>
+                <td><strong style="color: #10b981; font-size: 15px;"><?php echo number_format($oplata_poczatkowa, 2, ',', ' '); ?> zł</strong></td>
+            </tr>
+            <tr>
                 <th><strong>Cena miesięczna:</strong></th>
                 <td><strong style="color: #10b981; font-size: 15px;"><?php echo number_format($cena_miesieczna, 2, ',', ' '); ?> zł/mies.</strong></td>
             </tr>
@@ -191,18 +197,17 @@ class Reservations {
 
         $status = get_post_meta($post->ID, '_status', true);
         if (empty($status)) {
-            $status = 'pending';
+            $status = 'approved';
         }
         ?>
         <p>
             <label for="status"><strong>Status:</strong></label><br>
             <select id="status" name="status" class="widefat">
-                <option value="pending" <?php selected($status, 'pending'); ?>>Oczekująca</option>
                 <option value="approved" <?php selected($status, 'approved'); ?>>Zatwierdzona</option>
                 <option value="rejected" <?php selected($status, 'rejected'); ?>>Odrzucona</option>
             </select>
         </p>
-        <p class="description">Po zatwierdzeniu rezerwacji, samochód zostanie automatycznie oznaczony jako zarezerwowany.</p>
+        <p class="description">Rezerwacje są automatycznie zatwierdzane. Samochód zostaje oznaczony jako zarezerwowany.</p>
         <?php
     }
 
@@ -286,12 +291,6 @@ class Reservations {
             return;
         }
 
-        // Sprawdź czy rezerwacja była zatwierdzona
-        $status = get_post_meta($post_id, '_status', true);
-        if ($status !== 'approved') {
-            return;
-        }
-
         // Pobierz ID oferty
         $samochod_id = get_post_meta($post_id, '_offer_id', true);
         if (!$samochod_id) {
@@ -348,17 +347,13 @@ class Reservations {
 
             update_post_meta($post_id, '_status', $new_status);
 
-            if ($new_status === 'approved' && $old_status !== 'approved') {
-                $samochod_id = get_post_meta($post_id, '_offer_id', true);
-                if ($samochod_id) {
+            // Rezerwacje są zawsze zatwierdzone, więc zawsze ustawiamy flagę
+            $samochod_id = get_post_meta($post_id, '_offer_id', true);
+            if ($samochod_id) {
+                if ($new_status === 'approved') {
                     update_post_meta($samochod_id, '_reservation_active', '1');
-                }
-            }
-
-            if ($old_status === 'approved' && $new_status !== 'approved') {
-                $samochod_id = get_post_meta($post_id, '_offer_id', true);
-                if ($samochod_id) {
-                    // Sprawdź czy są jeszcze inne aktywne rezerwacje dla tej oferty
+                } else {
+                    // Jeśli status zmieniono na rejected, sprawdź czy są inne aktywne rezerwacje
                     $other_reservations = get_posts([
                         'post_type' => self::POST_TYPE,
                         'post_status' => 'publish',
@@ -422,11 +417,10 @@ class Reservations {
             case 'status':
                 $status = get_post_meta($post_id, '_status', true);
                 $labels = [
-                    'pending' => '<span style="color: orange;">Oczekująca</span>',
                     'approved' => '<span style="color: green;">Zatwierdzona</span>',
                     'rejected' => '<span style="color: red;">Odrzucona</span>',
                 ];
-                echo $labels[$status] ?? $labels['pending'];
+                echo $labels[$status] ?? $labels['approved'];
                 break;
 
             case 'konfiguracja':

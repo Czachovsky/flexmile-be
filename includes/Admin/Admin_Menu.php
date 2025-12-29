@@ -111,7 +111,6 @@ class Admin_Menu {
         $total_offers = wp_count_posts('offer');
         $total_reservations = wp_count_posts('reservation');
 
-        $pending_count = 0;
         $approved_count = 0;
         $rejected_count = 0;
 
@@ -122,7 +121,9 @@ class Admin_Menu {
 
         foreach ($reservations as $res) {
             $status = get_post_meta($res->ID, '_status', true);
-            if ($status === 'pending') $pending_count++;
+            if (empty($status)) {
+                $status = 'approved';
+            }
             if ($status === 'approved') $approved_count++;
             if ($status === 'rejected') $rejected_count++;
         }

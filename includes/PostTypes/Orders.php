@@ -106,6 +106,7 @@ class Orders {
         $telefon = get_post_meta($post->ID, '_phone', true);
         $ilosc_miesiecy = get_post_meta($post->ID, '_rental_months', true);
         $limit_km_rocznie = get_post_meta($post->ID, '_annual_mileage_limit', true);
+        $oplata_poczatkowa = get_post_meta($post->ID, '_initial_payment', true) ?: 0;
         $cena_miesieczna = get_post_meta($post->ID, '_monthly_price', true);
         $cena_calkowita = get_post_meta($post->ID, '_total_price', true);
         $wiadomosc = get_post_meta($post->ID, '_message', true);
@@ -169,6 +170,10 @@ class Orders {
                 <td><?php echo number_format($limit_km_rocznie, 0, ',', ' '); ?> km</td>
             </tr>
             <tr>
+                <th><strong>Opłata początkowa:</strong></th>
+                <td><strong style="color: #0ea5e9; font-size: 15px;"><?php echo number_format($oplata_poczatkowa, 2, ',', ' '); ?> zł</strong></td>
+            </tr>
+            <tr>
                 <th><strong>Cena miesięczna:</strong></th>
                 <td><strong style="color: #0ea5e9; font-size: 15px;"><?php echo number_format($cena_miesieczna, 2, ',', ' '); ?> zł/mies.</strong></td>
             </tr>
@@ -194,18 +199,17 @@ class Orders {
 
         $status = get_post_meta($post->ID, '_status', true);
         if (empty($status)) {
-            $status = 'pending';
+            $status = 'approved';
         }
         ?>
         <p>
             <label for="status"><strong>Status:</strong></label><br>
             <select id="status" name="status" class="widefat">
-                <option value="pending" <?php selected($status, 'pending'); ?>>Oczekujące</option>
                 <option value="approved" <?php selected($status, 'approved'); ?>>Zatwierdzone</option>
                 <option value="rejected" <?php selected($status, 'rejected'); ?>>Odrzucone</option>
             </select>
         </p>
-        <p class="description">Po zatwierdzeniu zamówienia, samochód zostanie ukryty z listy dostępnych aut.</p>
+        <p class="description">Zamówienia są automatycznie zatwierdzane. Samochód zostaje oznaczony jako zamówiony.</p>
         <?php
     }
 
@@ -292,14 +296,35 @@ class Orders {
 
             $samochod_id = get_post_meta($post_id, '_offer_id', true);
             if ($samochod_id) {
-                // Jeśli zamówienie zostało właśnie zatwierdzone – oznacz auto jako "zamówione"
-                if ($new_status === 'approved' && $old_status !== 'approved') {
+                // Zamówienia są zawsze zatwierdzone, więc zawsze ustawiamy flagę
+                if ($new_status === 'approved') {
                     update_post_meta($samochod_id, '_order_approved', '1');
-                }
+                } else {
+                    // Jeśli status zmieniono na rejected, sprawdź czy są inne zatwierdzone zamówienia
+                    $other_orders = new \WP_Query([
+                        'post_type'      => self::POST_TYPE,
+                        'post_status'    => 'publish',
+                        'posts_per_page' => 1,
+                        'no_found_rows'  => true,
+                        'fields'         => 'ids',
+                        'post__not_in'   => [$post_id],
+                        'meta_query'     => [
+                            [
+                                'key'   => '_offer_id',
+                                'value' => $samochod_id,
+                            ],
+                            [
+                                'key'     => '_status',
+                                'value'   => 'approved',
+                                'compare' => '=',
+                            ],
+                        ],
+                    ]);
 
-                // Jeśli zamówienie przestało być zatwierdzone (np. zmiana na pending/rejected) – odblokuj auto
-                if ($old_status === 'approved' && $new_status !== 'approved') {
-                    update_post_meta($samochod_id, '_order_approved', '0');
+                    // Jeśli brak innych zatwierdzonych zamówień – zdejmij blokadę z auta
+                    if (empty($other_orders->posts)) {
+                        update_post_meta($samochod_id, '_order_approved', '0');
+                    }
                 }
             }
         }
@@ -390,11 +415,10 @@ class Orders {
             case 'status':
                 $status = get_post_meta($post_id, '_status', true);
                 $labels = [
-                    'pending' => '<span style="color: orange;">⏳ Oczekujące</span>',
                     'approved' => '<span style="color: green;">✅ Zatwierdzone</span>',
                     'rejected' => '<span style="color: red;">❌ Odrzucone</span>',
                 ];
-                echo $labels[$status] ?? $labels['pending'];
+                echo $labels[$status] ?? $labels['approved'];
                 break;
 
             case 'konfiguracja':

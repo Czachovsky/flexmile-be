@@ -67,7 +67,6 @@ class Dashboard_Widgets {
 
         $stats = [
             'total' => count($orders),
-            'pending' => 0,
             'approved' => 0,
             'rejected' => 0,
             'today' => 0,
@@ -80,13 +79,10 @@ class Dashboard_Widgets {
         foreach ($orders as $order) {
             $status = get_post_meta($order->ID, '_status', true);
             if (empty($status)) {
-                $status = 'pending';
+                $status = 'approved';
             }
 
             switch ($status) {
-                case 'pending':
-                    $stats['pending']++;
-                    break;
                 case 'approved':
                     $stats['approved']++;
                     break;
@@ -112,10 +108,6 @@ class Dashboard_Widgets {
                     <div class="flexmile-stat-value flexmile-stat-total"><?php echo esc_html($stats['total']); ?></div>
                 </div>
                 <div class="flexmile-stat-item">
-                    <div class="flexmile-stat-label">Oczekujące</div>
-                    <div class="flexmile-stat-value flexmile-stat-pending"><?php echo esc_html($stats['pending']); ?></div>
-                </div>
-                <div class="flexmile-stat-item">
                     <div class="flexmile-stat-label">Zatwierdzone</div>
                     <div class="flexmile-stat-value flexmile-stat-approved"><?php echo esc_html($stats['approved']); ?></div>
                 </div>
@@ -136,9 +128,6 @@ class Dashboard_Widgets {
             </div>
             <div class="flexmile-stat-actions">
                 <a href="<?php echo admin_url('edit.php?post_type=order'); ?>" class="button button-primary">Zarządzaj zamówieniami</a>
-                <?php if ($stats['pending'] > 0): ?>
-                    <span class="flexmile-pending-badge"><?php echo esc_html($stats['pending']); ?> oczekuje na akcję</span>
-                <?php endif; ?>
             </div>
         </div>
         <?php
@@ -156,7 +145,6 @@ class Dashboard_Widgets {
 
         $stats = [
             'total' => count($reservations),
-            'pending' => 0,
             'approved' => 0,
             'rejected' => 0,
             'today' => 0,
@@ -169,13 +157,10 @@ class Dashboard_Widgets {
         foreach ($reservations as $reservation) {
             $status = get_post_meta($reservation->ID, '_status', true);
             if (empty($status)) {
-                $status = 'pending';
+                $status = 'approved';
             }
 
             switch ($status) {
-                case 'pending':
-                    $stats['pending']++;
-                    break;
                 case 'approved':
                     $stats['approved']++;
                     break;
@@ -201,10 +186,6 @@ class Dashboard_Widgets {
                     <div class="flexmile-stat-value flexmile-stat-total"><?php echo esc_html($stats['total']); ?></div>
                 </div>
                 <div class="flexmile-stat-item">
-                    <div class="flexmile-stat-label">Oczekujące</div>
-                    <div class="flexmile-stat-value flexmile-stat-pending"><?php echo esc_html($stats['pending']); ?></div>
-                </div>
-                <div class="flexmile-stat-item">
                     <div class="flexmile-stat-label">Zatwierdzone</div>
                     <div class="flexmile-stat-value flexmile-stat-approved"><?php echo esc_html($stats['approved']); ?></div>
                 </div>
@@ -225,9 +206,6 @@ class Dashboard_Widgets {
             </div>
             <div class="flexmile-stat-actions">
                 <a href="<?php echo admin_url('edit.php?post_type=reservation'); ?>" class="button button-primary">Zarządzaj rezerwacjami</a>
-                <?php if ($stats['pending'] > 0): ?>
-                    <span class="flexmile-pending-badge"><?php echo esc_html($stats['pending']); ?> oczekuje na akcję</span>
-                <?php endif; ?>
             </div>
         </div>
         <?php
@@ -256,11 +234,10 @@ class Dashboard_Widgets {
             <?php foreach ($orders as $order): 
                 $status = get_post_meta($order->ID, '_status', true);
                 if (empty($status)) {
-                    $status = 'pending';
+                    $status = 'approved';
                 }
 
                 $status_labels = [
-                    'pending' => '<span class="flexmile-status-badge flexmile-status-pending">Oczekujące</span>',
                     'approved' => '<span class="flexmile-status-badge flexmile-status-approved">Zatwierdzone</span>',
                     'rejected' => '<span class="flexmile-status-badge flexmile-status-rejected">Odrzucone</span>',
                 ];
@@ -326,11 +303,10 @@ class Dashboard_Widgets {
             <?php foreach ($reservations as $reservation): 
                 $status = get_post_meta($reservation->ID, '_status', true);
                 if (empty($status)) {
-                    $status = 'pending';
+                    $status = 'approved';
                 }
 
                 $status_labels = [
-                    'pending' => '<span class="flexmile-status-badge flexmile-status-pending">Oczekująca</span>',
                     'approved' => '<span class="flexmile-status-badge flexmile-status-approved">Zatwierdzona</span>',
                     'rejected' => '<span class="flexmile-status-badge flexmile-status-rejected">Odrzucona</span>',
                 ];

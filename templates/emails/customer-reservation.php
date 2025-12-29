@@ -29,17 +29,42 @@ $car_secondary_line = implode(' | ', $car_secondary_parts);
 $current_date = date_i18n('d.m.Y', current_time('timestamp'));
 $car_reference_display = $car_reference_id ?: sprintf('ID-%d', $samochod->ID);
 
+// Pobierz markę i model do tytułu
+$brand_slug = get_post_meta($samochod->ID, '_car_brand_slug', true);
+$model = get_post_meta($samochod->ID, '_car_model', true);
+$car_title = '';
+
+if ($brand_slug && $model) {
+    // Załaduj config.json aby pobrać pełną nazwę marki
+    $config_file = defined('FLEXMILE_PLUGIN_DIR') ? FLEXMILE_PLUGIN_DIR . 'config.json' : '';
+    if ($config_file && file_exists($config_file)) {
+        $config = json_decode(file_get_contents($config_file), true);
+        if ($config && isset($config['brands'][$brand_slug])) {
+            $brand_name = $config['brands'][$brand_slug]['name'];
+            $car_title = trim($brand_name . ' ' . $model);
+        }
+    }
+}
+
+// Jeśli nie udało się utworzyć tytułu z marki i modelu, usuń kod z nawiasów kwadratowych z post_title
+if (empty($car_title)) {
+    $car_title = preg_replace('/\s*\[.*?\]\s*/', '', $samochod->post_title);
+    $car_title = trim($car_title);
+}
+
 $rental_months = isset($params['rental_months']) ? (int) $params['rental_months'] : null;
 $annual_mileage_limit = isset($params['annual_mileage_limit']) ? (int) $params['annual_mileage_limit'] : null;
 $company_name = $params['company_name'] ?? '';
 $tax_id = $params['tax_id'] ?? '';
 $email = $params['email'] ?? '';
 $phone = $params['phone'] ?? '';
+$initial_payment = isset($params['initial_payment']) ? (int) $params['initial_payment'] : 0;
 
 $formatted_monthly_price = number_format((float) $cena_miesieczna, 2, ',', ' ');
 $formatted_total_price = number_format((float) $cena_calkowita, 2, ',', ' ');
 $formatted_mileage = $annual_mileage_limit ? number_format($annual_mileage_limit, 0, ',', ' ') . ' km' : '—';
 $formatted_months = $rental_months ? sprintf('%d mies.', $rental_months) : '—';
+$formatted_initial_payment = number_format($initial_payment, 2, ',', ' ');
 $reservation_number = sprintf('#%d', $rezerwacja_id);
 $consent_email = !empty($params['consent_email']);
 $consent_phone = !empty($params['consent_phone']);
@@ -104,7 +129,7 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
 
                       <tr>
                         <td style="font-size:24px;font-weight:bold;color:#000;padding-bottom: 12px;">
-                          <?php echo esc_html($samochod->post_title); ?>
+                          <?php echo esc_html($car_title); ?>
                         </td>
                       </tr>
 
@@ -122,6 +147,13 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
                           <span style="font-size:14px;font-weight:normal;color: #863087;">/netto mies.</span>
                         </td>
                       </tr>
+                      <?php if ($initial_payment > 0): ?>
+                      <tr>
+                        <td style="font-size:15px;color:#666;padding-top: 8px;">
+                          Wpłata początkowa: <span style="font-weight:bold;color:#863087;"><?php echo esc_html($formatted_initial_payment); ?> zł</span>
+                        </td>
+                      </tr>
+                      <?php endif; ?>
                     </tbody></table>
 
                   </td>
@@ -163,6 +195,15 @@ $pickup_text = $pickup_labels[$pickup_location] ?? 'Nie określono';
                   </td>
                   <td align="right" style="padding: 12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold;">
                     <?php echo esc_html($formatted_mileage); ?>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;">
+                    Opłata początkowa
+                  </td>
+                  <td align="right" style="padding: 12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee;font-weight: bold;">
+                    <?php echo esc_html($formatted_initial_payment); ?> zł
                   </td>
                 </tr>
 

@@ -156,6 +156,16 @@ $admin_car_link = admin_url('post.php?post=' . $samochod->ID . '&action=edit');
                                             </tr>
                                             <tr>
                                                 <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
+                                                    Opłata początkowa
+                                                </td>
+                                                <td align="right" style="padding:12px 0;font-size:15px;color:#863087;border-bottom: 1px solid #eeeeee;font-weight: bold">
+                                                    <?php 
+                                                    $initial_payment = isset($params['initial_payment']) ? (int) $params['initial_payment'] : 0;
+                                                    echo esc_html(number_format($initial_payment, 2, ',', ' ')); ?> zł
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:12px 0;font-size:15px;color:#333;border-bottom: 1px solid #eeeeee">
                                                     Rata miesięczna
                                                 </td>
                                                 <td align="right" style="padding:12px 0;font-size:15px;color:#863087;border-bottom: 1px solid #eeeeee;font-weight: bold">

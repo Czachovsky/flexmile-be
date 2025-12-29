@@ -124,24 +124,20 @@ class Offers_Endpoint {
                 ],
             ];
         }
-        // Alternatywnie: pokaż tylko zarezerwowane
+        // Alternatywnie: pokaż tylko zarezerwowane i zamówione
         elseif (isset($params['only_reserved']) && $params['only_reserved'] === 'true') {
-            // Zarezerwowane = aktywna rezerwacja, ale bez zatwierdzonego zamówienia
-            $args['meta_query'][] = [
-                'key' => '_reservation_active',
-                'value' => '1',
-                'compare' => '=',
-            ];
+            // Zarezerwowane LUB zamówione = aktywna rezerwacja LUB zatwierdzone zamówienie
             $args['meta_query'][] = [
                 'relation' => 'OR',
                 [
-                    'key' => '_order_approved',
-                    'compare' => 'NOT EXISTS',
+                    'key' => '_reservation_active',
+                    'value' => '1',
+                    'compare' => '=',
                 ],
                 [
                     'key' => '_order_approved',
                     'value' => '1',
-                    'compare' => '!=',
+                    'compare' => '=',
                 ],
             ];
         }
@@ -591,6 +587,9 @@ class Offers_Endpoint {
             $data['pricing'] = [
                 'rental_periods' => $config_price['rental_periods'],
                 'mileage_limits' => $config_price['mileage_limits'],
+                'initial_payments' => isset($config_price['initial_payments']) && !empty($config_price['initial_payments']) 
+                    ? $config_price['initial_payments'] 
+                    : [0],
                 'price_matrix' => $config_price['prices'],
                 'lowest_price' => (float) get_post_meta($post->ID, '_lowest_price', true),
             ];
@@ -598,6 +597,7 @@ class Offers_Endpoint {
             $data['pricing'] = [
                 'rental_periods' => [],
                 'mileage_limits' => [],
+                'initial_payments' => [0],
                 'price_matrix' => [],
                 'lowest_price' => 0,
             ];

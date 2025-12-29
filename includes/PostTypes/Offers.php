@@ -470,11 +470,10 @@ class Offers {
         $reserved_active = get_post_meta($post_id, '_reservation_active', true) === '1';
         if ($reserved_active) {
             $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#fee2e2;color:#b91c1c;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">Zarezerwowany</span>';
-        } elseif ($this->has_entry_with_status($post_id, 'reservation', ['pending'])) {
-            $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#fef3c7;color:#92400e;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">Rezerwacja oczekująca</span>';
         }
 
-        if ($this->has_entry_with_status($post_id, 'order', ['pending', 'approved'])) {
+        $order_approved = get_post_meta($post_id, '_order_approved', true) === '1';
+        if ($order_approved) {
             $badges[] = '<span style="display:inline-flex;align-items:center;gap:6px;background:#dbeafe;color:#1d4ed8;font-weight:600;padding:3px 10px;border-radius:999px;font-size:12px;">Zamówienie</span>';
         }
 
@@ -1439,8 +1438,14 @@ class Offers {
             $config = [
                 'rental_periods' => [12, 24, 36, 48],
                 'mileage_limits' => [10000, 15000, 20000],
+                'initial_payments' => [0],
                 'prices' => []
             ];
+        }
+        
+        // Upewnij się, że initial_payments istnieje (wsteczna kompatybilność)
+        if (empty($config['initial_payments'])) {
+            $config['initial_payments'] = [0];
         }
 
         $cena_najnizsza = get_post_meta($post->ID, '_lowest_price', true);
@@ -1471,6 +1476,20 @@ class Offers {
                        placeholder="np. 10000,15000,20000">
                 <p class="description" style="margin-top: 8px; margin-bottom: 0; color: #64748b; font-size: 12px;">
                     Oddziel przecinkami, np: 10000,15000,20000
+                </p>
+            </div>
+
+            <div class="flexmile-pricing-input-group">
+                <label for="flexmile_initial_payments">
+                    <span>Opłaty początkowe (zł)</span>
+                </label>
+                <input type="text"
+                       id="flexmile_initial_payments"
+                       name="initial_payments"
+                       value="<?php echo esc_attr(implode(',', $config['initial_payments'])); ?>"
+                       placeholder="np. 0,5000,10000">
+                <p class="description" style="margin-top: 8px; margin-bottom: 0; color: #64748b; font-size: 12px;">
+                    Oddziel przecinkami, np: 0,5000,10000 (0 oznacza brak opłaty początkowej)
                 </p>
             </div>
 
@@ -1507,6 +1526,7 @@ class Offers {
             var generateMatrix = function() {
                 var okresy = $('#flexmile_rental_periods').val();
                 var limity = $('#flexmile_mileage_limits').val();
+                var oplaty = $('#flexmile_initial_payments').val() || '0';
 
                 if (!okresy || !limity) {
                     $('#flexmile_price_matrix').html('<p style="text-align: center; color: #6b7280; padding: 16px;">Uzupełnij okresy i limity kilometrów, aby wygenerować tabelę cen.</p>');
@@ -1518,6 +1538,7 @@ class Offers {
                     post_id: <?php echo $post->ID; ?>,
                     okresy: okresy,
                     limity: limity,
+                    oplaty: oplaty,
                     nonce: '<?php echo wp_create_nonce('flexmile_price_matrix'); ?>'
                 }, function(response) {
                     if (response.success) {
@@ -1532,8 +1553,8 @@ class Offers {
                 });
             };
 
-            // Automatyczne generowanie przy zmianie okresów lub limitów
-            $('#flexmile_rental_periods, #flexmile_mileage_limits').on('blur', function() {
+            // Automatyczne generowanie przy zmianie okresów, limitów lub opłat początkowych
+            $('#flexmile_rental_periods, #flexmile_mileage_limits, #flexmile_initial_payments').on('blur', function() {
                 var okresy = $('#flexmile_rental_periods').val();
                 var limity = $('#flexmile_mileage_limits').val();
                 
@@ -1548,6 +1569,7 @@ class Offers {
                 var button = $(this);
                 var okresy = $('#flexmile_rental_periods').val();
                 var limity = $('#flexmile_mileage_limits').val();
+                var oplaty = $('#flexmile_initial_payments').val() || '0';
 
                 if (!okresy || !limity) {
                     alert('Uzupełnij okresy i limity kilometrów!');
@@ -1561,6 +1583,7 @@ class Offers {
                     post_id: <?php echo $post->ID; ?>,
                     okresy: okresy,
                     limity: limity,
+                    oplaty: oplaty,
                     nonce: '<?php echo wp_create_nonce('flexmile_price_matrix'); ?>'
                 }, function(response) {
                     if (response.success) {
@@ -1585,7 +1608,7 @@ class Offers {
     }
 
     /**
-     * Renderuje macierz cen
+     * Renderuje macierz cen (z obsługą opłat początkowych)
      */
     private function render_price_matrix($config) {
         if (empty($config['rental_periods']) || empty($config['mileage_limits'])) {
@@ -1595,78 +1618,108 @@ class Offers {
             return;
         }
 
+        // Upewnij się, że initial_payments istnieje (wsteczna kompatybilność)
+        if (empty($config['initial_payments'])) {
+            $config['initial_payments'] = [0];
+        }
+
+        $min_price = PHP_FLOAT_MAX;
+        $min_key = '';
+
+        // Renderuj jedną tabelę dla każdej opłaty początkowej
+        foreach ($config['initial_payments'] as $index => $initial_payment):
+            $is_first = $index === 0;
+            $is_last = $index === count($config['initial_payments']) - 1;
         ?>
-        <div style="overflow-x: auto; margin-top: 0;">
-            <table class="widefat" style="border-collapse: collapse; width: 100%; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                <thead>
-                    <tr>
-                        <th style="padding: 14px 16px; text-align: left; color: #ffffff; font-weight: 600; font-size: 13px; border-right: 1px solid rgba(255,255,255,0.2);">
-                            Okres / Limit km
-                        </th>
-                        <?php foreach ($config['mileage_limits'] as $limit): ?>
-                        <th style="padding: 14px 16px; text-align: center; color: #ffffff; font-weight: 600; font-size: 13px; border-right: 1px solid rgba(255,255,255,0.2);">
-                            <?php echo number_format($limit, 0, '', ' '); ?> km/rok
-                        </th>
-                        <?php endforeach; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $min_price = PHP_FLOAT_MAX;
-                    $min_key = '';
-
-                    foreach ($config['rental_periods'] as $okres):
-                    ?>
-                    <tr style="transition: background 0.2s ease;">
-                        <td style="padding: 14px 16px; font-weight: 600; background: #f9fafb; border: 1px solid #e5e7eb; font-size: 13px; color: #374151;">
-                            <span style="display: inline-flex; align-items: center; gap: 6px;">
-                                <span><?php echo $okres; ?> miesięcy</span>
-                            </span>
-                        </td>
-                        <?php foreach ($config['mileage_limits'] as $limit):
-                            $key = $okres . '_' . $limit;
-                            $cena = isset($config['prices'][$key]) ? $config['prices'][$key] : '';
-
-                            if (!empty($cena) && $cena < $min_price) {
-                                $min_price = $cena;
-                                $min_key = $key;
-                            }
-                        ?>
-                        <td style="padding: 12px; border: 1px solid #e5e7eb; background: #ffffff;">
-                            <input type="number"
-                                   name="price_matrix[<?php echo esc_attr($key); ?>]"
-                                   value="<?php echo esc_attr($cena); ?>"
-                                   step="0.01"
-                                   min="0"
-                                   placeholder="0.00"
-                                   style="width: 100%; padding: 10px 12px; border: 2px solid #d1d5db; border-radius: 6px; text-align: right; font-weight: 600; font-size: 13px; transition: all 0.2s ease;">
-                        </td>
-                        <?php endforeach; ?>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-
-            <?php if ($min_price < PHP_FLOAT_MAX): ?>
-            <div style="margin-top: 16px; padding: 14px 16px; background: linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%); border-left: 4px solid #22c55e; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
-
-                <div style="flex: 1;">
-                    <div style="font-size: 12px; font-weight: 600; color: #166534; margin-bottom: 2px;">
-                        Najniższa cena (widoczna na liście ofert)
-                    </div>
-                    <div style="font-size: 18px; font-weight: 700; color: #15803d;">
-                        <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
-                    </div>
+        <div style="margin-bottom: <?php echo $is_last ? '0' : '32px'; ?>;">
+            <div style="margin-bottom: 12px; padding: 10px 14px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #0ea5e9; border-radius: 8px;">
+                <div style="font-size: 14px; font-weight: 600; color: #0c4a6e;">
+                    <?php if ($initial_payment == 0): ?>
+                        Bez opłaty początkowej
+                    <?php else: ?>
+                        Opłata początkowa: <strong><?php echo number_format($initial_payment, 0, ',', ' '); ?> zł</strong>
+                    <?php endif; ?>
                 </div>
             </div>
-            <?php else: ?>
-            <div style="margin-top: 16px; padding: 14px 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
-                <div style="flex: 1; font-size: 13px; color: #92400e;">
-                    <strong>Uwaga:</strong> Wypełnij ceny w tabeli powyżej, aby wyświetlić najniższą cenę.
-                </div>
+            
+            <div style="overflow-x: auto;">
+                <table class="widefat" style="border-collapse: collapse; width: 100%; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <thead>
+                        <tr>
+                            <th style="padding: 14px 16px; text-align: left; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #ffffff; font-weight: 600; font-size: 13px; border-right: 1px solid rgba(255,255,255,0.2);">
+                                Okres / Limit km
+                            </th>
+                            <?php foreach ($config['mileage_limits'] as $limit): ?>
+                            <th style="padding: 14px 16px; text-align: center; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #ffffff; font-weight: 600; font-size: 13px; border-right: 1px solid rgba(255,255,255,0.2);">
+                                <?php echo number_format($limit, 0, '', ' '); ?> km/rok
+                            </th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($config['rental_periods'] as $okres): ?>
+                        <tr style="transition: background 0.2s ease;">
+                            <td style="padding: 14px 16px; font-weight: 600; background: #f9fafb; border: 1px solid #e5e7eb; font-size: 13px; color: #374151;">
+                                <span style="display: inline-flex; align-items: center; gap: 6px;">
+                                    <span><?php echo $okres; ?> miesięcy</span>
+                                </span>
+                            </td>
+                            <?php foreach ($config['mileage_limits'] as $limit):
+                                // Nowy format klucza: okres_limit_initial_payment
+                                $key = $okres . '_' . $limit . '_' . $initial_payment;
+                                
+                                // Wsteczna kompatybilność: sprawdź też stary format (okres_limit)
+                                $old_key = $okres . '_' . $limit;
+                                $cena = '';
+                                
+                                if (isset($config['prices'][$key])) {
+                                    $cena = $config['prices'][$key];
+                                } elseif (isset($config['prices'][$old_key]) && $initial_payment == 0) {
+                                    // Dla opłaty 0, użyj starego formatu jeśli istnieje
+                                    $cena = $config['prices'][$old_key];
+                                }
+
+                                if (!empty($cena) && is_numeric($cena) && $cena < $min_price) {
+                                    $min_price = $cena;
+                                    $min_key = $key;
+                                }
+                            ?>
+                            <td style="padding: 12px; border: 1px solid #e5e7eb; background: #ffffff;">
+                                <input type="number"
+                                       name="price_matrix[<?php echo esc_attr($key); ?>]"
+                                       value="<?php echo esc_attr($cena); ?>"
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="0.00"
+                                       style="width: 100%; padding: 10px 12px; border: 2px solid #d1d5db; border-radius: 6px; text-align: right; font-weight: 600; font-size: 13px; transition: all 0.2s ease;">
+                            </td>
+                            <?php endforeach; ?>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-            <?php endif; ?>
         </div>
+        <?php endforeach; ?>
+
+        <?php if ($min_price < PHP_FLOAT_MAX): ?>
+        <div style="margin-top: 24px; padding: 14px 16px; background: linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%); border-left: 4px solid #22c55e; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+            <div style="flex: 1;">
+                <div style="font-size: 12px; font-weight: 600; color: #166534; margin-bottom: 2px;">
+                    Najniższa cena (widoczna na liście ofert)
+                </div>
+                <div style="font-size: 18px; font-weight: 700; color: #15803d;">
+                    <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
+        <div style="margin-top: 24px; padding: 14px 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+            <div style="flex: 1; font-size: 13px; color: #92400e;">
+                <strong>Uwaga:</strong> Wypełnij ceny w tabelach powyżej, aby wyświetlić najniższą cenę.
+            </div>
+        </div>
+        <?php endif; ?>
         <?php
     }
 
@@ -1683,12 +1736,19 @@ class Offers {
         $post_id = intval($_POST['post_id']);
         $okresy_str = sanitize_text_field($_POST['okresy']);
         $limity_str = sanitize_text_field($_POST['limity']);
+        $oplaty_str = isset($_POST['oplaty']) ? sanitize_text_field($_POST['oplaty']) : '0';
 
-        $okresy = array_map('intval', array_filter(explode(',', $okresy_str)));
-        $limity_km = array_map('intval', array_filter(explode(',', $limity_str)));
+        $okresy = array_map('intval', array_filter(explode(',', $okresy_str), function($v) { return trim($v) !== ''; }));
+        $limity_km = array_map('intval', array_filter(explode(',', $limity_str), function($v) { return trim($v) !== ''; }));
+        $oplaty_poczatkowe = array_map('intval', array_filter(explode(',', $oplaty_str), function($v) { return trim($v) !== ''; }));
 
         if (empty($okresy) || empty($limity_km)) {
             wp_send_json_error(['message' => 'Nieprawidłowe dane']);
+        }
+
+        // Jeśli brak opłat początkowych, użyj domyślnej [0]
+        if (empty($oplaty_poczatkowe)) {
+            $oplaty_poczatkowe = [0];
         }
 
         $old_config = get_post_meta($post_id, '_pricing_config', true);
@@ -1697,6 +1757,7 @@ class Offers {
         $config = [
             'rental_periods' => $okresy,
             'mileage_limits' => $limity_km,
+            'initial_payments' => $oplaty_poczatkowe,
             'prices' => $old_ceny
         ];
 
@@ -2118,8 +2179,18 @@ class Offers {
         }
 
         if (isset($_POST['rental_periods']) && isset($_POST['mileage_limits'])) {
-            $okresy = array_map('intval', array_filter(explode(',', $_POST['rental_periods'])));
-            $limity_km = array_map('intval', array_filter(explode(',', $_POST['mileage_limits'])));
+            $okresy = array_map('intval', array_filter(explode(',', $_POST['rental_periods']), function($v) { return trim($v) !== ''; }));
+            $limity_km = array_map('intval', array_filter(explode(',', $_POST['mileage_limits']), function($v) { return trim($v) !== ''; }));
+            
+            // Opłaty początkowe
+            $oplaty_poczatkowe = [];
+            if (isset($_POST['initial_payments']) && !empty($_POST['initial_payments'])) {
+                $oplaty_poczatkowe = array_map('intval', array_filter(explode(',', $_POST['initial_payments']), function($v) { return trim($v) !== ''; }));
+            }
+            // Domyślnie [0] jeśli brak
+            if (empty($oplaty_poczatkowe)) {
+                $oplaty_poczatkowe = [0];
+            }
 
             $ceny = [];
             if (isset($_POST['price_matrix']) && is_array($_POST['price_matrix'])) {
@@ -2133,6 +2204,7 @@ class Offers {
             $config = [
                 'rental_periods' => $okresy,
                 'mileage_limits' => $limity_km,
+                'initial_payments' => $oplaty_poczatkowe,
                 'prices' => $ceny
             ];
 
