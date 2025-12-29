@@ -489,8 +489,14 @@ class Offers_Endpoint {
         // Fuel type z meta pól
         $data['fuel_type'] = get_post_meta($post->ID, '_fuel_type', true);
 
-        $cena_najnizsza = (float) get_post_meta($post->ID, '_lowest_price', true);
-        $data['price_from'] = $cena_najnizsza;
+        // Użyj wybranej ceny wyświetlanej, jeśli istnieje, w przeciwnym razie najniższej
+        $display_price = get_post_meta($post->ID, '_display_price', true);
+        if (!empty($display_price) && is_numeric($display_price)) {
+            $data['price_from'] = (float) $display_price;
+        } else {
+            $cena_najnizsza = (float) get_post_meta($post->ID, '_lowest_price', true);
+            $data['price_from'] = $cena_najnizsza;
+        }
 
         $data['attributes'] = [
             'new' => get_post_meta($post->ID, '_new_car', true) === '1',
@@ -592,6 +598,7 @@ class Offers_Endpoint {
                     : [0],
                 'price_matrix' => $config_price['prices'],
                 'lowest_price' => (float) get_post_meta($post->ID, '_lowest_price', true),
+                'display_price' => get_post_meta($post->ID, '_display_price', true) ? (float) get_post_meta($post->ID, '_display_price', true) : null,
             ];
         } else {
             $data['pricing'] = [

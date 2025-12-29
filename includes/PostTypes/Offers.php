@@ -1449,6 +1449,7 @@ class Offers {
         }
 
         $cena_najnizsza = get_post_meta($post->ID, '_lowest_price', true);
+        $display_price_key = get_post_meta($post->ID, '_display_price_key', true);
         ?>
         <div style="padding: 0;">
             <div class="flexmile-pricing-input-group">
@@ -1501,8 +1502,9 @@ class Offers {
             </button>
 
             <div id="flexmile_price_matrix">
-                <?php $this->render_price_matrix($config); ?>
+                <?php $this->render_price_matrix($config, $display_price_key); ?>
             </div>
+            <input type="hidden" name="display_price_key" value="<?php echo esc_attr($display_price_key); ?>" id="flexmile_display_price_key">
 
             <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 24px 0;">
 
@@ -1543,10 +1545,16 @@ class Offers {
                 }, function(response) {
                     if (response.success) {
                         $('#flexmile_price_matrix').html(response.data.html);
+                        // Upewnij się, że hidden input istnieje
+                        if ($('#flexmile_display_price_key').length === 0) {
+                            $('#flexmile_price_matrix').after('<input type="hidden" name="display_price_key" value="" id="flexmile_display_price_key">');
+                        }
                         // Zaktualizuj wskaźnik postępu
                         if (typeof updateProgressIndicator === 'function') {
                             updateProgressIndicator();
                         }
+                        // Re-inicjalizuj checkboxy
+                        initDisplayPriceCheckboxes();
                     } else {
                         $('#flexmile_price_matrix').html('<p style="text-align: center; color: #ef4444; padding: 16px;">Błąd: ' + response.data.message + '</p>');
                     }
@@ -1588,10 +1596,16 @@ class Offers {
                 }, function(response) {
                     if (response.success) {
                         $('#flexmile_price_matrix').html(response.data.html);
+                        // Upewnij się, że hidden input istnieje
+                        if ($('#flexmile_display_price_key').length === 0) {
+                            $('#flexmile_price_matrix').after('<input type="hidden" name="display_price_key" value="" id="flexmile_display_price_key">');
+                        }
                         // Zaktualizuj wskaźnik postępu
                         if (typeof updateProgressIndicator === 'function') {
                             updateProgressIndicator();
                         }
+                        // Re-inicjalizuj checkboxy
+                        initDisplayPriceCheckboxes();
                     } else {
                         alert('Błąd: ' + response.data.message);
                     }
@@ -1602,6 +1616,33 @@ class Offers {
 
             // Inicjalizacja przy załadowaniu strony
             generateMatrix();
+
+            // Obsługa checkboxów wyboru ceny wyświetlanej
+            function initDisplayPriceCheckboxes() {
+                // Upewnij się, że hidden input istnieje
+                if ($('#flexmile_display_price_key').length === 0) {
+                    $('#flexmile_price_matrix').after('<input type="hidden" name="display_price_key" value="" id="flexmile_display_price_key">');
+                }
+                
+                $('.flexmile-display-price-checkbox').off('change').on('change', function() {
+                    var $checkbox = $(this);
+                    var priceKey = $checkbox.data('price-key');
+                    var isChecked = $checkbox.is(':checked');
+
+                    if (isChecked) {
+                        // Odznacz wszystkie inne checkboxy
+                        $('.flexmile-display-price-checkbox').not($checkbox).prop('checked', false);
+                        // Ustaw wartość w hidden input
+                        $('#flexmile_display_price_key').val(priceKey);
+                    } else {
+                        // Jeśli odznaczono, usuń wybór
+                        $('#flexmile_display_price_key').val('');
+                    }
+                });
+            }
+
+            // Inicjalizuj przy załadowaniu
+            initDisplayPriceCheckboxes();
         });
         </script>
         <?php
@@ -1610,7 +1651,7 @@ class Offers {
     /**
      * Renderuje macierz cen (z obsługą opłat początkowych)
      */
-    private function render_price_matrix($config) {
+    private function render_price_matrix($config, $display_price_key = '') {
         if (empty($config['rental_periods']) || empty($config['mileage_limits'])) {
             echo '<div style="text-align: center; padding: 40px 20px; background: #f9fafb; border-radius: 10px; border: 2px dashed #e5e7eb;">';
             echo '<p style="margin: 0; color: #6b7280; font-size: 14px; font-weight: 500;">Uzupełnij okresy i limity kilometrów powyżej,<br>a tabela cen wygeneruje się automatycznie.</p>';
@@ -1685,13 +1726,27 @@ class Offers {
                                 }
                             ?>
                             <td style="padding: 12px; border: 1px solid #e5e7eb; background: #ffffff;">
-                                <input type="number"
-                                       name="price_matrix[<?php echo esc_attr($key); ?>]"
-                                       value="<?php echo esc_attr($cena); ?>"
-                                       step="0.01"
-                                       min="0"
-                                       placeholder="0.00"
-                                       style="width: 100%; padding: 10px 12px; border: 2px solid #d1d5db; border-radius: 6px; text-align: right; font-weight: 600; font-size: 13px; transition: all 0.2s ease;">
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <input type="number"
+                                           name="price_matrix[<?php echo esc_attr($key); ?>]"
+                                           value="<?php echo esc_attr($cena); ?>"
+                                           step="0.01"
+                                           min="0"
+                                           placeholder="0.00"
+                                           style="width: 100%; padding: 10px 12px; border: 2px solid #d1d5db; border-radius: 6px; text-align: right; font-weight: 600; font-size: 13px; transition: all 0.2s ease;">
+                                    <?php if (!empty($cena) && is_numeric($cena)): ?>
+                                    <div style="margin-top: 6px;">
+                                        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;">
+                                            <input type="checkbox"
+                                                   class="flexmile-display-price-checkbox"
+                                                   data-price-key="<?php echo esc_attr($key); ?>"
+                                                   <?php checked($display_price_key, $key); ?>
+                                                   style="width: 16px; height: 16px; margin: 0; cursor: pointer; flex-shrink: 0;">
+                                            <span style="font-size: 12px;">Wyświetlaj tę cenę</span>
+                                        </label>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <?php endforeach; ?>
                         </tr>
@@ -1702,15 +1757,30 @@ class Offers {
         </div>
         <?php endforeach; ?>
 
-        <?php if ($min_price < PHP_FLOAT_MAX): ?>
+        <?php if ($min_price < PHP_FLOAT_MAX): 
+            // Sprawdź czy jest wybrana cena wyświetlana
+            $display_price = '';
+            $display_price_label = 'Najniższa cena';
+            if (!empty($display_price_key) && isset($config['prices'][$display_price_key])) {
+                $display_price = $config['prices'][$display_price_key];
+                $display_price_label = 'Wybrana cena wyświetlana';
+            } else {
+                $display_price = $min_price;
+            }
+        ?>
         <div style="margin-top: 24px; padding: 14px 16px; background: linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%); border-left: 4px solid #22c55e; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
             <div style="flex: 1;">
                 <div style="font-size: 12px; font-weight: 600; color: #166534; margin-bottom: 2px;">
-                    Najniższa cena (widoczna na liście ofert)
+                    <?php echo esc_html($display_price_label); ?> (widoczna na liście ofert)
                 </div>
                 <div style="font-size: 18px; font-weight: 700; color: #15803d;">
-                    <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.
+                    <?php echo number_format($display_price, 2, ',', ' '); ?> zł/mies.
                 </div>
+                <?php if (!empty($display_price_key) && $display_price != $min_price): ?>
+                <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">
+                    (Najniższa cena: <?php echo number_format($min_price, 2, ',', ' '); ?> zł/mies.)
+                </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php else: ?>
@@ -1753,6 +1823,7 @@ class Offers {
 
         $old_config = get_post_meta($post_id, '_pricing_config', true);
         $old_ceny = is_array($old_config) && isset($old_config['prices']) ? $old_config['prices'] : [];
+        $display_price_key = get_post_meta($post_id, '_display_price_key', true);
 
         $config = [
             'rental_periods' => $okresy,
@@ -1762,7 +1833,7 @@ class Offers {
         ];
 
         ob_start();
-        $this->render_price_matrix($config);
+        $this->render_price_matrix($config, $display_price_key);
         $html = ob_get_clean();
 
         wp_send_json_success(['html' => $html]);
@@ -2212,6 +2283,24 @@ class Offers {
 
             $min_price = !empty($ceny) ? min($ceny) : 0;
             update_post_meta($post_id, '_lowest_price', $min_price);
+
+            // Zapisz wybraną cenę wyświetlaną
+            if (isset($_POST['display_price_key']) && !empty($_POST['display_price_key'])) {
+                $display_key = sanitize_text_field($_POST['display_price_key']);
+                // Sprawdź czy klucz istnieje w cenach
+                if (isset($ceny[$display_key])) {
+                    update_post_meta($post_id, '_display_price_key', $display_key);
+                    update_post_meta($post_id, '_display_price', floatval($ceny[$display_key]));
+                } else {
+                    // Jeśli klucz nie istnieje, usuń wybraną cenę
+                    delete_post_meta($post_id, '_display_price_key');
+                    delete_post_meta($post_id, '_display_price');
+                }
+            } else {
+                // Jeśli nie wybrano ceny, usuń zapisaną
+                delete_post_meta($post_id, '_display_price_key');
+                delete_post_meta($post_id, '_display_price');
+            }
         }
 
         $rezerwacja = isset($_POST['reservation_active']) ? '1' : '0';
