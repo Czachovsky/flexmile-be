@@ -632,13 +632,33 @@ class Offers_Endpoint {
         $data['available'] = !$reservation_active && !$order_approved;
 
         // Dodatkowe usługi (tylko w szczegółach oferty)
-        $data['additional_services'] = [
-            'financing' => get_post_meta($post->ID, '_financing', true) === '1',
-            'vehicle_service' => get_post_meta($post->ID, '_vehicle_service', true) === '1',
-            'insurance_oc_ac_nnw' => get_post_meta($post->ID, '_insurance_oc_ac_nnw', true) === '1',
-            'assistance_24h' => get_post_meta($post->ID, '_assistance_24h', true) === '1',
-            'summer_winter_tires' => get_post_meta($post->ID, '_summer_winter_tires', true) === '1',
+        $additional_services_config = [
+            'financing' => '_financing',
+            'vehicle_service' => '_vehicle_service',
+            'insurance_oc_ac_nnw' => '_insurance_oc_ac_nnw',
+            'assistance_24h' => '_assistance_24h',
+            'summer_winter_tires' => '_summer_winter_tires',
         ];
+        
+        $data['additional_services'] = [];
+        foreach ($additional_services_config as $key => $meta_key) {
+            $is_enabled = get_post_meta($post->ID, $meta_key, true) === '1';
+            if ($is_enabled) {
+                $title = get_post_meta($post->ID, $meta_key . '_title', true);
+                $description = get_post_meta($post->ID, $meta_key . '_description', true);
+                $data['additional_services'][$key] = [
+                    'enabled' => true,
+                    'title' => $title ?: '',
+                    'description' => $description ?: '',
+                ];
+            } else {
+                $data['additional_services'][$key] = [
+                    'enabled' => false,
+                    'title' => '',
+                    'description' => '',
+                ];
+            }
+        }
 
         // Customowe dodatkowe dane (tylko w szczegółach oferty)
         $custom_data = get_post_meta($post->ID, '_custom_additional_data', true);

@@ -1233,10 +1233,12 @@ class Offers {
                             <option value="new" <?php selected($stan, 'new'); ?>>Nowy</option>
                             <option value="demo" <?php selected($stan, 'demo'); ?>>Demo</option>
                             <option value="used" <?php selected($stan, 'used'); ?>>Używany</option>
+                            <option value="ex_lease" <?php selected($stan, 'ex_lease'); ?>>Poleasingowy</option>
+                            <option value="ex_contract" <?php selected($stan, 'ex_contract'); ?>>Pokontraktowy</option>
                         </select>
                     </div>
 
-                    <div class="flexmile-field" id="mileage-field-wrapper" style="<?php echo in_array($stan, ['demo', 'used']) ? '' : 'display: none;'; ?>">
+                    <div class="flexmile-field" id="mileage-field-wrapper" style="<?php echo in_array($stan, ['demo', 'used', 'ex_lease', 'ex_contract']) ? '' : 'display: none;'; ?>">
                         <label for="mileage">
                             <strong>Przebieg (km)</strong>
                         </label>
@@ -1366,7 +1368,7 @@ class Offers {
             
             function toggleMileageField() {
                 var condition = $carCondition.val();
-                if (condition === 'demo' || condition === 'used') {
+                if (condition === 'demo' || condition === 'used' || condition === 'ex_lease' || condition === 'ex_contract') {
                     $mileageWrapper.slideDown();
                 } else {
                     $mileageWrapper.slideUp();
@@ -1966,51 +1968,105 @@ class Offers {
         $assistance_24h = get_post_meta($post->ID, '_assistance_24h', true) === '1';
         $opony = get_post_meta($post->ID, '_summer_winter_tires', true) === '1';
 
+        // Pobierz tytuły i opisy dla każdej usługi
+        $financing_title = get_post_meta($post->ID, '_financing_title', true) ?: 'Finansowanie';
+        $financing_description = get_post_meta($post->ID, '_financing_description', true) ?: 'Elastyczne warunki najmu dopasowane do Twoich potrzeb i budżetu.';
+        
+        $vehicle_service_title = get_post_meta($post->ID, '_vehicle_service_title', true) ?: 'Serwis pojazdu';
+        $vehicle_service_description = get_post_meta($post->ID, '_vehicle_service_description', true) ?: 'Regularne przeglądy i naprawy w cenie — bez dodatkowych kosztów.';
+        
+        $insurance_title = get_post_meta($post->ID, '_insurance_oc_ac_nnw_title', true) ?: 'Ubezpieczenie OC/AC/NNW';
+        $insurance_description = get_post_meta($post->ID, '_insurance_oc_ac_nnw_description', true) ?: 'Pełna ochrona przez cały okres wynajmu, wliczona w ratę.';
+        
+        $assistance_title = get_post_meta($post->ID, '_assistance_24h_title', true) ?: 'Assistance 24h';
+        $assistance_description = get_post_meta($post->ID, '_assistance_24h_description', true) ?: 'Pomoc na drodze o każdej porze — w Polsce i za granicą.';
+        
+        $tires_title = get_post_meta($post->ID, '_summer_winter_tires_title', true) ?: 'Opony letnie i zimowe';
+        $tires_description = get_post_meta($post->ID, '_summer_winter_tires_description', true) ?: 'Zawsze gotowy do jazdy!';
+
         $custom_data = get_post_meta($post->ID, '_custom_additional_data', true);
         if (empty($custom_data) || !is_array($custom_data)) {
             $custom_data = [];
         }
+
+        // Definicje usług z predefiniowanymi wartościami
+        $services = [
+            'financing' => [
+                'label' => 'Finansowanie',
+                'checked' => $finansowanie,
+                'title' => $financing_title,
+                'description' => $financing_description,
+            ],
+            'vehicle_service' => [
+                'label' => 'Serwis pojazdu',
+                'checked' => $serwis_pojazdu,
+                'title' => $vehicle_service_title,
+                'description' => $vehicle_service_description,
+            ],
+            'insurance_oc_ac_nnw' => [
+                'label' => 'Ubezpieczenie OC/AC/NNW',
+                'checked' => $ubezpieczenie,
+                'title' => $insurance_title,
+                'description' => $insurance_description,
+            ],
+            'assistance_24h' => [
+                'label' => 'Assistance 24h',
+                'checked' => $assistance_24h,
+                'title' => $assistance_title,
+                'description' => $assistance_description,
+            ],
+            'summer_winter_tires' => [
+                'label' => 'Opony letnie i zimowe',
+                'checked' => $opony,
+                'title' => $tires_title,
+                'description' => $tires_description,
+            ],
+        ];
         ?>
         <div style="padding: 0;">
             <div style="margin-bottom: 24px;">
                 <h4 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #1e293b;">
                     Dodatkowe usługi
                 </h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
-                    <div class="flexmile-flag-item">
-                        <input type="checkbox" id="financing" name="financing" value="1" <?php checked($finansowanie); ?>>
-                        <label for="financing" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                            <span>Finansowanie</span>
-                        </label>
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <?php foreach ($services as $key => $service): ?>
+                    <div class="flexmile-service-item" style="padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <div style="margin-bottom: 12px;display: flex;align-items: center;justify-content: flex-start;gap: 16px;">
+                            <input type="checkbox" 
+                                   id="<?php echo esc_attr($key); ?>" 
+                                   name="<?php echo esc_attr($key); ?>" 
+                                   value="1" 
+                                   class="flexmile-service-checkbox"
+                                   <?php checked($service['checked']); ?>>
+                            <label for="<?php echo esc_attr($key); ?>" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; font-weight: 600; color: #1e293b;">
+                                <span><?php echo esc_html($service['label']); ?></span>
+                            </label>
+                        </div>
+                        <div class="flexmile-service-fields" style="display: <?php echo $service['checked'] ? 'block' : 'none'; ?>; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+                                    Tytuł <span style="color: #ef4444;">*</span>
+                                </label>
+                                <input type="text"
+                                       name="<?php echo esc_attr($key); ?>_title"
+                                       value="<?php echo esc_attr($service['title']); ?>"
+                                       class="flexmile-service-title"
+                                       required
+                                       style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;">
+                                    Opis <span style="color: #ef4444;">*</span>
+                                </label>
+                                <textarea name="<?php echo esc_attr($key); ?>_description"
+                                          rows="3"
+                                          class="flexmile-service-description"
+                                          required
+                                          style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px; resize: vertical; font-family: inherit;"><?php echo esc_textarea($service['description']); ?></textarea>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="flexmile-flag-item">
-                        <input type="checkbox" id="vehicle_service" name="vehicle_service" value="1" <?php checked($serwis_pojazdu); ?>>
-                        <label for="vehicle_service" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                            <span>Serwis pojazdu</span>
-                        </label>
-                    </div>
-
-                    <div class="flexmile-flag-item">
-                        <input type="checkbox" id="insurance_oc_ac_nnw" name="insurance_oc_ac_nnw" value="1" <?php checked($ubezpieczenie); ?>>
-                        <label for="insurance_oc_ac_nnw" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                            <span>Ubezpieczenie OC/AC/NNW</span>
-                        </label>
-                    </div>
-
-                    <div class="flexmile-flag-item">
-                        <input type="checkbox" id="assistance_24h" name="assistance_24h" value="1" <?php checked($assistance_24h); ?>>
-                        <label for="assistance_24h" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                            <span>Assistance 24h</span>
-                        </label>
-                    </div>
-
-                    <div class="flexmile-flag-item">
-                        <input type="checkbox" id="summer_winter_tires" name="summer_winter_tires" value="1" <?php checked($opony); ?>>
-                        <label for="summer_winter_tires" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                            <span>Opony letnie i zimowe</span>
-                        </label>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
@@ -2080,6 +2136,40 @@ class Offers {
 
             <script>
             jQuery(document).ready(function($) {
+                // Obsługa pokazywania/ukrywania pól dla dodatkowych usług
+                $('.flexmile-service-checkbox').on('change', function() {
+                    var checkbox = $(this);
+                    var serviceItem = checkbox.closest('.flexmile-service-item');
+                    var fieldsContainer = serviceItem.find('.flexmile-service-fields');
+                    var titleInput = serviceItem.find('.flexmile-service-title');
+                    var descriptionInput = serviceItem.find('.flexmile-service-description');
+                    
+                    if (checkbox.is(':checked')) {
+                        fieldsContainer.slideDown(300);
+                        titleInput.prop('required', true);
+                        descriptionInput.prop('required', true);
+                    } else {
+                        fieldsContainer.slideUp(300);
+                        titleInput.prop('required', false);
+                        descriptionInput.prop('required', false);
+                    }
+                });
+
+                // Inicjalizacja przy załadowaniu strony
+                $('.flexmile-service-checkbox').each(function() {
+                    var checkbox = $(this);
+                    var serviceItem = checkbox.closest('.flexmile-service-item');
+                    var fieldsContainer = serviceItem.find('.flexmile-service-fields');
+                    var titleInput = serviceItem.find('.flexmile-service-title');
+                    var descriptionInput = serviceItem.find('.flexmile-service-description');
+                    
+                    if (!checkbox.is(':checked')) {
+                        fieldsContainer.hide();
+                        titleInput.prop('required', false);
+                        descriptionInput.prop('required', false);
+                    }
+                });
+
                 var maxItems = 5;
                 var currentIndex = <?php echo $item_index; ?>;
                 var container = $('#flexmile-custom-additional-data-container');
@@ -2231,8 +2321,8 @@ class Offers {
             if ($car_condition === 'new') {
                 // Wyczyść przebieg dla nowych samochodów
                 delete_post_meta($post_id, '_mileage');
-            } elseif (in_array($car_condition, ['demo', 'used'])) {
-                // Zapisz przebieg tylko dla demo i używanych
+            } elseif (in_array($car_condition, ['demo', 'used', 'ex_lease', 'ex_contract'])) {
+                // Zapisz przebieg dla demo, używanych, poleasingowych i pokontraktowych
                 if (isset($_POST['mileage']) && !empty($_POST['mileage'])) {
                     $mileage = intval($_POST['mileage']);
                     if ($mileage > 0) {
@@ -2336,7 +2426,7 @@ class Offers {
             update_post_meta($post_id, '_additional_equipment', sanitize_textarea_field($_POST['additional_equipment']));
         }
 
-        // Zapisz dodatkowe usługi (5 pól boolean)
+        // Zapisz dodatkowe usługi (5 pól boolean) wraz z tytułami i opisami
         $additional_services = [
             '_financing' => 'financing',
             '_vehicle_service' => 'vehicle_service',
@@ -2348,6 +2438,26 @@ class Offers {
         foreach ($additional_services as $meta_key => $post_key) {
             $value = isset($_POST[$post_key]) ? '1' : '0';
             update_post_meta($post_id, $meta_key, $value);
+            
+            // Zapisz tytuł i opis dla każdej usługi
+            $title_key = $meta_key . '_title';
+            $description_key = $meta_key . '_description';
+            
+            if (isset($_POST[$post_key . '_title'])) {
+                $title = sanitize_text_field($_POST[$post_key . '_title']);
+                update_post_meta($post_id, $title_key, $title);
+            }
+            
+            if (isset($_POST[$post_key . '_description'])) {
+                $description = sanitize_textarea_field($_POST[$post_key . '_description']);
+                update_post_meta($post_id, $description_key, $description);
+            }
+            
+            // Jeśli usługa nie jest zaznaczona, usuń tytuł i opis
+            if ($value === '0') {
+                delete_post_meta($post_id, $title_key);
+                delete_post_meta($post_id, $description_key);
+            }
         }
 
         // Zapisz customowe dodatkowe dane (max 5 elementów)
