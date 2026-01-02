@@ -20,6 +20,7 @@ class Offers {
         add_action('save_post_' . self::POST_TYPE, [$this, 'save_meta'], 10, 2);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
         add_action('post_submitbox_misc_actions', [$this, 'add_duplicate_button']);
+        add_action('post_submitbox_misc_actions', [$this, 'add_view_offer_button']);
         add_action('admin_action_flexmile_duplicate_offer', [$this, 'handle_duplicate_offer']);
 
         // Wyłącz Gutenberga dla typu postu 'offer'
@@ -102,6 +103,43 @@ class Offers {
         <div class="misc-pub-section">
             <a href="<?php echo esc_url($url); ?>" class="button button-secondary">
                 Powiel ofertę
+            </a>
+        </div>
+        <?php
+    }
+
+    /**
+     * Dodaje przycisk "Zobacz ofertę" w boksie publikacji
+     */
+    public function add_view_offer_button() {
+        global $post, $typenow;
+
+        if (!is_admin()) {
+            return;
+        }
+
+        if ($typenow !== self::POST_TYPE || !$post instanceof \WP_Post) {
+            return;
+        }
+
+        // Przycisk widoczny tylko gdy oferta ma ID (jest zapisana)
+        if (empty($post->ID) || $post->post_status === 'auto-draft') {
+            return;
+        }
+
+        $frontend_domain = get_option('flexmile_frontend_domain', '');
+        
+        // Jeśli domena nie jest ustawiona, nie pokazuj przycisku
+        if (empty($frontend_domain)) {
+            return;
+        }
+
+        // Generuj link do oferty: {domena}/oferta/{id}
+        $offer_url = rtrim($frontend_domain, '/') . '/oferta/' . absint($post->ID);
+        ?>
+        <div class="misc-pub-section">
+            <a href="<?php echo esc_url($offer_url); ?>" target="_blank" class="button button-secondary" style="margin-top: 8px;">
+                <span class="dashicons dashicons-external" style="margin-top: 3px;"></span> Zobacz ofertę
             </a>
         </div>
         <?php

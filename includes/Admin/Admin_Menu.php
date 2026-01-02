@@ -15,6 +15,9 @@ class Admin_Menu {
         // Sprzątanie domyślnego menu WordPress po dodaniu własnego
         add_action('admin_menu', [$this, 'cleanup_admin_menu'], 999);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+        
+        // Obsługa zapisu ustawień domeny frontendowej
+        add_action('admin_post_flexmile_save_frontend_domain', [$this, 'save_frontend_domain']);
     }
 
     /**
@@ -352,9 +355,53 @@ BMW X5 3.0d,bmw,X5,SUV,diesel,2022,286,automatic,2200,"12,24,36,48","10000,15000
      * Renderuje ustawienia API
      */
     public function render_api_settings() {
+        // Obsługa zapisu formularza domeny frontendowej
+        if (isset($_POST['flexmile_save_frontend_domain']) && check_admin_referer('flexmile_frontend_domain_nonce')) {
+            $domain = isset($_POST['frontend_domain']) ? esc_url_raw(trim($_POST['frontend_domain'])) : '';
+            // Usuń końcowy slash jeśli istnieje
+            $domain = rtrim($domain, '/');
+            update_option('flexmile_frontend_domain', $domain);
+            ?>
+            <div class="notice notice-success is-dismissible">
+                <p><strong>✅ Sukces!</strong> Domena frontendowa została zapisana.</p>
+            </div>
+            <?php
+        }
+
+        $frontend_domain = get_option('flexmile_frontend_domain', '');
         ?>
         <div class="wrap">
             <h1>Ustawienia FlexMile API</h1>
+
+            <div class="flexmile-api-info" style="margin-bottom: 20px;">
+                <h2>Domena Frontendowa</h2>
+                <p>Ustaw domenę frontendową (np. https://flexmile.mr-creations.pl), aby móc korzystać z przycisku "Zobacz ofertę" w edycji oferty.</p>
+                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+                    <input type="hidden" name="action" value="flexmile_save_frontend_domain">
+                    <?php wp_nonce_field('flexmile_frontend_domain_nonce'); ?>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="frontend_domain">Domena frontendowa</label>
+                            </th>
+                            <td>
+                                <input 
+                                    type="url" 
+                                    id="frontend_domain" 
+                                    name="frontend_domain" 
+                                    value="<?php echo esc_attr($frontend_domain); ?>" 
+                                    class="regular-text"
+                                    placeholder="https://flexmile.mr-creations.pl"
+                                />
+                                <p class="description">Pełny URL do aplikacji frontendowej (bez końcowego slasha).</p>
+                            </td>
+                        </tr>
+                    </table>
+                    <p class="submit">
+                        <input type="submit" name="flexmile_save_frontend_domain" class="button button-primary" value="Zapisz domenę" />
+                    </p>
+                </form>
+            </div>
 
             <div class="flexmile-api-info">
                 <h2>Konfiguracja CORS</h2>
@@ -731,6 +778,28 @@ add_action('init', function() {
             }
         </style>
         <?php
+    }
+
+    /**
+     * Zapisuje domenę frontendową
+     */
+    public function save_frontend_domain() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Brak uprawnień');
+        }
+
+        check_admin_referer('flexmile_frontend_domain_nonce');
+
+        $domain = isset($_POST['frontend_domain']) ? esc_url_raw(trim($_POST['frontend_domain'])) : '';
+        $domain = rtrim($domain, '/');
+        
+        update_option('flexmile_frontend_domain', $domain);
+
+        wp_redirect(add_query_arg([
+            'page' => 'flexmile-api',
+            'settings-updated' => 'true'
+        ], admin_url('admin.php')));
+        exit;
     }
 
     /**

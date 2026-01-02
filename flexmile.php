@@ -3,7 +3,7 @@
  * Plugin Name: FlexMile
  * Plugin URI: https://flexmile.pl
  * Description: Headless WordPress API for FlexMile
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: MR
  * Text Domain: flexmile
  * Domain Path: /languages
