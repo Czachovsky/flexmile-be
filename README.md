@@ -427,7 +427,7 @@ Po aktywacji wtyczki w menu WordPress pojawiają się:
    - **Tytuł** - np. "BMW X5 3.0d xDrive"
    - **Marka i model** - wybierz z listy
    - **Typ nadwozia** - SUV, Sedan, Hatchback, Kombi, Coupe
-   - **Rodzaj paliwa** - Diesel, Bezołowiowa, Elektryczny, Hybryda, Hybryda Plug-in
+   - **Rodzaj paliwa** - Diesel, Benzyna, Elektryczny, Hybryda, Hybryda Plug-in
    - **Rocznik, moc, pojemność** - szczegóły techniczne
 3. **Galeria** - dodaj zdjęcia samochodu
 4. **Konfiguracja cen**:
