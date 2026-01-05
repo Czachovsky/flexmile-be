@@ -565,7 +565,7 @@ class Offers {
             'add_new' => 'Dodaj nową',
             'add_new_item' => 'Dodaj nową ofertę',
             'edit_item' => 'Edytuj ofertę',
-            'new_item' => 'Nowa oferta',
+            'new_item' => 'Nowy samochód',
             'view_item' => 'Zobacz ofertę',
             'search_items' => 'Szukaj ofert',
             'not_found' => 'Nie znaleziono ofert',
@@ -737,14 +737,6 @@ class Offers {
                 '1.0'
             );
 
-            wp_enqueue_script('jquery-ui-tabs');
-            wp_enqueue_style('wp-jquery-ui-dialog');
-
-            wp_add_inline_script('jquery-ui-tabs', '
-                jQuery(document).ready(function($) {
-                    $(".flexmile-tabs").tabs();
-                });
-            ');
         }
     }
 
@@ -1155,14 +1147,10 @@ class Offers {
         $body_types = $config['body_types'] ?? [];
         $fuel_types = $config['fuel_types'] ?? [];
         ?>
-        <div class="flexmile-tabs">
-            <ul class="flexmile-tab-nav">
-                <li><a href="#tab-podstawowe">Podstawowe</a></li>
-                <li><a href="#tab-silnik">Silnik i napęd</a></li>
-                <li><a href="#tab-wyglad">Wygląd i wnętrze</a></li>
-            </ul>
-
-            <div id="tab-podstawowe" class="flexmile-tab-content">
+        <div class="flexmile-sections">
+            <div class="flexmile-section">
+                <h3 class="flexmile-section-title">Podstawowe</h3>
+                <div class="flexmile-section-content">
                 <div class="flexmile-form-grid">
                     <div class="flexmile-field flexmile-field-required">
                         <label for="car_brand">
@@ -1194,7 +1182,19 @@ class Offers {
                         </select>
                         <p class="description">Dostępne po wybraniu marki</p>
                     </div>
+         <div class="flexmile-field flexmile-field-full">
+                        <label for="engine">
 
+                            <strong>Wersja</strong>
+                        </label>
+                        <input type="text"
+                               id="engine"
+                               name="engine"
+                               value="<?php echo esc_attr($silnik); ?>"
+                               class="flexmile-input"
+                               placeholder="np. 2.0 TDI, 1.5 TSI, 3.0d xDrive">
+                        <p class="description">Wersja silnika / samochodu, np Wersja L 1.6 T-GDI 7DCT 2WD</p>
+                    </div>
                     <div class="flexmile-field">
                         <label for="body_type">
                             <strong>Typ nadwozia</strong>
@@ -1257,8 +1257,10 @@ class Offers {
                         </label>
                         <select id="doors" name="doors" class="flexmile-input">
                             <option value="">-- Wybierz --</option>
-                            <option value="2" <?php selected($liczba_drzwi, '2'); ?>>2/3 drzwi</option>
-                            <option value="4" <?php selected($liczba_drzwi, '4'); ?>>4/5 drzwi</option>
+                            <option value="2" <?php selected($liczba_drzwi, '2'); ?>>2</option>
+                            <option value="3" <?php selected($liczba_drzwi, '3'); ?>>3</option>
+                            <option value="4" <?php selected($liczba_drzwi, '4'); ?>>4</option>
+                            <option value="5" <?php selected($liczba_drzwi, '5'); ?>>5</option>
                         </select>
                     </div>
 
@@ -1289,24 +1291,13 @@ class Offers {
                                placeholder="np. 15000">
                     </div>
                 </div>
+                </div>
             </div>
 
-            <div id="tab-silnik" class="flexmile-tab-content">
+            <div class="flexmile-section">
+                <h3 class="flexmile-section-title">Silnik i napęd</h3>
+                <div class="flexmile-section-content">
                 <div class="flexmile-form-grid">
-                    <div class="flexmile-field flexmile-field-full">
-                        <label for="engine">
-
-                            <strong>Oznaczenie silnika</strong>
-                        </label>
-                        <input type="text"
-                               id="engine"
-                               name="engine"
-                               value="<?php echo esc_attr($silnik); ?>"
-                               class="flexmile-input"
-                               placeholder="np. 2.0 TDI, 1.5 TSI, 3.0d xDrive">
-                        <p class="description">Pełna nazwa/model silnika</p>
-                    </div>
-
                     <div class="flexmile-field">
                         <label for="horsepower">
                             <strong>Moc (KM)</strong>
@@ -1370,9 +1361,12 @@ class Offers {
                                placeholder="np. 120">
                     </div>
                 </div>
+                </div>
             </div>
 
-            <div id="tab-wyglad" class="flexmile-tab-content">
+            <div class="flexmile-section">
+                <h3 class="flexmile-section-title">Wygląd i wnętrze</h3>
+                <div class="flexmile-section-content">
                 <div class="flexmile-form-grid">
                     <div class="flexmile-field flexmile-field-full">
                         <label for="color">
@@ -1396,6 +1390,7 @@ class Offers {
                                class="flexmile-input"
                                placeholder="np. Czarny, Szary, Beżowy">
                     </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -1902,7 +1897,7 @@ class Offers {
             <div class="flexmile-flag-item">
                 <input type="checkbox" id="new_car" name="new_car" value="1" <?php checked($nowy, '1'); ?>>
                 <label for="new_car" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
-                    <span>Nowa oferta</span>
+                    <span>Nowy samochód</span>
                 </label>
             </div>
 

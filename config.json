@@ -1303,6 +1303,14 @@
     {
       "id": "coupe",
       "label": "Coupe"
+    },
+    {
+      "id": "van",
+      "label": "Van"
+    },
+    {
+      "id": "dostawczy",
+      "label": "Dostawczy"
     }
   ],
   "fuel_types": [
