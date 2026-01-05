@@ -575,7 +575,7 @@ class Offers_Endpoint {
 
         $data['image'] = $image_url ? $image_url : null;
 
-        $data['engine'] = get_post_meta($post->ID, '_engine', true) ?: 'Brak danych';
+        $data['engine'] = get_post_meta($post->ID, '_engine', true) ?: null;
         $data['horsepower'] = (int) get_post_meta($post->ID, '_horsepower', true);
         $data['transmission'] = get_post_meta($post->ID, '_transmission', true);
         $data['engine_capacity'] = (int) get_post_meta($post->ID, '_engine_capacity', true);
