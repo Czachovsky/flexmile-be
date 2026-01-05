@@ -46,6 +46,11 @@ class Offers {
 
         // Generuj reference ID przy tworzeniu nowego posta
         add_action('transition_post_status', [$this, 'generate_reference_id'], 10, 3);
+        
+        // Czyść cache marek przy zmianach ofert
+        add_action('save_post_' . self::POST_TYPE, [$this, 'clear_brands_cache_on_save'], 20);
+        add_action('transition_post_status', [$this, 'clear_brands_cache_on_status_change'], 10, 3);
+        add_action('before_delete_post', [$this, 'clear_brands_cache_on_delete']);
 
         // Dodaj kolumnę z reference ID w liście postów
         add_filter('manage_' . self::POST_TYPE . '_posts_columns', [$this, 'add_reference_id_column']);
@@ -2521,6 +2526,71 @@ class Offers {
             }
         } else {
             delete_post_meta($post_id, '_custom_additional_data');
+        }
+    }
+
+    /**
+     * Czyści cache marek i modeli przy zapisie oferty
+     */
+    public function clear_brands_cache_on_save($post_id) {
+        if (get_post_type($post_id) !== self::POST_TYPE) {
+            return;
+        }
+        
+        // Wyczyść cache marek
+        \FlexMile\API\Offers_Endpoint::clear_brands_cache();
+        
+        // Wyczyść cache modeli - sprawdź starą i nową markę
+        $old_brand_slug = get_post_meta($post_id, '_car_brand_slug', true);
+        if (isset($_POST['car_brand_slug'])) {
+            $new_brand_slug = sanitize_text_field($_POST['car_brand_slug']);
+            // Wyczyść cache dla starej marki (jeśli się zmieniła)
+            if ($old_brand_slug && $old_brand_slug !== $new_brand_slug) {
+                \FlexMile\API\Offers_Endpoint::clear_models_cache($old_brand_slug);
+            }
+            // Wyczyść cache dla nowej marki
+            \FlexMile\API\Offers_Endpoint::clear_models_cache($new_brand_slug);
+        } elseif ($old_brand_slug) {
+            // Jeśli marka się nie zmienia, wyczyść cache dla obecnej marki
+            \FlexMile\API\Offers_Endpoint::clear_models_cache($old_brand_slug);
+        }
+    }
+
+    /**
+     * Czyści cache marek i modeli przy zmianie statusu oferty
+     */
+    public function clear_brands_cache_on_status_change($new_status, $old_status, $post) {
+        if ($post->post_type !== self::POST_TYPE) {
+            return;
+        }
+        
+        // Czyść cache tylko jeśli status wpływa na widoczność (publish/unpublish)
+        if (($old_status === 'publish' && $new_status !== 'publish') || 
+            ($old_status !== 'publish' && $new_status === 'publish')) {
+            \FlexMile\API\Offers_Endpoint::clear_brands_cache();
+            
+            // Wyczyść cache modeli dla marki tej oferty
+            $brand_slug = get_post_meta($post->ID, '_car_brand_slug', true);
+            if ($brand_slug) {
+                \FlexMile\API\Offers_Endpoint::clear_models_cache($brand_slug);
+            }
+        }
+    }
+
+    /**
+     * Czyści cache marek i modeli przy usuwaniu oferty
+     */
+    public function clear_brands_cache_on_delete($post_id) {
+        if (get_post_type($post_id) !== self::POST_TYPE) {
+            return;
+        }
+        
+        \FlexMile\API\Offers_Endpoint::clear_brands_cache();
+        
+        // Wyczyść cache modeli dla marki tej oferty
+        $brand_slug = get_post_meta($post_id, '_car_brand_slug', true);
+        if ($brand_slug) {
+            \FlexMile\API\Offers_Endpoint::clear_models_cache($brand_slug);
         }
     }
 }

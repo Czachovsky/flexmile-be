@@ -383,28 +383,70 @@ class Offers_Endpoint {
     }
 
     /**
-     * Zwraca listę dostępnych marek
+     * Zwraca listę dostępnych marek (tylko te, które mają oferty)
+     * Z cache'owaniem dla lepszej wydajności
      */
     public function get_brands() {
+        // Sprawdź cache (ważny przez 1 godzinę)
+        $cache_key = 'flexmile_brands_list';
+        $cached_brands = get_transient($cache_key);
+
+        if ($cached_brands !== false) {
+            return new \WP_REST_Response($cached_brands);
+        }
+
         $config = $this->load_config();
 
         if (!$config || !isset($config['brands'])) {
             return new \WP_Error('config_error', 'Nie można załadować konfiguracji marek', ['status' => 500]);
         }
 
+        // Pobierz wszystkie unikalne marki z opublikowanych ofert
+        $args = [
+            'post_type' => 'offer',
+            'post_status' => 'publish',
+            'posts_per_page' => -1, // Pobierz wszystkie oferty
+            'fields' => 'ids', // Tylko ID, dla wydajności
+        ];
+
+        $query = new \WP_Query($args);
+        $brand_slugs_in_offers = [];
+
+        // Zbierz wszystkie unikalne marki z ofert
+        foreach ($query->posts as $post_id) {
+            $brand_slug = get_post_meta($post_id, '_car_brand_slug', true);
+            if (!empty($brand_slug)) {
+                $brand_slugs_in_offers[$brand_slug] = true;
+            }
+        }
+
+        // Zwróć tylko marki, które faktycznie występują w ofertach
         $brands = [];
         foreach ($config['brands'] as $slug => $brand) {
-            $brands[] = [
-                'slug' => $slug,
-                'name' => $brand['name']
-            ];
+            if (isset($brand_slugs_in_offers[$slug])) {
+                $brands[] = [
+                    'slug' => $slug,
+                    'name' => $brand['name']
+                ];
+            }
         }
+
+        // Zapisz w cache na 1 godzinę
+        set_transient($cache_key, $brands, HOUR_IN_SECONDS);
 
         return new \WP_REST_Response($brands);
     }
 
     /**
-     * Zwraca modele dla wybranej marki
+     * Czyści cache marek (wywoływane przy zmianach ofert)
+     */
+    public static function clear_brands_cache() {
+        delete_transient('flexmile_brands_list');
+    }
+
+    /**
+     * Zwraca modele dla wybranej marki (tylko te, które mają oferty)
+     * Z cache'owaniem dla lepszej wydajności
      */
     public function get_models_for_brand($request) {
         $brand_slug = sanitize_text_field($request['brand_slug']);
@@ -415,13 +457,83 @@ class Offers_Endpoint {
             return new \WP_Error('not_found', 'Nie znaleziono marki', ['status' => 404]);
         }
 
-        $models = $config['brands'][$brand_slug]['models'];
+        // Sprawdź cache (ważny przez 1 godzinę)
+        $cache_key = 'flexmile_models_' . $brand_slug;
+        $cached_data = get_transient($cache_key);
 
-        return new \WP_REST_Response([
+        if ($cached_data !== false) {
+            return new \WP_REST_Response($cached_data);
+        }
+
+        // Pobierz wszystkie oferty dla danej marki
+        $args = [
+            'post_type' => 'offer',
+            'post_status' => 'publish',
+            'posts_per_page' => -1, // Pobierz wszystkie oferty
+            'fields' => 'ids', // Tylko ID, dla wydajności
+            'meta_query' => [
+                [
+                    'key' => '_car_brand_slug',
+                    'value' => $brand_slug,
+                    'compare' => '=',
+                ],
+            ],
+        ];
+
+        $query = new \WP_Query($args);
+        $models_in_offers = [];
+
+        // Zbierz wszystkie unikalne modele z ofert dla tej marki
+        foreach ($query->posts as $post_id) {
+            $model = get_post_meta($post_id, '_car_model', true);
+            if (!empty($model)) {
+                $models_in_offers[$model] = true;
+            }
+        }
+
+        // Zwróć tylko modele, które faktycznie występują w ofertach
+        $available_models = [];
+        $all_models = $config['brands'][$brand_slug]['models'];
+        
+        foreach ($all_models as $model) {
+            if (isset($models_in_offers[$model])) {
+                $available_models[] = $model;
+            }
+        }
+
+        $response_data = [
             'brand_slug' => $brand_slug,
             'brand_name' => $config['brands'][$brand_slug]['name'],
-            'models' => $models
-        ]);
+            'models' => $available_models
+        ];
+
+        // Zapisz w cache na 1 godzinę
+        set_transient($cache_key, $response_data, HOUR_IN_SECONDS);
+
+        return new \WP_REST_Response($response_data);
+    }
+
+    /**
+     * Czyści cache modeli dla wszystkich marek (wywoływane przy zmianach ofert)
+     */
+    public static function clear_models_cache($brand_slug = null) {
+        if ($brand_slug) {
+            // Wyczyść cache dla konkretnej marki
+            delete_transient('flexmile_models_' . $brand_slug);
+        } else {
+            // Wyczyść cache dla wszystkich marek - pobierz wszystkie marki z config
+            $config_file = FLEXMILE_PLUGIN_DIR . 'config.json';
+            if (file_exists($config_file)) {
+                $json = file_get_contents($config_file);
+                $config = json_decode($json, true);
+                
+                if ($config && isset($config['brands'])) {
+                    foreach (array_keys($config['brands']) as $slug) {
+                        delete_transient('flexmile_models_' . $slug);
+                    }
+                }
+            }
+        }
     }
 
     /**
