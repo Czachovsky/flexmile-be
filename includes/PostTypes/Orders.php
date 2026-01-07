@@ -388,6 +388,7 @@ class Orders {
         $new_columns = [];
         $new_columns['cb'] = $columns['cb'];
         $new_columns['title'] = 'Klient';
+        $new_columns['firma_kontakt'] = 'Firma / Kontakt';
         $new_columns['samochod'] = 'Samochód';
         $new_columns['status'] = 'Status';
         $new_columns['konfiguracja'] = 'Konfiguracja';
@@ -402,6 +403,28 @@ class Orders {
      */
     public function custom_column_content($column, $post_id) {
         switch ($column) {
+            case 'firma_kontakt':
+                $nazwa_firmy = get_post_meta($post_id, '_company_name', true);
+                $nip = get_post_meta($post_id, '_tax_id', true);
+                $telefon = get_post_meta($post_id, '_phone', true);
+                
+                if (!empty($nazwa_firmy)) {
+                    echo '<strong>' . esc_html($nazwa_firmy) . '</strong>';
+                    if (!empty($nip)) {
+                        echo '<br><small>NIP: ' . esc_html($nip) . '</small>';
+                    }
+                } else {
+                    echo '<em>Brak nazwy firmy</em>';
+                    if (!empty($nip)) {
+                        echo '<br><small>NIP: ' . esc_html($nip) . '</small>';
+                    }
+                }
+                
+                if (!empty($telefon)) {
+                    echo '<br><a href="tel:' . esc_attr($telefon) . '">' . esc_html($telefon) . '</a>';
+                }
+                break;
+
             case 'samochod':
                 $samochod_id = get_post_meta($post_id, '_offer_id', true);
                 if ($samochod_id) {

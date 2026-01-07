@@ -14,7 +14,7 @@ jQuery(document).ready(function($) {
     }
     
     var initialBrand = brandSelect.val();
-    var initialModel = modelSelect.data('initial-model');
+    var initialModel = modelSelect.attr('data-initial-model') || '';
     
     console.log('FlexMile: Inicjalizacja - marka:', initialBrand, ', model:', initialModel);
 
@@ -42,7 +42,7 @@ jQuery(document).ready(function($) {
                     var options = '<option value="">-- Wybierz model --</option>';
 
                     $.each(response.data.models, function(index, model) {
-                        var selected = (selectModel && selectModel === model) ? ' selected' : '';
+                        var selected = (selectModel != null && String(selectModel) === String(model)) ? ' selected' : '';
                         options += '<option value="' + model + '"' + selected + '>' + model + '</option>';
                     });
 

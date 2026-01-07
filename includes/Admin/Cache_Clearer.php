@@ -48,15 +48,3 @@ class Cache_Clearer {
         flush_rewrite_rules();
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
