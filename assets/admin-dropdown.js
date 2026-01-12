@@ -80,8 +80,22 @@ jQuery(document).ready(function($) {
     /**
      * Aktualizuje tytuł wpisu na podstawie marki i modelu
      * (Działa tylko z klasycznym edytorem - Gutenberg jest wyłączony)
+     * NIE nadpisuje tytułu, jeśli został ręcznie edytowany
      */
     function updatePostTitle() {
+        // Sprawdź czy tytuł był ręcznie edytowany
+        var titleManuallyEdited = $('input[name="title_manually_edited"]').length > 0 && $('input[name="title_manually_edited"]').val() === '1';
+        
+        // Pobierz zapisaną wartość z meta pola (dla istniejących postów)
+        if (!titleManuallyEdited && typeof flexmileDropdown !== 'undefined' && flexmileDropdown.titleManuallyEdited === '1') {
+            titleManuallyEdited = true;
+        }
+        
+        if (titleManuallyEdited) {
+            console.log('FlexMile: Tytuł był ręcznie edytowany - pomijam automatyczną aktualizację');
+            return;
+        }
+        
         var brandText = brandSelect.find('option:selected').text().trim();
         var modelText = modelSelect.find('option:selected').text().trim();
         
@@ -131,7 +145,14 @@ jQuery(document).ready(function($) {
                 newTitle = newTitle + ' []';
             }
             
+            // Emituj event przed aktualizacją
+            $(document).trigger('flexmile:beforeTitleUpdate');
+            
             titleInput.val(newTitle);
+            
+            // Emituj event po automatycznej aktualizacji
+            $(document).trigger('flexmile:titleUpdated', [newTitle]);
+            
             titleInput.trigger('input').trigger('change');
             
             // Usuń placeholder jeśli istnieje
@@ -205,12 +226,8 @@ jQuery(document).ready(function($) {
         }
     }
 
-    // Aktualizuj tytuł również przy ręcznej zmianie (na wypadek gdyby użytkownik chciał go zmienić)
-    $('#title').on('focus', function() {
-        // Pozwól użytkownikowi edytować tytuł ręcznie
-    });
-    
     // Fallback - aktualizacja po 1 sekundzie (na wypadek problemów z timingiem)
+    // (Logika wykrywania ręcznej edycji tytułu jest obsłużona w inline script w Offers.php)
     setTimeout(function() {
         if (initialBrand && initialModel) {
             console.log('FlexMile: Fallback - aktualizacja tytułu');
