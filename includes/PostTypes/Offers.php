@@ -1403,6 +1403,9 @@ class Offers {
                             <option value="RWD" <?php selected($naped, 'RWD'); ?>>RWD (tylny)</option>
                             <option value="AWD" <?php selected($naped, 'AWD'); ?>>AWD (4x4)</option>
                             <option value="4WD" <?php selected($naped, '4WD'); ?>>4WD (4x4 dołączany)</option>
+                            <option value="Quattro - 4x4" <?php selected($naped, 'Quattro'); ?>>Quattro - 4x4</option>
+                            <option value="xDrive - 4x4" <?php selected($naped, 'xDrive'); ?>>xDrive - 4x4</option>
+                            <option value="SDrive - przód" <?php selected($naped, 'SDrive'); ?>>SDrive - przód</option>
                         </select>
                     </div>
 
