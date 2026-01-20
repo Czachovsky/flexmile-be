@@ -108,9 +108,23 @@ class Contact_Endpoint {
 
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
+            'X-FlexMile-Context: contact_admin',
         ];
 
-        return wp_mail($admin_email, $subject, $message, $headers);
+        $sent = wp_mail($admin_email, $subject, $message, $headers);
+
+        // Loguj wynik wysyłki
+        if (class_exists('\\FlexMile\\Core\\Email_Config')) {
+            \FlexMile\Core\Email_Config::add_log_entry([
+                'type'    => 'info',
+                'status'  => $sent ? 'success' : 'failed',
+                'to'      => $admin_email,
+                'subject' => $subject,
+                'context' => 'contact_admin',
+            ]);
+        }
+
+        return $sent;
     }
 
     /**

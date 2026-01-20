@@ -389,11 +389,24 @@ class Reservations_Endpoint {
             'entry_type' => $entry_config['post_type'],
         ]);
 
+        $context = sprintf('admin_%s', $entry_config['post_type']);
+
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
+            'X-FlexMile-Context: ' . $context,
         ];
 
-        wp_mail($admin_email, $subject, $message, $headers);
+        $sent = wp_mail($admin_email, $subject, $message, $headers);
+
+        if (class_exists('\\FlexMile\\Core\\Email_Config')) {
+            \FlexMile\Core\Email_Config::add_log_entry([
+                'type'    => 'info',
+                'status'  => $sent ? 'success' : 'failed',
+                'to'      => $admin_email,
+                'subject' => $subject,
+                'context' => $context,
+            ]);
+        }
     }
 
     /**
@@ -412,11 +425,24 @@ class Reservations_Endpoint {
             'entry_type' => $entry_config['post_type'],
         ]);
 
+        $context = sprintf('customer_%s', $entry_config['post_type']);
+
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
+            'X-FlexMile-Context: ' . $context,
         ];
 
-        wp_mail($to, $subject, $message, $headers);
+        $sent = wp_mail($to, $subject, $message, $headers);
+
+        if (class_exists('\\FlexMile\\Core\\Email_Config')) {
+            \FlexMile\Core\Email_Config::add_log_entry([
+                'type'    => 'info',
+                'status'  => $sent ? 'success' : 'failed',
+                'to'      => $to,
+                'subject' => $subject,
+                'context' => $context,
+            ]);
+        }
     }
 
     /**

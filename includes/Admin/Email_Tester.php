@@ -1,6 +1,8 @@
 <?php
 namespace FlexMile\Admin;
 
+use FlexMile\Core\Email_Config;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -129,6 +131,139 @@ class Email_Tester {
                     Upewnij się, że konfiguracja SMTP jest prawidłowa, lub użyj wtyczki do konfiguracji wysyłki emaili (np. WP Mail SMTP).
                 </p>
             </div>
+
+            <?php
+            // Sekcja logów emaili
+            $logs = Email_Config::get_logs(50);
+            $smtp_debug_enabled = get_option('flexmile_smtp_debug', false);
+            $smtp_debug_logs = $smtp_debug_enabled ? Email_Config::get_smtp_debug_logs(100) : [];
+            ?>
+
+            <div style="background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #6b7280; margin-top: 30px;">
+                <h3 style="margin-top: 0;">Logi wysyłki emaili (ostatnie 50)</h3>
+                <p style="margin-bottom: 10px; color: #4b5563;">
+                    Tutaj zobaczysz próby wysyłki emaili z wtyczki (rezerwacje, zamówienia, formularz kontaktowy, testy) oraz ewentualne błędy SMTP.
+                </p>
+
+                <?php if (empty($logs)): ?>
+                    <p style="margin: 0; color: #6b7280;">Brak zapisanych logów wysyłki emaili.</p>
+                <?php else: ?>
+                    <div style="max-height: 400px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff;">
+                        <table class="widefat striped" style="margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 150px;">Czas</th>
+                                    <th style="width: 90px;">Status</th>
+                                    <th>Do</th>
+                                    <th>Temat</th>
+                                    <th style="width: 140px;">Kontekst</th>
+                                    <th style="width: 220px;">Szczegóły</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($logs as $log): ?>
+                                    <?php
+                                    $status = isset($log['status']) ? $log['status'] : '';
+                                    $status_label = strtoupper($status);
+                                    $status_color = '#6b7280';
+
+                                    if ($status === 'success') {
+                                        $status_color = '#059669';
+                                    } elseif ($status === 'failed') {
+                                        $status_color = '#dc2626';
+                                    }
+
+                                    $time = isset($log['time']) ? $log['time'] : '';
+                                    $to = isset($log['to']) ? $log['to'] : '';
+                                    $subject = isset($log['subject']) ? $log['subject'] : '';
+                                    $context = isset($log['context']) ? $log['context'] : '';
+                                    $error = isset($log['error']) ? $log['error'] : '';
+                                    $error_details = isset($log['error_details']) ? $log['error_details'] : '';
+                                    $from = isset($log['from']) ? $log['from'] : '';
+                                    $smtp = isset($log['smtp']) && is_array($log['smtp']) ? $log['smtp'] : null;
+                                    ?>
+                                    <tr>
+                                        <td><code><?php echo esc_html($time); ?></code></td>
+                                        <td>
+                                            <span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;color:#fff;background:<?php echo esc_attr($status_color); ?>">
+                                                <?php echo esc_html($status_label); ?>
+                                            </span>
+                                        </td>
+                                        <td><?php echo esc_html($to); ?></td>
+                                        <td><?php echo esc_html($subject); ?></td>
+                                        <td><code><?php echo esc_html($context); ?></code></td>
+                                        <td>
+                                            <?php if (!empty($from)): ?>
+                                                <div style="color:#059669;font-size:11px;margin-bottom:4px;">
+                                                    <strong>From:</strong> <?php echo esc_html($from); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (!empty($error)): ?>
+                                                <div style="color:#dc2626;font-size:12px;margin-bottom:4px;">
+                                                    <strong>Błąd:</strong> <?php echo esc_html($error); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (!empty($error_details)): ?>
+                                                <div style="color:#991b1b;font-size:11px;margin-bottom:4px;font-style:italic;">
+                                                    <?php echo esc_html($error_details); ?>
+                                                </div>
+                                            <?php endif; ?>
+
+                                            <?php if ($smtp): ?>
+                                                <div style="color:#4b5563;font-size:11px;">
+                                                    <strong>SMTP:</strong>
+                                                    host=<?php echo esc_html($smtp['host'] ?? ''); ?>,
+                                                    port=<?php echo isset($smtp['port']) ? intval($smtp['port']) : ''; ?>,
+                                                    enc=<?php echo esc_html($smtp['encryption'] ?? ''); ?>,
+                                                    user=<?php echo esc_html($smtp['username'] ?? ''); ?>,
+                                                    enabled=<?php echo !empty($smtp['enabled']) ? 'yes' : 'no'; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if ($smtp_debug_enabled && !empty($smtp_debug_logs)): ?>
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="margin: 0;">🔍 Logi debugowania SMTP (ostatnie 100)</h3>
+                            <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" style="display: inline;">
+                                <input type="hidden" name="action" value="flexmile_clear_smtp_debug_logs">
+                                <?php wp_nonce_field('flexmile_clear_smtp_debug_logs'); ?>
+                                <button type="submit" class="button button-secondary" style="font-size: 12px; padding: 4px 8px;">
+                                    Wyczyść logi
+                                </button>
+                            </form>
+                        </div>
+                        <p style="margin-bottom: 10px; color: #92400e; font-size: 13px;">
+                            Szczegółowe komunikaty z serwera SMTP podczas ostatniej próby wysyłki. To pomaga zdiagnozować problemy z autoryzacją.
+                        </p>
+                        <div style="max-height: 300px; overflow: auto; border: 1px solid #fbbf24; border-radius: 4px; background: #fff; padding: 10px; font-family: monospace; font-size: 11px;">
+                            <?php foreach ($smtp_debug_logs as $debug_log): ?>
+                                <div style="margin-bottom: 4px; padding: 2px 0; border-bottom: 1px solid #fef3c7;">
+                                    <span style="color: #92400e;">[<?php echo esc_html($debug_log['time'] ?? ''); ?>]</span>
+                                    <span style="color: <?php echo isset($debug_log['level']) && $debug_log['level'] >= 2 ? '#dc2626' : '#059669'; ?>;">
+                                        <?php echo esc_html($debug_log['message'] ?? ''); ?>
+                                    </span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php elseif ($smtp_debug_enabled && empty($smtp_debug_logs)): ?>
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">🔍 Debugowanie SMTP włączone</h3>
+                        <p style="margin: 0; color: #92400e;">
+                            Wyślij testowy email, aby zobaczyć szczegółowe logi połączenia SMTP tutaj.
+                        </p>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
         <?php
     }
@@ -209,11 +344,41 @@ class Email_Tester {
 
         $subject = sprintf('[TEST] FlexMile - %s', $this->templates[$template_name]['name']);
         
+        $context = 'email_tester:' . $template_name;
+
         $headers = [
             'Content-Type: text/html; charset=UTF-8',
+            'X-FlexMile-Context: ' . $context,
         ];
 
-        return wp_mail($to_email, $subject, $message, $headers);
+        $sent = wp_mail($to_email, $subject, $message, $headers);
+
+        // Pobierz informacje o adresie From (z ustawień SMTP lub domyślnego)
+        $smtp_enabled = get_option('flexmile_smtp_enabled', false);
+        $smtp_from_email = get_option('flexmile_smtp_from_email', '');
+        $smtp_from_name = get_option('flexmile_smtp_from_name', '');
+        $smtp_username = get_option('flexmile_smtp_username', '');
+        
+        $from_email = '';
+        if ($smtp_enabled) {
+            if (!empty($smtp_from_email) && is_email($smtp_from_email)) {
+                $from_email = $smtp_from_email;
+            } elseif (!empty($smtp_username) && is_email($smtp_username)) {
+                $from_email = $smtp_username;
+            }
+        }
+        
+        // Zapisz log testowego maila
+        Email_Config::add_log_entry([
+            'type'    => 'info',
+            'status'  => $sent ? 'success' : 'failed',
+            'to'      => $to_email,
+            'subject' => $subject,
+            'context' => $context,
+            'from'    => $from_email, // Dodaj informację o adresie From
+        ]);
+
+        return $sent;
     }
 
     /**
@@ -392,6 +557,25 @@ class Email_Tester {
         }
 
         return $value;
+    }
+    
+    /**
+     * Obsługuje czyszczenie logów debugowania SMTP
+     */
+    public function handle_clear_smtp_debug_logs() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Brak uprawnień');
+        }
+
+        check_admin_referer('flexmile_clear_smtp_debug_logs');
+
+        Email_Config::clear_smtp_debug_logs();
+
+        wp_safe_redirect(add_query_arg([
+            'page' => 'flexmile-test-emails',
+            'smtp_logs_cleared' => '1'
+        ], admin_url('admin.php')));
+        exit;
     }
 }
 

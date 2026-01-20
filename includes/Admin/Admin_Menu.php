@@ -18,6 +18,9 @@ class Admin_Menu {
         
         // Obsługa zapisu ustawień domeny frontendowej
         add_action('admin_post_flexmile_save_frontend_domain', [$this, 'save_frontend_domain']);
+        
+        // Obsługa zapisu ustawień SMTP
+        add_action('admin_post_flexmile_save_smtp_settings', [$this, 'save_smtp_settings']);
     }
 
     /**
@@ -59,6 +62,15 @@ class Admin_Menu {
             'manage_options',
             'flexmile-banners',
             [$this, 'render_banners']
+        );
+
+        add_submenu_page(
+            'flexmile',
+            'Ustawienia Email',
+            'Ustawienia Email',
+            'manage_options',
+            'flexmile-email-settings',
+            [$this, 'render_email_settings']
         );
     }
 
@@ -797,6 +809,281 @@ add_action('init', function() {
 
         wp_redirect(add_query_arg([
             'page' => 'flexmile-api',
+            'settings-updated' => 'true'
+        ], admin_url('admin.php')));
+        exit;
+    }
+
+    /**
+     * Renderuje stronę ustawień email/SMTP
+     */
+    public function render_email_settings() {
+        // Komunikat sukcesu
+        if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
+            ?>
+            <div class="notice notice-success is-dismissible">
+                <p><strong>✅ Sukces!</strong> Ustawienia SMTP zostały zapisane.</p>
+            </div>
+            <?php
+        }
+
+        // Pobierz aktualne ustawienia
+        $smtp_enabled = get_option('flexmile_smtp_enabled', false);
+        $smtp_host = get_option('flexmile_smtp_host', '');
+        $smtp_port = get_option('flexmile_smtp_port', 587);
+        $smtp_encryption = get_option('flexmile_smtp_encryption', 'tls');
+        $smtp_username = get_option('flexmile_smtp_username', '');
+        $smtp_password = get_option('flexmile_smtp_password', '');
+        $smtp_from_email = get_option('flexmile_smtp_from_email', '');
+        $smtp_from_name = get_option('flexmile_smtp_from_name', get_option('blogname', 'FlexMile'));
+        $smtp_debug = get_option('flexmile_smtp_debug', false);
+        
+        // Dla bezpieczeństwa, nie pokazuj pełnego hasła
+        $smtp_password_display = !empty($smtp_password) ? '••••••••' : '';
+        ?>
+        <div class="wrap">
+            <h1>Ustawienia Email / SMTP</h1>
+            
+            <div class="flexmile-api-info" style="max-width: 800px;">
+                <h2>Konfiguracja SMTP</h2>
+                <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+                    <input type="hidden" name="action" value="flexmile_save_smtp_settings">
+                    <?php wp_nonce_field('flexmile_smtp_settings_nonce'); ?>
+                    
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_enabled">Włącz SMTP</label>
+                            </th>
+                            <td>
+                                <label>
+                                    <input 
+                                        type="checkbox" 
+                                        id="smtp_enabled" 
+                                        name="smtp_enabled" 
+                                        value="1" 
+                                        <?php checked($smtp_enabled, true); ?>
+                                    />
+                                    Użyj SMTP zamiast standardowej funkcji mail()
+                                </label>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_host">Serwer SMTP</label>
+                            </th>
+                            <td>
+                                <input 
+                                    type="text" 
+                                    id="smtp_host" 
+                                    name="smtp_host" 
+                                    value="<?php echo esc_attr($smtp_host); ?>" 
+                                    class="regular-text"
+                                    placeholder="smtp.example.com"
+                                />
+                                <p class="description">Adres serwera SMTP (np. smtp.gmail.com, smtp.example.com)</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_port">Port SMTP</label>
+                            </th>
+                            <td>
+                                <input 
+                                    type="number" 
+                                    id="smtp_port" 
+                                    name="smtp_port" 
+                                    value="<?php echo esc_attr($smtp_port); ?>" 
+                                    class="small-text"
+                                    min="1"
+                                    max="65535"
+                                />
+                                <p class="description">Port SMTP (587 dla TLS, 465 dla SSL, 25 dla bez szyfrowania)</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_encryption">Szyfrowanie</label>
+                            </th>
+                            <td>
+                                <select id="smtp_encryption" name="smtp_encryption" class="regular-text">
+                                    <option value="" <?php selected($smtp_encryption, ''); ?>>Brak</option>
+                                    <option value="tls" <?php selected($smtp_encryption, 'tls'); ?>>TLS (zalecane)</option>
+                                    <option value="ssl" <?php selected($smtp_encryption, 'ssl'); ?>>SSL</option>
+                                </select>
+                                <p class="description">Typ szyfrowania połączenia SMTP</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_username">Nazwa użytkownika</label>
+                            </th>
+                            <td>
+                                <input 
+                                    type="text" 
+                                    id="smtp_username" 
+                                    name="smtp_username" 
+                                    value="<?php echo esc_attr($smtp_username); ?>" 
+                                    class="regular-text"
+                                    placeholder="twoj@email.com"
+                                />
+                                <p class="description">Pełny adres email używany do autentykacji SMTP</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_password">Hasło</label>
+                            </th>
+                            <td>
+                                <input 
+                                    type="password" 
+                                    id="smtp_password" 
+                                    name="smtp_password" 
+                                    value="" 
+                                    class="regular-text"
+                                    placeholder="<?php echo esc_attr($smtp_password_display); ?>"
+                                />
+                                <p class="description">
+                                    Hasło do konta email lub hasło aplikacji (dla Gmail użyj hasła aplikacji)
+                                    <?php if (!empty($smtp_password)): ?>
+                                        <br><strong>Uwaga:</strong> Hasło jest już zapisane. Wpisz nowe tylko jeśli chcesz je zmienić.
+                                    <?php endif; ?>
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_from_email">Adres nadawcy (From)</label>
+                            </th>
+                            <td>
+                                <input 
+                                    type="email" 
+                                    id="smtp_from_email" 
+                                    name="smtp_from_email" 
+                                    value="<?php echo esc_attr($smtp_from_email); ?>" 
+                                    class="regular-text"
+                                    placeholder="noreply@example.com"
+                                />
+                                <p class="description">Adres email, który będzie widoczny jako nadawca (opcjonalne, domyślnie używa domeny strony)</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_from_name">Nazwa nadawcy</label>
+                            </th>
+                            <td>
+                                <input 
+                                    type="text" 
+                                    id="smtp_from_name" 
+                                    name="smtp_from_name" 
+                                    value="<?php echo esc_attr($smtp_from_name); ?>" 
+                                    class="regular-text"
+                                    placeholder="FlexMile"
+                                />
+                                <p class="description">Nazwa wyświetlana jako nadawca (opcjonalne)</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">
+                                <label for="smtp_debug">Debugowanie SMTP</label>
+                            </th>
+                            <td>
+                                <label>
+                                    <input 
+                                        type="checkbox" 
+                                        id="smtp_debug" 
+                                        name="smtp_debug" 
+                                        value="1" 
+                                        <?php checked($smtp_debug, true); ?>
+                                    />
+                                    Włącz szczegółowe logowanie SMTP (tylko do diagnostyki)
+                                </label>
+                                <p class="description">
+                                    Po włączeniu, szczegóły połączenia SMTP będą widoczne na stronie <strong>FlexMile → Test Emaili</strong> 
+                                    w sekcji "Logi debugowania SMTP". <strong>Wyłącz po zdiagnozowaniu problemu!</strong>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <p class="submit">
+                        <input type="submit" name="flexmile_save_smtp_settings" class="button button-primary" value="Zapisz ustawienia SMTP" />
+                    </p>
+                </form>
+
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Zapisuje ustawienia SMTP
+     */
+    public function save_smtp_settings() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Brak uprawnień');
+        }
+
+        check_admin_referer('flexmile_smtp_settings_nonce');
+
+        // Zapisz ustawienia
+        $smtp_enabled = isset($_POST['smtp_enabled']) && $_POST['smtp_enabled'] === '1';
+        update_option('flexmile_smtp_enabled', $smtp_enabled);
+
+        if (isset($_POST['smtp_host'])) {
+            update_option('flexmile_smtp_host', sanitize_text_field($_POST['smtp_host']));
+        }
+
+        if (isset($_POST['smtp_port'])) {
+            $port = intval($_POST['smtp_port']);
+            if ($port > 0 && $port <= 65535) {
+                update_option('flexmile_smtp_port', $port);
+            }
+        }
+
+        if (isset($_POST['smtp_encryption'])) {
+            $encryption = sanitize_text_field($_POST['smtp_encryption']);
+            if (in_array($encryption, ['', 'tls', 'ssl'], true)) {
+                update_option('flexmile_smtp_encryption', $encryption);
+            }
+        }
+
+        if (isset($_POST['smtp_username'])) {
+            update_option('flexmile_smtp_username', sanitize_text_field($_POST['smtp_username']));
+        }
+
+        // Hasło - zapisz tylko jeśli zostało podane (nie nadpisuj jeśli puste)
+        if (isset($_POST['smtp_password']) && !empty($_POST['smtp_password'])) {
+            // Szyfruj hasło przed zapisaniem (opcjonalne, ale bezpieczniejsze)
+            update_option('flexmile_smtp_password', sanitize_text_field($_POST['smtp_password']));
+        }
+
+        if (isset($_POST['smtp_from_email'])) {
+            $email = sanitize_email($_POST['smtp_from_email']);
+            if (is_email($email)) {
+                update_option('flexmile_smtp_from_email', $email);
+            } else {
+                update_option('flexmile_smtp_from_email', '');
+            }
+        }
+
+        if (isset($_POST['smtp_from_name'])) {
+            update_option('flexmile_smtp_from_name', sanitize_text_field($_POST['smtp_from_name']));
+        }
+
+        $smtp_debug = isset($_POST['smtp_debug']) && $_POST['smtp_debug'] === '1';
+        update_option('flexmile_smtp_debug', $smtp_debug);
+
+        wp_redirect(add_query_arg([
+            'page' => 'flexmile-email-settings',
             'settings-updated' => 'true'
         ], admin_url('admin.php')));
         exit;
