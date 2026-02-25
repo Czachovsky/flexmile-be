@@ -1037,6 +1037,9 @@ class Offers {
      */
     public function render_reference_id_meta_box($post) {
         $ref_id = get_post_meta($post->ID, '_car_reference_id', true);
+        $hero_slider_enabled = get_post_meta($post->ID, '_hero_slider_enabled', true) === '1';
+        $hero_slider_image_id = get_post_meta($post->ID, '_hero_slider_image_id', true);
+        $hero_slider_image_url = $hero_slider_image_id ? wp_get_attachment_image_url($hero_slider_image_id, 'medium') : '';
 
         ?>
         <div style="padding: 14px 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: #ffffff; display: flex; flex-direction: column; gap: 14px;">
@@ -1097,6 +1100,106 @@ class Offers {
                         </p>
                     </div>
                 <?php endif; ?>
+            </div>
+
+            <div style="margin-top: 8px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                <div style="font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;">
+                    Slider na stronie głównej
+                </div>
+
+                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+                    <input type="checkbox"
+                           name="hero_slider_enabled"
+                           value="1"
+                           <?php checked($hero_slider_enabled); ?>
+                           style="margin-top: 2px;">
+                    <span style="font-size: 12px; color: #374151;">
+                        <strong>Wyświetl ofertę w sliderze hero</strong><br>
+                        <span style="color: #6b7280;">
+                            Jeśli zaznaczone, oferta może pojawić się w sliderze na stronie głównej.
+                        </span>
+                    </span>
+                </label>
+
+                <div id="hero-slider-image-wrapper" style="margin-top: 10px; <?php echo $hero_slider_enabled ? '' : 'display: none;'; ?>">
+                    <input type="hidden" id="hero_slider_image_id" name="hero_slider_image_id" value="<?php echo esc_attr($hero_slider_image_id); ?>">
+
+                    <div id="hero-slider-image-preview" style="margin-bottom: 8px;">
+                        <?php if ($hero_slider_image_id && $hero_slider_image_url): ?>
+                            <img src="<?php echo esc_url($hero_slider_image_url); ?>" alt="" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <?php endif; ?>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="button button-secondary" id="hero-slider-image-select">
+                            Wybierz zdjęcie do slidera
+                        </button>
+                        <button type="button"
+                                class="button button-link-delete"
+                                id="hero-slider-image-remove"
+                                style="<?php echo $hero_slider_image_id ? '' : 'display: none;'; ?>">
+                            Usuń zdjęcie
+                        </button>
+                    </div>
+
+                    <p class="description" style="margin-top: 6px; font-size: 11px; color: #6b7280;">
+                        To zdjęcie będzie użyte w sliderze hero. Najlepiej dodaj poziome zdjęcie o wysokiej jakości.
+                    </p>
+                </div>
+
+                <script>
+                    (function($){
+                        $(document).ready(function () {
+                            var $checkbox = $('input[name="hero_slider_enabled"]');
+                            var $wrapper = $('#hero-slider-image-wrapper');
+                            var frame;
+
+                            $checkbox.on('change', function () {
+                                if ($(this).is(':checked')) {
+                                    $wrapper.slideDown(150);
+                                } else {
+                                    $wrapper.slideUp(150);
+                                }
+                            });
+
+                            $('#hero-slider-image-select').on('click', function (e) {
+                                e.preventDefault();
+
+                                if (frame) {
+                                    frame.open();
+                                    return;
+                                }
+
+                                frame = wp.media({
+                                    title: 'Wybierz zdjęcie do slidera',
+                                    button: {
+                                        text: 'Użyj tego zdjęcia'
+                                    },
+                                    multiple: false
+                                });
+
+                                frame.on('select', function () {
+                                    var attachment = frame.state().get('selection').first().toJSON();
+                                    $('#hero_slider_image_id').val(attachment.id);
+                                    var url = attachment.sizes && attachment.sizes.medium ? attachment.sizes.medium.url : attachment.url;
+                                    $('#hero-slider-image-preview').html(
+                                        '<img src=\"' + url + '\" style=\"max-width:100%;height:auto;border-radius:6px;border:1px solid #e5e7eb;\" />'
+                                    );
+                                    $('#hero-slider-image-remove').show();
+                                });
+
+                                frame.open();
+                            });
+
+                            $('#hero-slider-image-remove').on('click', function (e) {
+                                e.preventDefault();
+                                $('#hero_slider_image_id').val('');
+                                $('#hero-slider-image-preview').empty();
+                                $(this).hide();
+                            });
+                        });
+                    })(jQuery);
+                </script>
             </div>
         </div>
         <?php
@@ -2392,6 +2495,19 @@ class Offers {
 
         if (isset($_POST['fuel_type'])) {
             update_post_meta($post_id, '_fuel_type', sanitize_text_field($_POST['fuel_type']));
+        }
+
+        // Slider hero na stronie głównej
+        $hero_slider_enabled = isset($_POST['hero_slider_enabled']) ? '1' : '0';
+        update_post_meta($post_id, '_hero_slider_enabled', $hero_slider_enabled);
+
+        if (!empty($_POST['hero_slider_image_id'])) {
+            $image_id = intval($_POST['hero_slider_image_id']);
+            if ($image_id > 0) {
+                update_post_meta($post_id, '_hero_slider_image_id', $image_id);
+            }
+        } else {
+            delete_post_meta($post_id, '_hero_slider_image_id');
         }
 
         $fields = [

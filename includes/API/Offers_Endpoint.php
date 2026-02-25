@@ -67,6 +67,12 @@ class Offers_Endpoint {
             'callback' => [$this, 'get_models_for_brand'],
             'permission_callback' => '__return_true',
         ]);
+
+        register_rest_route(self::NAMESPACE, '/' . self::BASE . '/slider', [
+            'methods' => 'GET',
+            'callback' => [$this, 'get_slider_offers'],
+            'permission_callback' => '__return_true',
+        ]);
     }
 
     /**
@@ -380,6 +386,75 @@ class Offers_Endpoint {
         }
 
         return $this->prepare_samochod_data($post);
+    }
+
+    /**
+     * Pobiera oferty do slidera na stronie głównej (hero)
+     * Zwraca wszystkie zaznaczone oferty w losowej kolejności
+     * Dane: image, brand, model, engine
+     */
+    public function get_slider_offers($request) {
+        $args = [
+            'post_type'      => 'offer',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'rand',
+            'meta_query'     => [
+                [
+                    'key'   => '_hero_slider_enabled',
+                    'value' => '1',
+                    'compare' => '=',
+                ],
+            ],
+        ];
+
+        $query = new \WP_Query($args);
+        $offers = [];
+
+        foreach ($query->posts as $post) {
+            $image_id = get_post_meta($post->ID, '_hero_slider_image_id', true);
+            $image_url = null;
+
+            if ($image_id) {
+                $image_url = wp_get_attachment_image_url((int) $image_id, 'large');
+            }
+
+            // Jeśli nie ma dedykowanego zdjęcia slidera, spróbuj użyć pierwszego z galerii lub miniatury
+            if (!$image_url) {
+                $gallery_ids = get_post_meta($post->ID, '_gallery', true);
+                if ($gallery_ids) {
+                    $gallery_array = explode(',', $gallery_ids);
+                    $first_image_id = trim($gallery_array[0]);
+                    if ($first_image_id) {
+                        $image_url = wp_get_attachment_image_url((int) $first_image_id, 'large');
+                    }
+                }
+            }
+
+            if (!$image_url) {
+                $image_url = get_the_post_thumbnail_url($post->ID, 'large');
+            }
+
+            $brand_slug = get_post_meta($post->ID, '_car_brand_slug', true);
+            $model = get_post_meta($post->ID, '_car_model', true);
+            $engine = get_post_meta($post->ID, '_engine', true);
+
+            $config = $this->load_config();
+            $brand_name = '';
+
+            if ($config && isset($config['brands'][$brand_slug])) {
+                $brand_name = $config['brands'][$brand_slug]['name'];
+            }
+
+            $offers[] = [
+                'image'  => $image_url ?: null,
+                'brand'  => $brand_name,
+                'model'  => $model,
+                'engine' => $engine,
+            ];
+        }
+
+        return new \WP_REST_Response($offers, 200);
     }
 
     /**
