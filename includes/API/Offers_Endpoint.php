@@ -446,11 +446,21 @@ class Offers_Endpoint {
                 $brand_name = $config['brands'][$brand_slug]['name'];
             }
 
+            // Cena jak na listach ofert (display_price jeśli ustawione, inaczej lowest_price)
+            $display_price = get_post_meta($post->ID, '_display_price', true);
+            if (!empty($display_price) && is_numeric($display_price)) {
+                $price_from = (float) $display_price;
+            } else {
+                $price_from = (float) get_post_meta($post->ID, '_lowest_price', true);
+            }
+
             $offers[] = [
-                'image'  => $image_url ?: null,
-                'brand'  => $brand_name,
-                'model'  => $model,
-                'engine' => $engine,
+                'id'         => $post->ID,
+                'image'      => $image_url ?: null,
+                'brand'      => $brand_name,
+                'model'      => $model,
+                'engine'     => $engine,
+                'price_from' => $price_from,
             ];
         }
 
