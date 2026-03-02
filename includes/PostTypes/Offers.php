@@ -46,6 +46,12 @@ class Offers {
 
         add_action('wp_ajax_flexmile_generate_price_matrix', [$this, 'ajax_generate_price_matrix']);
         add_action('wp_ajax_flexmile_get_models', [$this, 'ajax_get_models']);
+        add_action('wp_ajax_flexmile_toggle_homepage_visible', [$this, 'ajax_toggle_homepage_visible']);
+
+        // Akcje zbiorcze: Strona główna
+        add_filter('bulk_actions-edit-' . self::POST_TYPE, [$this, 'add_bulk_actions_homepage']);
+        add_filter('handle_bulk_actions-edit-' . self::POST_TYPE, [$this, 'handle_bulk_actions_homepage'], 10, 3);
+        add_action('admin_notices', [$this, 'admin_notices_homepage_bulk']);
 
         // Generuj reference ID przy tworzeniu nowego posta
         add_action('transition_post_status', [$this, 'generate_reference_id'], 10, 3);
@@ -276,11 +282,16 @@ class Offers {
 
         if ($column === 'homepage_visible') {
             $enabled = get_post_meta($post_id, '_homepage_visible', true) === '1';
-            if ($enabled) {
-                echo '<span class="dashicons dashicons-yes-alt" style="color: #22c55e; font-size: 18px;" title="Na stronie głównej"></span>';
-            } else {
-                echo '<span style="color: #94a3b8;">—</span>';
-            }
+            $nonce = wp_create_nonce('flexmile_toggle_homepage_' . $post_id);
+            printf(
+                '<label class="flexmile-homepage-toggle" style="cursor: pointer; display: inline-block;" data-post-id="%s" data-enabled="%d" data-nonce="%s" title="%s">',
+                esc_attr((string) $post_id),
+                $enabled ? 1 : 0,
+                esc_attr($nonce),
+                esc_attr__('Na stronie głównej (kliknij, aby zmienić)', 'flexmile')
+            );
+            echo '<input type="checkbox" ' . ($enabled ? 'checked' : '') . ' onclick="return false;">';
+            echo '</label>';
             return;
         }
 
@@ -694,6 +705,22 @@ class Offers {
      */
     public function enqueue_admin_scripts($hook) {
         global $post_type;
+
+        // Lista ofert – przełącznik „Strona główna” w kolumnie
+        if ('edit.php' === $hook && self::POST_TYPE === $post_type) {
+            wp_enqueue_script(
+                'flexmile-offers-list',
+                plugins_url('../../assets/admin-offers-list.js', __FILE__),
+                ['jquery'],
+                '1.0',
+                true
+            );
+            wp_localize_script('flexmile-offers-list', 'flexmileOffersList', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce'   => wp_create_nonce('flexmile_toggle_homepage'),
+            ]);
+            return;
+        }
 
         if (('post.php' === $hook || 'post-new.php' === $hook) && self::POST_TYPE === $post_type) {
             wp_enqueue_media();
@@ -1320,6 +1347,95 @@ class Offers {
         $models = $config['brands'][$brand_slug]['models'];
 
         wp_send_json_success(['models' => $models]);
+    }
+
+    /**
+     * AJAX: przełącza ofertę na/ze strony głównej (klik w kolumnie listy)
+     */
+    public function ajax_toggle_homepage_visible() {
+        $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
+        if (!$post_id) {
+            wp_send_json_error(['message' => 'Brak ID oferty']);
+        }
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'flexmile_toggle_homepage_' . $post_id)) {
+            wp_send_json_error(['message' => 'Nieprawidłowy nonce']);
+        }
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error(['message' => 'Brak uprawnień']);
+        }
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== self::POST_TYPE) {
+            wp_send_json_error(['message' => 'Nieprawidłowa oferta']);
+        }
+
+        $current = get_post_meta($post_id, '_homepage_visible', true) === '1';
+        $new_value = $current ? '0' : '1';
+        update_post_meta($post_id, '_homepage_visible', $new_value);
+
+        wp_send_json_success([
+            'enabled' => $new_value === '1',
+            'post_id' => $post_id,
+        ]);
+    }
+
+    /**
+     * Dodaje akcje zbiorcze dla „Strona główna”
+     */
+    public function add_bulk_actions_homepage($actions) {
+        $actions['flexmile_homepage_add']    = __('Dodaj na stronę główną', 'flexmile');
+        $actions['flexmile_homepage_remove'] = __('Usuń ze strony głównej', 'flexmile');
+        return $actions;
+    }
+
+    /**
+     * Obsługuje akcje zbiorcze „Strona główna”
+     */
+    public function handle_bulk_actions_homepage($redirect_to, $doaction, $post_ids) {
+        if (!in_array($doaction, ['flexmile_homepage_add', 'flexmile_homepage_remove'], true)) {
+            return $redirect_to;
+        }
+        if (empty($post_ids) || !is_array($post_ids)) {
+            return $redirect_to;
+        }
+
+        $value = $doaction === 'flexmile_homepage_add' ? '1' : '0';
+        $count = 0;
+
+        foreach ($post_ids as $post_id) {
+            $post_id = absint($post_id);
+            if (!$post_id || !current_user_can('edit_post', $post_id)) {
+                continue;
+            }
+            $post = get_post($post_id);
+            if (!$post || $post->post_type !== self::POST_TYPE) {
+                continue;
+            }
+            update_post_meta($post_id, '_homepage_visible', $value);
+            $count++;
+        }
+
+        $redirect_to = add_query_arg('flexmile_homepage_bulk', $count, $redirect_to);
+        return $redirect_to;
+    }
+
+    /**
+     * Wyświetla komunikat po akcji zbiorczej „Strona główna”
+     */
+    public function admin_notices_homepage_bulk() {
+        global $pagenow, $typenow;
+        if ($pagenow !== 'edit.php' || $typenow !== self::POST_TYPE || !isset($_GET['flexmile_homepage_bulk'])) {
+            return;
+        }
+        $count = absint($_GET['flexmile_homepage_bulk']);
+        if ($count <= 0) {
+            return;
+        }
+        $message = sprintf(
+            /* translators: %d: number of offers updated */
+            _n('%d oferta zaktualizowana.', '%d ofert zaktualizowanych.', $count, 'flexmile'),
+            $count
+        );
+        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($message) . '</p></div>';
     }
 
     /**

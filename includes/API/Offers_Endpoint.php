@@ -500,10 +500,33 @@ class Offers_Endpoint {
             $offers[] = $this->prepare_samochod_data_minimal($post);
         }
 
+        // meta.total = łączna liczba wszystkich dostępnych ofert (nie tylko tych na stronie głównej)
+        $total_available_args = [
+            'post_type'      => 'offer',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'relation' => 'OR',
+                    ['key' => '_reservation_active', 'compare' => 'NOT EXISTS'],
+                    ['key' => '_reservation_active', 'value' => '1', 'compare' => '!='],
+                ],
+                [
+                    'relation' => 'OR',
+                    ['key' => '_order_approved', 'compare' => 'NOT EXISTS'],
+                    ['key' => '_order_approved', 'value' => '1', 'compare' => '!='],
+                ],
+            ],
+        ];
+        $total_available_query = new \WP_Query($total_available_args);
+        $total_available = $total_available_query->found_posts;
+
         $response_data = [
             'offers' => $offers,
             'meta' => [
-                'total' => $query->found_posts,
+                'total' => $total_available,
                 'total_pages' => 1,
                 'current_page' => 1,
                 'per_page' => 29,
@@ -511,7 +534,7 @@ class Offers_Endpoint {
         ];
 
         $response = new \WP_REST_Response($response_data, 200);
-        $response->header('X-WP-Total', $query->found_posts);
+        $response->header('X-WP-Total', $total_available);
         $response->header('X-WP-TotalPages', 1);
 
         return $response;
