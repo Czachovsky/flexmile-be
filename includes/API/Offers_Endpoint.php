@@ -73,6 +73,12 @@ class Offers_Endpoint {
             'callback' => [$this, 'get_slider_offers'],
             'permission_callback' => '__return_true',
         ]);
+
+        register_rest_route(self::NAMESPACE, '/' . self::BASE . '/homepage', [
+            'methods' => 'GET',
+            'callback' => [$this, 'get_homepage_offers'],
+            'permission_callback' => '__return_true',
+        ]);
     }
 
     /**
@@ -465,6 +471,50 @@ class Offers_Endpoint {
         }
 
         return new \WP_REST_Response($offers, 200);
+    }
+
+    /**
+     * Pobiera oferty widoczne na stronie głównej (29 sztuk).
+     * Zwraca tablicę ofert z danymi minimalnymi – bez paginacji i sortowania.
+     */
+    public function get_homepage_offers($request) {
+        $args = [
+            'post_type'      => 'offer',
+            'post_status'    => 'publish',
+            'posts_per_page' => 29,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+            'meta_query'     => [
+                [
+                    'key'     => '_homepage_visible',
+                    'value'   => '1',
+                    'compare' => '=',
+                ],
+            ],
+        ];
+
+        $query = new \WP_Query($args);
+        $offers = [];
+
+        foreach ($query->posts as $post) {
+            $offers[] = $this->prepare_samochod_data_minimal($post);
+        }
+
+        $response_data = [
+            'offers' => $offers,
+            'meta' => [
+                'total' => $query->found_posts,
+                'total_pages' => 1,
+                'current_page' => 1,
+                'per_page' => 29,
+            ],
+        ];
+
+        $response = new \WP_REST_Response($response_data, 200);
+        $response->header('X-WP-Total', $query->found_posts);
+        $response->header('X-WP-TotalPages', 1);
+
+        return $response;
     }
 
     /**

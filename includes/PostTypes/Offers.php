@@ -38,6 +38,9 @@ class Offers {
         add_filter('posts_join', [$this, 'extend_search_join'], 10, 2);
         add_filter('posts_where', [$this, 'extend_search_where'], 10, 2);
 
+        // Sortowanie kolumny „Slider” – LEFT JOIN, aby uwzględnić wszystkie oferty (nie tylko z meta)
+        add_filter('posts_clauses', [$this, 'hero_slider_sort_clauses'], 10, 2);
+
         // Ukryj zbędne akcje w liście (szybka edycja, podgląd)
         add_filter('post_row_actions', [$this, 'filter_row_actions'], 10, 2);
 
@@ -240,6 +243,8 @@ class Offers {
             if ($key === 'title') {
                 $new_columns['car_reference_id'] = 'ID oferty';
                 $new_columns['car_status'] = 'Status';
+                $new_columns['homepage_visible'] = 'Strona główna';
+                $new_columns['hero_slider'] = 'Slider na stronie głównej';
             }
         }
         return $new_columns;
@@ -266,6 +271,26 @@ class Offers {
             } else {
                 echo '<span style="color: #94a3b8;">Brak</span>';
             }
+            return;
+        }
+
+        if ($column === 'homepage_visible') {
+            $enabled = get_post_meta($post_id, '_homepage_visible', true) === '1';
+            if ($enabled) {
+                echo '<span class="dashicons dashicons-yes-alt" style="color: #22c55e; font-size: 18px;" title="Na stronie głównej"></span>';
+            } else {
+                echo '<span style="color: #94a3b8;">—</span>';
+            }
+            return;
+        }
+
+        if ($column === 'hero_slider') {
+            $enabled = get_post_meta($post_id, '_hero_slider_enabled', true) === '1';
+            if ($enabled) {
+                echo '<span class="dashicons dashicons-yes-alt" style="color: #22c55e; font-size: 18px;" title="W sliderze"></span>';
+            } else {
+                echo '<span style="color: #94a3b8;">—</span>';
+            }
         }
     }
 
@@ -274,6 +299,8 @@ class Offers {
      */
     public function make_reference_id_sortable($columns) {
         $columns['car_reference_id'] = 'car_reference_id';
+        $columns['homepage_visible'] = 'homepage_visible';
+        $columns['hero_slider'] = 'hero_slider';
         return $columns;
     }
 
@@ -290,7 +317,46 @@ class Offers {
         if ($orderby === 'car_reference_id') {
             $query->set('meta_key', '_car_reference_id');
             $query->set('orderby', 'meta_value');
+            return;
         }
+
+        if ($orderby === 'homepage_visible') {
+            $query->set('orderby', 'homepage_visible');
+            $query->set('order', $query->get('order') ?: 'DESC');
+        }
+
+        if ($orderby === 'hero_slider') {
+            // Nie ustawiamy meta_key – powodowałoby INNER JOIN i brak paginacji.
+            // Zamiast tego posts_clauses dodaje LEFT JOIN i ORDER BY.
+            $query->set('orderby', 'hero_slider');
+            $query->set('order', $query->get('order') ?: 'DESC');
+        }
+    }
+
+    /**
+     * Dodaje LEFT JOIN i ORDER BY dla sortowania po „Slider na stronie głównej” i „Strona główna”.
+     * Dzięki LEFT JOIN uwzględniamy wszystkie oferty (także bez meta), paginacja działa poprawnie.
+     */
+    public function hero_slider_sort_clauses($clauses, $query) {
+        global $wpdb;
+
+        if (!is_admin() || !$query->is_main_query()) {
+            return $clauses;
+        }
+
+        $orderby = $query->get('orderby');
+        if ($query->get('post_type') !== self::POST_TYPE || !in_array($orderby, ['hero_slider', 'homepage_visible'], true)) {
+            return $clauses;
+        }
+
+        $order = strtoupper($query->get('order')) === 'ASC' ? 'ASC' : 'DESC';
+        $meta_key = $orderby === 'hero_slider' ? '_hero_slider_enabled' : '_homepage_visible';
+        $alias = $orderby === 'hero_slider' ? 'pm_hero_slider' : 'pm_homepage_visible';
+
+        $clauses['join'] .= " LEFT JOIN {$wpdb->postmeta} AS {$alias} ON ({$wpdb->posts}.ID = {$alias}.post_id AND {$alias}.meta_key = '{$meta_key}')";
+        $clauses['orderby'] = "COALESCE({$alias}.meta_value, '0') {$order}, {$wpdb->posts}.ID {$order}";
+
+        return $clauses;
     }
 
     /**
@@ -1104,6 +1170,22 @@ class Offers {
 
             <div style="margin-top: 8px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
                 <div style="font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;">
+                    Wyświetlanie
+                </div>
+
+                <?php $homepage_visible = get_post_meta($post->ID, '_homepage_visible', true) === '1'; ?>
+                <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; margin-bottom: 12px;">
+                    <input type="checkbox"
+                           name="homepage_visible"
+                           value="1"
+                           <?php checked($homepage_visible); ?>
+                           style="margin-top: 2px;">
+                    <span style="font-size: 12px; color: #374151;">
+                        <strong>Wyświetl na stronie głównej</strong>
+                    </span>
+                </label>
+
+                <div style="font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;">
                     Slider na stronie głównej
                 </div>
 
@@ -1115,9 +1197,7 @@ class Offers {
                            style="margin-top: 2px;">
                     <span style="font-size: 12px; color: #374151;">
                         <strong>Wyświetl ofertę w sliderze hero</strong><br>
-                        <span style="color: #6b7280;">
-                            Jeśli zaznaczone, oferta może pojawić się w sliderze na stronie głównej.
-                        </span>
+
                     </span>
                 </label>
 
@@ -1143,7 +1223,7 @@ class Offers {
                     </div>
 
                     <p class="description" style="margin-top: 6px; font-size: 11px; color: #6b7280;">
-                        To zdjęcie będzie użyte w sliderze hero. Najlepiej dodaj poziome zdjęcie o wysokiej jakości.
+                        To zdjęcie będzie użyte w sliderze na stronie głównej.
                     </p>
                 </div>
 
@@ -2497,6 +2577,10 @@ class Offers {
         if (isset($_POST['fuel_type'])) {
             update_post_meta($post_id, '_fuel_type', sanitize_text_field($_POST['fuel_type']));
         }
+
+        // Widoczność na stronie głównej
+        $homepage_visible = isset($_POST['homepage_visible']) ? '1' : '0';
+        update_post_meta($post_id, '_homepage_visible', $homepage_visible);
 
         // Slider hero na stronie głównej
         $hero_slider_enabled = isset($_POST['hero_slider_enabled']) ? '1' : '0';
