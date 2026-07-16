@@ -1,0 +1,47 @@
+# BEGIN WordPress
+# Reguły dla WordPress permalinków i REST API
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# Zezwól na bezpośredni dostęp do plików statycznych
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Przekieruj wszystko do index.php (w tym REST API)
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress
+
+# Zabezpieczenia
+<IfModule mod_headers.c>
+    # CORS dla REST API (opcjonalnie - dostosuj do swoich potrzeb)
+    <FilesMatch "\.(php)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    </FilesMatch>
+</IfModule>
+
+# Blokuj dostęp do plików wrażliwych
+<FilesMatch "^(wp-config\.php|\.htaccess|\.htpasswd|readme\.html|license\.txt)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Włącz kompresję (opcjonalnie)
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Cache dla statycznych plików (opcjonalnie)
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+

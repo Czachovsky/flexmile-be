@@ -1,0 +1,16 @@
+# BEGIN WordPress
+# Reguły dla WordPress permalinków i REST API
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# Zezwól na bezpośredni dostęp do plików statycznych
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Przekieruj wszystko do index.php (w tym REST API)
+# Użyj QSA aby zachować query string
+RewriteRule . /index.php [L,QSA]
+</IfModule>
+# END WordPress
+
